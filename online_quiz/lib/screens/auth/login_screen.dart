@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../utils/app_routes.dart';
 import '../../widgets/custom_text_field.dart';
+import '../../providers/auth_provider.dart';
 import 'login_screen_animations.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen>
+class _LoginScreenState extends ConsumerState<LoginScreen>
     with TickerProviderStateMixin, LoginScreenAnimations {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
-  bool _isLoading = false;
 
   @override
   void initState() {
@@ -35,6 +36,16 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authProvider);
+    
+    // Listen to auth state changes
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      if (next.isAuthenticated && next.user != null) {
+        // Navigate to main screen on successful login
+        Navigator.pushReplacementNamed(context, AppRoutes.main);
+      }
+    });
+    
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: SafeArea(
@@ -46,7 +57,7 @@ class _LoginScreenState extends State<LoginScreen>
               const SizedBox(height: 40),
               _buildAnimatedHeader(),
               const SizedBox(height: 40),
-              _buildAnimatedLoginCard(),
+              _buildAnimatedLoginCard(authState.isLoading),
               const SizedBox(height: 24),
               _buildAnimatedForgotPassword(),
               const SizedBox(height: 40),
@@ -109,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _buildAnimatedLoginCard() {
+  Widget _buildAnimatedLoginCard(bool isLoading) {
     return createAnimatedWidget(
       fadeAnimation: formFadeAnimation,
       slideAnimation: formSlideAnimation,
@@ -129,15 +140,14 @@ class _LoginScreenState extends State<LoginScreen>
         child: Column(
           children: [
             _buildLoginForm(),
+            _buildErrorMessage(),
             const SizedBox(height: 32),
-            _buildLoginButton(),
+            _buildLoginButton(isLoading),
           ],
         ),
       ),
     );
   }
-
-
 
   Widget _buildLoginForm() {
     return Form(
@@ -190,7 +200,97 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _buildLoginButton() {
+  Widget _buildErrorMessage() {
+    final authState = ref.watch(authProvider);
+    
+    if (authState.error == null) {
+      return const SizedBox.shrink();
+    }
+    
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      margin: const EdgeInsets.only(top: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF5F5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFFFFE5E5),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.red.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFE5E5),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: const Icon(
+              Icons.info_outline,
+              color: Color(0xFFDC2626),
+              size: 16,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Authentication Error',
+                  style: TextStyle(
+                    color: Color(0xFFDC2626),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  authState.error!,
+                  style: const TextStyle(
+                    color: Color(0xFF7F1D1D),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: () {
+              ref.read(authProvider.notifier).clearError();
+            },
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Icon(
+                Icons.close,
+                color: Color(0xFFDC2626),
+                size: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoginButton(bool isLoading) {
     return Container(
       width: double.infinity,
       height: 56,
@@ -211,7 +311,7 @@ class _LoginScreenState extends State<LoginScreen>
         ],
       ),
       child: ElevatedButton(
-        onPressed: _isLoading ? null : _handleLogin,
+        onPressed: isLoading ? null : _handleLogin,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
@@ -219,7 +319,7 @@ class _LoginScreenState extends State<LoginScreen>
             borderRadius: BorderRadius.circular(16),
           ),
         ),
-        child: _isLoading
+        child: isLoading
             ? const SizedBox(
                 width: 24,
                 height: 24,
@@ -283,27 +383,13 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-
-
-
-
   void _handleLogin() async {
     if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      // Simulate login process
-      await Future.delayed(const Duration(seconds: 2));
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      // Navigate to main screen
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, AppRoutes.main);
-      }
+      final username = _emailController.text.trim();
+      final password = _passwordController.text.trim();
+      
+      // Use auth provider to login
+      await ref.read(authProvider.notifier).login(username, password);
     }
   }
 }

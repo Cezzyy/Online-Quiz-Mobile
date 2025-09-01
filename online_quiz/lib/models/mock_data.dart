@@ -6,7 +6,51 @@ import 'notification_item.dart';
 
 // Dummy Data
 class DummyData {
+  // Mock credentials for authentication
+  static const Map<String, Map<String, dynamic>> mockCredentials = {
+    'jan.rosalijos': {
+      'password': 'password123',
+      'userType': 'student',
+      'userId': 'user_001',
+    },
+    'teacher.santos': {
+      'password': 'teacher123',
+      'userType': 'teacher',
+      'userId': 'user_002',
+    },
+    'admin.aclc': {
+      'password': 'admin123',
+      'userType': 'admin',
+      'userId': 'user_003',
+    },
+  };
+
   static User getUser() {
+    return getUserById('user_001');
+  }
+
+  static User getUserById(String userId) {
+    switch (userId) {
+      case 'user_001':
+        return _createStudentUser();
+      case 'user_002':
+        return _createTeacherUser();
+      case 'user_003':
+        return _createAdminUser();
+      default:
+        return _createStudentUser();
+    }
+  }
+
+  static User getUserByCredentials(String username, String password) {
+    final credentials = mockCredentials[username];
+    if (credentials != null && credentials['password'] == password) {
+      return getUserById(credentials['userId']);
+    }
+    throw Exception('Invalid credentials');
+  }
+
+  static User _createStudentUser() {
     final courses = _createCourses();
     final notifications = _createNotifications();
     
@@ -22,6 +66,44 @@ class DummyData {
       emergencyContact: '+63 998 765 4321',
       profileImageUrl: 'assets/images/aclclogo-nobg.png',
       degree: 'Bachelor of Science in Computer Science',
+    );
+  }
+
+  static User _createTeacherUser() {
+    final courses = _createTeacherCourses();
+    final notifications = _createTeacherNotifications();
+    
+    return User(
+      id: 'user_002',
+      name: 'Prof. Maria Santos',
+      email: 'maria.santos@aclc.edu.ph',
+      studentId: 'TEACH-001',
+      courses: courses,
+      notifications: notifications,
+      bio: 'Information Security Professor with 10+ years of experience in cybersecurity.',
+      phoneNumber: '+63 917 123 4567',
+      emergencyContact: '+63 998 111 2222',
+      profileImageUrl: 'assets/images/aclclogo-nobg.png',
+      degree: 'Master of Science in Information Technology',
+    );
+  }
+
+  static User _createAdminUser() {
+    final courses = _createAdminCourses();
+    final notifications = _createAdminNotifications();
+    
+    return User(
+      id: 'user_003',
+      name: 'Admin User',
+      email: 'admin@aclc.edu.ph',
+      studentId: 'ADMIN-001',
+      courses: courses,
+      notifications: notifications,
+      bio: 'System Administrator managing the ACLC Online Quiz Platform.',
+      phoneNumber: '+63 920 999 8888',
+      emergencyContact: '+63 998 777 6666',
+      profileImageUrl: 'assets/images/aclclogo-nobg.png',
+      degree: 'Bachelor of Science in Information Technology',
     );
   }
 
@@ -407,6 +489,77 @@ class DummyData {
         type: 'result',
         isRead: true,
         courseId: 'course_005',
+      ),
+    ];
+  }
+
+  static List<Course> _createTeacherCourses() {
+    return [
+      Course(
+        id: 'course_001',
+        name: 'Information Assurance and Security I',
+        code: 'IAS101',
+        instructor: 'Prof. Maria Santos',
+        units: 3,
+        quizzes: _createCourses()[0].quizzes,
+      ),
+      Course(
+        id: 'course_006',
+        name: 'Advanced Cybersecurity',
+        code: 'CS401',
+        instructor: 'Prof. Maria Santos',
+        units: 3,
+        quizzes: [],
+      ),
+    ];
+  }
+
+  static List<Course> _createAdminCourses() {
+    return _createCourses(); // Admin can see all courses
+  }
+
+  static List<NotificationItem> _createTeacherNotifications() {
+    return [
+      NotificationItem(
+        id: 'notif_teacher_001',
+        title: 'New Student Enrolled',
+        message: 'A new student has enrolled in your IAS101 course',
+        timestamp: DateTime.now().subtract(const Duration(hours: 2)),
+        type: 'info',
+        isRead: false,
+        courseId: 'course_001',
+      ),
+      NotificationItem(
+        id: 'notif_teacher_002',
+        title: 'Quiz Submissions',
+        message: '15 students have submitted their quiz assignments',
+        timestamp: DateTime.now().subtract(const Duration(days: 1)),
+        type: 'result',
+        isRead: true,
+        courseId: 'course_001',
+      ),
+    ];
+  }
+
+  static List<NotificationItem> _createAdminNotifications() {
+    return [
+      NotificationItem(
+        id: 'notif_admin_001',
+        title: 'System Maintenance',
+        message: 'Scheduled maintenance will occur this weekend',
+        timestamp: DateTime.now().subtract(const Duration(hours: 1)),
+        type: 'warning',
+        isRead: false,
+        courseId: '',
+      ),
+      NotificationItem(
+        id: 'notif_admin_002',
+        title: 'New Course Created',
+        message: 'Advanced Cybersecurity course has been added to the system',
+        timestamp: DateTime.now().subtract(const Duration(days: 2)),
+        type: 'info',
+        isRead: true,
+        courseId: 'course_006',
       ),
     ];
   }
