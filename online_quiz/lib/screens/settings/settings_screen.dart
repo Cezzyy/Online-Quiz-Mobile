@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/auth_provider.dart';
+import '../../utils/app_routes.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _notificationsEnabled = true;
   bool _darkModeEnabled = false;
   bool _autoSubmitEnabled = false;
@@ -274,12 +277,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                // Implement sign out logic here
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Sign out functionality coming soon')),
-                );
+              onPressed: () async {
+                final navigator = Navigator.of(context);
+                navigator.pop();
+                
+                // Perform logout
+                await ref.read(authProvider.notifier).logout();
+                
+                // Navigate to login screen and clear navigation stack
+                if (mounted) {
+                  navigator.pushNamedAndRemoveUntil(
+                    AppRoutes.onboarding,
+                    (route) => false,
+                  );
+                }
               },
               child: const Text(
                 'Sign Out',
