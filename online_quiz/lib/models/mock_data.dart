@@ -66,6 +66,7 @@ class DummyData {
       emergencyContact: '+63 998 765 4321',
       profileImageUrl: 'assets/images/aclclogo-nobg.png',
       degree: 'Bachelor of Science in Computer Science',
+      userType: 'student',
     );
   }
 
@@ -85,6 +86,7 @@ class DummyData {
       emergencyContact: '+63 998 111 2222',
       profileImageUrl: 'assets/images/aclclogo-nobg.png',
       degree: 'Master of Science in Information Technology',
+      userType: 'teacher',
     );
   }
 
@@ -104,6 +106,7 @@ class DummyData {
       emergencyContact: '+63 998 777 6666',
       profileImageUrl: 'assets/images/aclclogo-nobg.png',
       degree: 'Bachelor of Science in Information Technology',
+      userType: 'admin',
     );
   }
 

@@ -43,18 +43,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   // Initialize authentication state
   Future<void> _initializeAuth() async {
+    print('AUTH: Initializing authentication state');
     state = state.copyWith(isLoading: true);
     
     try {
-      // Simulate checking for existing session
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 100));
       
       // For now, start with no authenticated user
       state = state.copyWith(
         isLoading: false,
         isInitialized: true,
       );
+      print('AUTH: Authentication initialized - isAuthenticated: ${state.isAuthenticated}, user: ${state.user?.userType ?? 'none'}');
     } catch (e) {
+      print('AUTH ERROR: Failed to initialize authentication: $e');
       state = state.copyWith(
         isLoading: false,
         isInitialized: true,
@@ -65,25 +67,33 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   // Login method
   Future<bool> login(String username, String password) async {
+    print('AUTH: Login attempt: username=$username');
     state = state.copyWith(isLoading: true, error: null);
     
     try {
-      // Simulate network delay
-      await Future.delayed(const Duration(seconds: 2));
+      print('AUTH: Validating credentials...');
+      await Future.delayed(const Duration(milliseconds: 300));
       
       // Validate credentials using mock data
       try {
         final user = DummyData.getUserByCredentials(username, password);
+        print('AUTH: Login successful: user=${user.userType}, id=${user.id}, name=${user.name}');
         
-        state = state.copyWith(
+        // Update state with authenticated user
+        final newState = state.copyWith(
           user: user,
           isAuthenticated: true,
           isLoading: false,
           error: null,
         );
         
+        print('AUTH: Updating state - previous: {authenticated: ${state.isAuthenticated}, user: ${state.user?.userType ?? 'none'}}');
+        state = newState;
+        print('AUTH: State updated - current: {authenticated: ${state.isAuthenticated}, user: ${state.user?.userType}, id: ${state.user?.id}}');
+        
         return true;
       } catch (e) {
+        print('AUTH ERROR: Login failed: Invalid credentials - $e');
         state = state.copyWith(
           isLoading: false,
           error: 'Invalid username or password',
@@ -91,6 +101,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return false;
       }
     } catch (e) {
+      print('AUTH ERROR: Login error: $e');
       state = state.copyWith(
         isLoading: false,
         error: 'Login failed: $e',
@@ -101,14 +112,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   // Logout method
   Future<void> logout() async {
+    print('AUTH: Logout initiated - current user: ${state.user?.userType ?? 'none'}');
     state = state.copyWith(isLoading: true);
     
     try {
-      // Simulate logout process
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 100));
       
+      print('AUTH: Clearing authentication state');
       state = const AuthState(isInitialized: true);
+      print('AUTH: Logout complete - isAuthenticated: ${state.isAuthenticated}, user: ${state.user?.userType ?? 'none'}');
     } catch (e) {
+      print('AUTH ERROR: Logout failed: $e');
       state = state.copyWith(
         isLoading: false,
         error: 'Logout failed: $e',

@@ -93,6 +93,7 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
         emergencyContact: state.user!.emergencyContact,
         profileImageUrl: state.user!.profileImageUrl,
         degree: state.user!.degree,
+        userType: state.user!.userType,
       );
       
       state = state.copyWith(
@@ -127,6 +128,7 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
         emergencyContact: state.user!.emergencyContact,
         profileImageUrl: state.user!.profileImageUrl,
         degree: state.user!.degree,
+        userType: state.user!.userType,
       );
       
       state = state.copyWith(
@@ -161,6 +163,7 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
         emergencyContact: formattedEmergency,
         profileImageUrl: state.user!.profileImageUrl,
         degree: state.user!.degree,
+        userType: state.user!.userType,
       );
       
       state = state.copyWith(
@@ -190,6 +193,7 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
         emergencyContact: state.user!.emergencyContact,
         profileImageUrl: profileImageUrl,
         degree: state.user!.degree,
+        userType: state.user!.userType,
       );
       
       state = state.copyWith(
@@ -257,6 +261,7 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
         emergencyContact: state.originalEmergencyContact,
         profileImageUrl: state.originalProfileImageUrl,
         degree: state.user!.degree,
+        userType: state.user!.userType,
       );
       
       state = state.copyWith(

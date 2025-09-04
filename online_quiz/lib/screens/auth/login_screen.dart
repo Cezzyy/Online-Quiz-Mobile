@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../utils/app_routes.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../providers/auth_provider.dart';
 import 'login_screen_animations.dart';
@@ -18,6 +17,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
+  bool _isLoggingIn = false;
 
   @override
   void initState() {
@@ -36,16 +36,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authProvider);
-    
-    // Listen to auth state changes
-    ref.listen<AuthState>(authProvider, (previous, next) {
-      if (next.isAuthenticated && next.user != null) {
-        // Navigate to main screen on successful login
-        Navigator.pushReplacementNamed(context, AppRoutes.main);
-      }
-    });
-    
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: SafeArea(
@@ -57,7 +47,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               const SizedBox(height: 40),
               _buildAnimatedHeader(),
               const SizedBox(height: 40),
-              _buildAnimatedLoginCard(authState.isLoading),
+              _buildAnimatedLoginCard(_isLoggingIn),
               const SizedBox(height: 24),
               _buildAnimatedForgotPassword(),
               const SizedBox(height: 40),
@@ -142,7 +132,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             _buildLoginForm(),
             _buildErrorMessage(),
             const SizedBox(height: 32),
-            _buildLoginButton(isLoading),
+            _buildLoginButton(),
           ],
         ),
       ),
@@ -201,96 +191,100 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   }
 
   Widget _buildErrorMessage() {
-    final authState = ref.watch(authProvider);
-    
-    if (authState.error == null) {
-      return const SizedBox.shrink();
-    }
-    
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      margin: const EdgeInsets.only(top: 20),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF5F5),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFFFFE5E5),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.red.withValues(alpha: 0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
+    return Consumer(
+      builder: (context, ref, child) {
+        final authState = ref.watch(authProvider);
+        
+        if (authState.error == null) {
+          return const SizedBox.shrink();
+        }
+        
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          margin: const EdgeInsets.only(top: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF5F5),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
               color: const Color(0xFFFFE5E5),
-              borderRadius: BorderRadius.circular(6),
+              width: 1,
             ),
-            child: const Icon(
-              Icons.info_outline,
-              color: Color(0xFFDC2626),
-              size: 16,
-            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.red.withValues(alpha: 0.08),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Authentication Error',
-                  style: TextStyle(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFE5E5),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Icon(
+                  Icons.info_outline,
+                  color: Color(0xFFDC2626),
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Authentication Error',
+                      style: TextStyle(
+                        color: Color(0xFFDC2626),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      authState.error!,
+                      style: const TextStyle(
+                        color: Color(0xFF7F1D1D),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  ref.read(authProvider.notifier).clearError();
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Icon(
+                    Icons.close,
                     color: Color(0xFFDC2626),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.2,
+                    size: 14,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  authState.error!,
-                  style: const TextStyle(
-                    color: Color(0xFF7F1D1D),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          GestureDetector(
-            onTap: () {
-              ref.read(authProvider.notifier).clearError();
-            },
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: Colors.transparent,
-                borderRadius: BorderRadius.circular(4),
               ),
-              child: const Icon(
-                Icons.close,
-                color: Color(0xFFDC2626),
-                size: 14,
-              ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildLoginButton(bool isLoading) {
+  Widget _buildLoginButton() {
     return Container(
       width: double.infinity,
       height: 56,
@@ -311,7 +305,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         ],
       ),
       child: ElevatedButton(
-        onPressed: isLoading ? null : _handleLogin,
+        onPressed: _isLoggingIn ? null : _handleLogin,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
@@ -319,7 +313,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             borderRadius: BorderRadius.circular(16),
           ),
         ),
-        child: isLoading
+        child: _isLoggingIn
             ? const SizedBox(
                 width: 24,
                 height: 24,
@@ -388,8 +382,52 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       final username = _emailController.text.trim();
       final password = _passwordController.text.trim();
       
-      // Use auth provider to login
-      await ref.read(authProvider.notifier).login(username, password);
+      print('LOGIN_SCREEN: Attempting login with username: $username');
+      
+      try {
+        // Set loading state to show progress indicator
+        setState(() {
+          _isLoggingIn = true;
+        });
+        
+        // Attempt login
+        final success = await ref.read(authProvider.notifier).login(username, password);
+        
+        if (success) {
+          print('LOGIN_SCREEN: Login successful');
+          // No need to navigate - AuthWrapper will handle it automatically
+          // by returning the appropriate screen based on auth state
+        } else {
+          // Show error message if login failed
+          print('LOGIN_SCREEN: Login failed - showing error message');
+          if (mounted) {
+            final errorMsg = ref.read(authProvider).error ?? 'Login failed';
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(errorMsg),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        print('LOGIN_SCREEN ERROR: Exception during login: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Login error: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        // Reset loading state
+        if (mounted) {
+          setState(() {
+            _isLoggingIn = false;
+          });
+        }
+      }
     }
   }
 }

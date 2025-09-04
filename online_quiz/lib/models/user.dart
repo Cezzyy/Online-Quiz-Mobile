@@ -13,6 +13,7 @@ class User {
   final String emergencyContact;
   final String profileImageUrl;
   final String degree;
+  final String userType;
 
   User({
     required this.id,
@@ -26,6 +27,7 @@ class User {
     required this.emergencyContact,
     required this.profileImageUrl,
     required this.degree,
+    required this.userType,
   });
 
   // Getter for the primary course (first course if available)
