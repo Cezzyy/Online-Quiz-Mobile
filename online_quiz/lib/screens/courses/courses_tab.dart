@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../models/mock_data.dart';
-import '../../models/user.dart';
-import '../../models/course.dart';
+import '../../data/new_mock_data.dart';
+import '../../models/new_course.dart';
 import 'course_detail_screen.dart';
 import '../../widgets/empty_state_widget.dart';
 
@@ -10,7 +9,8 @@ class CoursesTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final User user = DummyData.getUser();
+    final user = NewMockData.users.firstWhere((u) => u.userId == 4); // Get first student for demo
+    final userCourses = _getUserCourses(user.userId);
     
     return Scaffold(
       body: Padding(
@@ -20,14 +20,14 @@ class CoursesTab extends StatelessWidget {
           children: [
             const SizedBox(height: 20),
             // Header Section
-            _buildHeader(user),
+            _buildHeader(userCourses),
             const SizedBox(height: 30),
             
             // Courses Grid
             Expanded(
-              child: user.courses.isEmpty 
+              child: userCourses.isEmpty 
                   ? _buildEmptyState()
-                  : _buildCoursesGrid(context, user.courses),
+                  : _buildCoursesGrid(context, userCourses),
             ),
           ],
         ),
@@ -35,7 +35,7 @@ class CoursesTab extends StatelessWidget {
     );
   }
   
-  Widget _buildHeader(User user) {
+  Widget _buildHeader(List<Course> userCourses) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -49,7 +49,7 @@ class CoursesTab extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'You are enrolled in ${user.courses.length} courses',
+          'You are enrolled in ${userCourses.length} courses',
           style: TextStyle(
             fontSize: 16,
             color: Colors.grey.shade600,
@@ -80,9 +80,13 @@ class CoursesTab extends StatelessWidget {
   }
   
   Widget _buildCourseCard(BuildContext context, Course course) {
-    final completedQuizzes = course.quizzes.where((quiz) => quiz.isCompleted).length;
-    final totalQuizzes = course.quizzes.length;
-    final progress = totalQuizzes > 0 ? completedQuizzes / totalQuizzes : 0.0;
+    final courseQuizzes = NewMockData.quizzes.where((q) => q.courseId == course.courseId).toList();
+    final completedAttempts = NewMockData.attempts.where((a) => 
+      courseQuizzes.any((q) => q.quizId == a.quizId) && a.submittedAt != null
+    ).length;
+    final totalQuizzes = courseQuizzes.length;
+    final progress = totalQuizzes > 0 ? completedAttempts / totalQuizzes : 0.0;
+    final teacherUser = NewMockData.users.where((u) => u.userId == course.instructorUserId).firstOrNull;
     
     return GestureDetector(
       onTap: () {
@@ -171,7 +175,7 @@ class CoursesTab extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Instructor: ${course.instructor}',
+                          'Instructor: ${teacherUser?.fullName ?? 'Unknown'}',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey.shade600,
@@ -179,7 +183,7 @@ class CoursesTab extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${course.units} Units • $totalQuizzes Quizzes',
+                          '$totalQuizzes Quizzes',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey.shade600,
@@ -219,6 +223,13 @@ class CoursesTab extends StatelessWidget {
         ),
       ),
     );
+  }
+  
+  List<Course> _getUserCourses(int userId) {
+    final enrollments = NewMockData.enrollments.where((e) => e.userId == userId).toList();
+    return enrollments.map((enrollment) => 
+      NewMockData.courses.firstWhere((c) => c.courseId == enrollment.courseId)
+    ).toList();
   }
   
   Color _getCourseColor(String courseCode) {

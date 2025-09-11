@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../models/course.dart';
-import '../../models/quiz.dart';
-import '../quizzes/quiz_result_screen.dart';
-import '../quizzes/quiz_detail_screen.dart';
+import '../../data/new_mock_data.dart';
+import '../../models/new_course.dart';
+import '../../models/new_quiz.dart';
+import '../../models/new_teacher.dart';
+import '../../models/new_user.dart';
 
 class CourseDetailScreen extends StatelessWidget {
   final Course course;
@@ -11,9 +12,12 @@ class CourseDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final completedQuizzes = course.quizzes.where((quiz) => quiz.isCompleted).length;
-    final totalQuizzes = course.quizzes.length;
-    final progress = totalQuizzes > 0 ? completedQuizzes / totalQuizzes : 0.0;
+    final courseQuizzes = NewMockData.quizzes.where((q) => q.courseId == course.courseId).toList();
+    final completedAttempts = NewMockData.attempts.where((a) => 
+      courseQuizzes.any((q) => q.quizId == a.quizId) && a.submittedAt != null
+    ).length;
+    final totalQuizzes = courseQuizzes.length;
+    final progress = totalQuizzes > 0 ? completedAttempts / totalQuizzes : 0.0;
     
     return Scaffold(
       appBar: AppBar(
@@ -32,10 +36,10 @@ class CourseDetailScreen extends StatelessWidget {
         child: Column(
           children: [
             // Course Header
-            _buildCourseHeader(progress, completedQuizzes, totalQuizzes),
+            _buildCourseHeader(progress, completedAttempts, totalQuizzes),
             
             // Quizzes List
-            _buildQuizzesList(),
+            _buildQuizzesList(courseQuizzes),
           ],
         ),
       ),
@@ -43,6 +47,26 @@ class CourseDetailScreen extends StatelessWidget {
   }
   
   Widget _buildCourseHeader(double progress, int completedQuizzes, int totalQuizzes) {
+    final teacher = NewMockData.teachers.firstWhere(
+      (t) => t.userId == course.instructorUserId,
+      orElse: () => Teacher(
+        userId: 0,
+        department: 'Unknown Department',
+      ),
+    );
+    final teacherUser = NewMockData.users.firstWhere(
+      (u) => u.userId == teacher.userId,
+      orElse: () => User(
+        userId: 0,
+        fullName: 'Unknown Teacher',
+        email: '',
+        passwordHash: '',
+        status: 'Active',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    );
+    
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -69,7 +93,7 @@ class CourseDetailScreen extends StatelessWidget {
             const SizedBox(height: 8),
             Flexible(
               child: Text(
-                'Instructor: ${course.instructor}',
+                'Instructor: ${teacherUser.fullName}',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 18,
@@ -81,7 +105,7 @@ class CourseDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              '${course.units} Units',
+              'Course ID: ${course.courseId}',
               style: const TextStyle(
                 color: Colors.white70,
                 fontSize: 16,
@@ -144,7 +168,7 @@ class CourseDetailScreen extends StatelessWidget {
     );
   }
   
-  Widget _buildQuizzesList() {
+  Widget _buildQuizzesList(List<Quiz> courseQuizzes) {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -163,9 +187,9 @@ class CourseDetailScreen extends StatelessWidget {
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: course.quizzes.length,
+            itemCount: courseQuizzes.length,
             itemBuilder: (context, index) {
-              final quiz = course.quizzes[index];
+              final quiz = courseQuizzes[index];
               return _buildQuizCard(context, quiz);
             },
           ),
@@ -175,36 +199,22 @@ class CourseDetailScreen extends StatelessWidget {
   }
   
   Widget _buildQuizCard(BuildContext context, Quiz quiz) {
-    final isCompleted = quiz.isCompleted;
-    final score = quiz.result != null 
-        ? (quiz.result!.correctAnswers / quiz.result!.totalQuestions * 100)
+    final attempt = NewMockData.attempts.where((a) => a.quizId == quiz.quizId).firstOrNull;
+    final isCompleted = attempt?.submittedAt != null;
+    final quizQuestions = NewMockData.questions.where((q) => q.quizId == quiz.quizId).toList();
+    final totalQuestions = quizQuestions.length;
+    final score = attempt != null && attempt.submittedAt != null && totalQuestions > 0
+        ? (attempt.score / totalQuestions * 100)
         : 0.0;
     
     return GestureDetector(
       onTap: () {
-        if (isCompleted) {
-          // Navigate to quiz result screen for completed quizzes
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => QuizResultScreen(
-                quiz: quiz,
-                course: course,
-              ),
-            ),
-          );
-        } else {
-          // Navigate to quiz detail screen for incomplete quizzes
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => QuizDetailScreen(
-                quiz: quiz,
-                course: course,
-              ),
-            ),
-          );
-        }
+        // TODO: Navigate to quiz screens when they support new models
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isCompleted ? 'Quiz completed with ${score.toStringAsFixed(1)}% score' : 'Quiz: ${quiz.title}'),
+          ),
+        );
       },
       child: Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -299,7 +309,7 @@ class CourseDetailScreen extends StatelessWidget {
                 child: _buildQuizDetail(
                   icon: Icons.quiz_outlined,
                   label: 'Questions',
-                  value: quiz.totalQuestions.toString(),
+                  value: totalQuestions.toString(),
                 ),
               ),
               Expanded(
@@ -323,7 +333,9 @@ class CourseDetailScreen extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Due: ${_formatDate(quiz.dueDate)}',
+                  quiz.dueAt != null
+                      ? 'Due: ${_formatDate(quiz.dueAt!)}'
+                      : 'No due date',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey.shade600,
@@ -341,7 +353,7 @@ class CourseDetailScreen extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Added: ${_formatDate(quiz.dateAdded)}',
+                  'Added: ${_formatDate(quiz.createdAt)}',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey.shade600,
@@ -351,7 +363,7 @@ class CourseDetailScreen extends StatelessWidget {
             ),
           ],
           
-          if (isCompleted && quiz.result != null) ...[
+          if (isCompleted && attempt != null) ...[
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
@@ -363,7 +375,7 @@ class CourseDetailScreen extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'Completed on ${_formatDate(quiz.result!.completedAt)}',
+                      'Completed on ${_formatDate(attempt.submittedAt!)}',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey.shade600,
@@ -371,7 +383,7 @@ class CourseDetailScreen extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Time: ${quiz.result!.timeSpent} min',
+                    'Time: ${attempt.timeSpent} min',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey.shade600,
@@ -435,17 +447,17 @@ class CourseDetailScreen extends StatelessWidget {
     return colors[courseCode.hashCode % colors.length];
   }
   
-  Color _getScoreColor(double score) {
-    if (score >= 80) return Colors.green;
-    if (score >= 60) return Colors.orange;
-    return Colors.red;
-  }
-  
   String _formatDate(DateTime date) {
     final months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
+  }
+  
+  Color _getScoreColor(double score) {
+    if (score >= 80) return Colors.green;
+    if (score >= 60) return Colors.orange;
+    return Colors.red;
   }
 }
