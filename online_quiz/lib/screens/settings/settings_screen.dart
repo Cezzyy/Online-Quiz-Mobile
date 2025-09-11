@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
+import '../../utils/app_routes.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -279,8 +280,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               onPressed: () async {
                 Navigator.of(context).pop();
                 
-                // Perform logout - AuthWrapper will handle navigation automatically
+                // Perform logout and explicitly navigate to login screen
                 await ref.read(authProvider.notifier).logout();
+                
+                // Force navigation to login screen
+                if (context.mounted) {
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    AppRoutes.login,
+                    (route) => false, // Clear all routes
+                  );
+                }
               },
               child: const Text(
                 'Sign Out',

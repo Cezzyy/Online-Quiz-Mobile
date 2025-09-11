@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../models/mock_data.dart';
+import '../../data/new_mock_data.dart';
 import 'edit_profile_screen.dart';
 import '../settings/settings_screen.dart';
 
@@ -8,7 +8,9 @@ class ProfileTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = DummyData.getUser();
+    // Get the student user (Jan Rosalijos - userId: 4)
+    final user = NewMockData.users.firstWhere((u) => u.userId == 4);
+    final student = NewMockData.students.firstWhere((s) => s.userId == 4);
 
     return Scaffold(
       body: SingleChildScrollView(
@@ -20,27 +22,16 @@ class ProfileTab extends StatelessWidget {
             // Profile Picture
             CircleAvatar(
               radius: 60,
-              backgroundColor: Colors.grey[300],
-              backgroundImage: user.profileImageUrl.isNotEmpty
-                  ? (user.profileImageUrl.startsWith('assets/')
-                      ? AssetImage(user.profileImageUrl) as ImageProvider
-                      : NetworkImage(user.profileImageUrl))
-                  : null,
-              child: user.profileImageUrl.isEmpty
-                  ? Icon(
-                      Icons.person,
-                      size: 60,
-                      color: Colors.grey[600],
-                    )
-                  : null,
+              backgroundColor: Colors.white,
+              backgroundImage: const AssetImage('assets/images/aclclogo-nobg.png'),
             ),
             const SizedBox(height: 24),
             
             // User Name
             Text(
-              user.name,
+              user.fullName,
               style: const TextStyle(
-                fontSize: 28,
+                fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,
               ),
@@ -50,7 +41,7 @@ class ProfileTab extends StatelessWidget {
             
             // Student ID
             Text(
-              user.studentId,
+              'Student ID: ${student.studentId}',
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.grey[600],
@@ -97,15 +88,13 @@ class ProfileTab extends StatelessWidget {
                      ),
                    ),
                    const SizedBox(height: 16),
-                   _buildDetailRow(Icons.school_outlined, 'Degree', user.degree),
+                   _buildDetailRow(Icons.school_outlined, 'Degree Program', student.course ?? 'N/A'),
                    const SizedBox(height: 12),
-                   _buildDetailRow(Icons.phone_outlined, 'Phone', user.phoneNumber),
+                   _buildDetailRow(Icons.class_outlined, 'Year Level', 'Year ${student.yearLevel}'),
                    const SizedBox(height: 12),
-                   _buildDetailRow(Icons.contact_emergency_outlined, 'Emergency Contact', user.emergencyContact),
-                   if (user.bio.isNotEmpty) ...[
-                     const SizedBox(height: 12),
-                     _buildDetailRow(Icons.info_outline, 'Bio', user.bio),
-                   ],
+                   _buildDetailRow(Icons.group_outlined, 'Section', student.section ?? 'N/A'),
+                   const SizedBox(height: 12),
+                   _buildDetailRow(Icons.badge_outlined, 'Status', user.status),
                  ],
                ),
              ),
