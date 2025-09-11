@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../models/mock_data.dart';
-import '../../models/user.dart';
-import '../../models/quiz.dart';
+import '../../models/new_course.dart';
+import '../../data/new_mock_data.dart';
+import '../../models/new_attempt.dart';
+import '../../models/new_user.dart';
 import '../../widgets/stat_card.dart';
 
 class HomeTab extends StatelessWidget {
@@ -9,10 +10,12 @@ class HomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final User user = DummyData.getUser();
-    final completedQuizzes = _getCompletedQuizzes(user);
-    final totalQuizzes = _getTotalQuizzes(user);
-    final averageScore = _calculateAverageScore(completedQuizzes);
+    final user = NewMockData.users.firstWhere((u) => u.userId == 4); // Get first student for demo
+    // final student = NewMockData.students.where((s) => s.userId == user.userId).firstOrNull;
+    final userCourses = _getUserCourses(user.userId);
+    final completedAttempts = _getCompletedAttempts(user.userId);
+    final totalQuizzes = _getTotalQuizzes(userCourses);
+    final averageScore = _calculateAverageScore(completedAttempts);
     
     return Scaffold(
       body: SingleChildScrollView(
@@ -26,15 +29,15 @@ class HomeTab extends StatelessWidget {
             const SizedBox(height: 30),
             
             // Statistics Cards
-            _buildStatsSection(totalQuizzes, completedQuizzes.length, averageScore),
+            _buildStatsSection(totalQuizzes, completedAttempts.length, averageScore),
             const SizedBox(height: 30),
             
             // Progress Chart Section
-            _buildProgressSection(user),
+            _buildProgressSection(userCourses),
             const SizedBox(height: 30),
             
             // Recent Activity
-            _buildRecentActivity(completedQuizzes),
+            _buildRecentActivity(completedAttempts),
           ],
         ),
       ),
@@ -75,7 +78,7 @@ class HomeTab extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            user.name.split(' ')[0],
+            user.fullName.split(' ')[0],
             style: const TextStyle(
               color: Colors.white,
               fontSize: 28,
@@ -145,7 +148,7 @@ class HomeTab extends StatelessWidget {
               child: StatCard(
                 icon: Icons.school_outlined,
                 title: 'Courses',
-                value: DummyData.getUser().courses.length.toString(),
+                value: NewMockData.enrollments.where((e) => e.userId == 4).length.toString(),
                 color: Colors.purple,
               ),
             ),
@@ -157,7 +160,7 @@ class HomeTab extends StatelessWidget {
   
 
   
-  Widget _buildProgressSection(User user) {
+  Widget _buildProgressSection(List<Course> userCourses) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -185,10 +188,13 @@ class HomeTab extends StatelessWidget {
             ],
           ),
           child: Column(
-            children: user.courses.take(3).map((course) {
-              final completedQuizzes = course.quizzes.where((q) => q.isCompleted).length;
-              final totalQuizzes = course.quizzes.length;
-              final progress = totalQuizzes > 0 ? completedQuizzes / totalQuizzes : 0.0;
+            children: userCourses.take(3).map((course) {
+              final courseQuizzes = NewMockData.quizzes.where((q) => q.courseId == course.courseId).toList();
+              final completedAttempts = NewMockData.attempts.where((a) => 
+                courseQuizzes.any((q) => q.quizId == a.quizId) && a.submittedAt != null
+              ).length;
+              final totalQuizzes = courseQuizzes.length;
+              final progress = totalQuizzes > 0 ? completedAttempts / totalQuizzes : 0.0;
               
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
@@ -227,7 +233,7 @@ class HomeTab extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '$completedQuizzes of $totalQuizzes quizzes completed',
+                      '$completedAttempts of $totalQuizzes quizzes completed',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey.shade600,
@@ -243,7 +249,7 @@ class HomeTab extends StatelessWidget {
     );
   }
   
-  Widget _buildRecentActivity(List<Quiz> recentQuizzes) {
+  Widget _buildRecentActivity(List<Attempt> recentAttempts) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -271,10 +277,9 @@ class HomeTab extends StatelessWidget {
             ],
           ),
           child: Column(
-            children: recentQuizzes.take(3).map((quiz) {
-              final score = quiz.result != null 
-                  ? (quiz.result!.correctAnswers / quiz.result!.totalQuestions * 100)
-                  : 0.0;
+            children: recentAttempts.take(3).map((attempt) {
+              final quiz = NewMockData.quizzes.firstWhere((q) => q.quizId == attempt.quizId);
+              final score = attempt.score;
               
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
@@ -316,7 +321,7 @@ class HomeTab extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      _formatDate(quiz.result?.completedAt ?? DateTime.now()),
+                      _formatDate(attempt.submittedAt ?? DateTime.now()),
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey.shade500,
@@ -332,32 +337,35 @@ class HomeTab extends StatelessWidget {
     );
   }
   
-  List<Quiz> _getCompletedQuizzes(User user) {
-    List<Quiz> completed = [];
-    for (var course in user.courses) {
-      completed.addAll(course.quizzes.where((quiz) => quiz.isCompleted));
-    }
-    return completed;
+  List<Course> _getUserCourses(int userId) {
+    final enrollments = NewMockData.enrollments.where((e) => e.userId == userId).toList();
+    return enrollments.map((enrollment) => 
+      NewMockData.courses.firstWhere((c) => c.courseId == enrollment.courseId)
+    ).toList();
   }
   
-  int _getTotalQuizzes(User user) {
+  List<Attempt> _getCompletedAttempts(int userId) {
+    return NewMockData.attempts.where((a) => 
+      a.userId == userId && a.submittedAt != null
+    ).toList();
+  }
+  
+  int _getTotalQuizzes(List<Course> userCourses) {
     int total = 0;
-    for (var course in user.courses) {
-      total += course.quizzes.length;
+    for (var course in userCourses) {
+      total += NewMockData.quizzes.where((q) => q.courseId == course.courseId).length;
     }
     return total;
   }
   
-  double _calculateAverageScore(List<Quiz> completedQuizzes) {
-    if (completedQuizzes.isEmpty) return 0.0;
+  double _calculateAverageScore(List<Attempt> completedAttempts) {
+    if (completedAttempts.isEmpty) return 0.0;
     
     double totalScore = 0;
-    for (var quiz in completedQuizzes) {
-      if (quiz.result != null) {
-        totalScore += (quiz.result!.correctAnswers / quiz.result!.totalQuestions) * 100;
-      }
+    for (var attempt in completedAttempts) {
+      totalScore += attempt.score;
     }
-    return totalScore / completedQuizzes.length;
+    return totalScore / completedAttempts.length;
   }
   
   String _formatDate(DateTime date) {
