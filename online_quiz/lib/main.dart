@@ -61,14 +61,14 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(authProvider.notifier).initialize();
       // Navigation will be handled in the build method
-      print('AUTH_WRAPPER: initState called');
+  
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
-    print('AUTH_WRAPPER: Building with state - authenticated: ${authState.isAuthenticated}, user: ${authState.user?.userType ?? 'none'}, loading: ${authState.isLoading}, initialized: ${authState.isInitialized}');
+
     
     // SIMPLIFIED APPROACH: Use MaterialApp.router with GoRouter for navigation
     // Instead of trying to navigate from within the build method or using ref.listen,
@@ -76,7 +76,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     
     // Show loading indicator while auth state is being determined
     if (!authState.isInitialized) {
-      print('AUTH_WRAPPER: Auth not initialized yet, showing loading indicator');
+
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(),
@@ -87,7 +87,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     // If authenticated, return the appropriate screen based on user role
     if (authState.isAuthenticated && authState.user != null) {
       final userType = authState.user!.userType;
-      print('AUTH_WRAPPER: User authenticated as $userType, returning appropriate screen');
+      
       
       switch (userType) {
         case 'teacher':
@@ -102,7 +102,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     
     // For unauthenticated users, show login screen directly
     // This is a key change - we're bypassing the onboarding screen for simplicity
-    print('AUTH_WRAPPER: User not authenticated, returning login screen');
+    
     return const LoginScreen();
   }
 }

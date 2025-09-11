@@ -382,7 +382,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       final username = _emailController.text.trim();
       final password = _passwordController.text.trim();
       
-      print('LOGIN_SCREEN: Attempting login with username: $username');
+      
       
       try {
         // Set loading state to show progress indicator
@@ -394,12 +394,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         final success = await ref.read(authProvider.notifier).login(username, password);
         
         if (success) {
-          print('LOGIN_SCREEN: Login successful');
+
           // No need to navigate - AuthWrapper will handle it automatically
           // by returning the appropriate screen based on auth state
         } else {
           // Show error message if login failed
-          print('LOGIN_SCREEN: Login failed - showing error message');
+
           if (mounted) {
             final errorMsg = ref.read(authProvider).error ?? 'Login failed';
             ScaffoldMessenger.of(context).showSnackBar(
@@ -411,7 +411,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           }
         }
       } catch (e) {
-        print('LOGIN_SCREEN ERROR: Exception during login: $e');
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
