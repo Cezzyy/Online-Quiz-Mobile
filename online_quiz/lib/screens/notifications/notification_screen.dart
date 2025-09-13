@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../models/mock_data.dart';
-import '../../models/notification_item.dart';
+import '../../data/new_mock_data.dart';
+import '../../models/new_notification.dart' as model;
 import '../../widgets/empty_state_widget.dart';
 
 class NotificationScreen extends StatefulWidget {
@@ -11,10 +11,11 @@ class NotificationScreen extends StatefulWidget {
 }
 
 class _NotificationScreenState extends State<NotificationScreen> {
-  List<NotificationItem> unreadNotifications = [];
-  List<NotificationItem> readNotifications = [];
+  List<model.Notification> unreadNotifications = [];
+  List<model.Notification> readNotifications = [];
   int currentPage = 0;
   final int itemsPerPage = 5;
+  final int currentUserId = 4; // Jan Rosalijos - student user
 
   @override
   void initState() {
@@ -23,7 +24,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   void _loadNotifications() {
-    final allNotifications = DummyData.getUser().notifications;
+    final allNotifications = NewMockData.getNotificationsByUser(currentUserId);
     unreadNotifications = allNotifications.where((n) => !n.isRead).toList();
     readNotifications = allNotifications.where((n) => n.isRead).toList();
   }
@@ -55,7 +56,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     return EmptyStatePresets.notifications();
   }
 
-  Widget _buildNotificationCard(NotificationItem notification) {
+  Widget _buildNotificationCard(model.Notification notification) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -132,13 +133,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          _formatTimestamp(notification.timestamp),
+                          _formatTimestamp(notification.createdAt),
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade500,
                           ),
                         ),
-                        if (notification.type != 'announcement') ...[
+                        if (notification.type != model.NotificationType.system) ...[
                           const SizedBox(width: 16),
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -171,30 +172,27 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  Widget _buildNotificationIcon(String type) {
+  Widget _buildNotificationIcon(model.NotificationType type) {
     IconData iconData;
     Color iconColor;
 
     switch (type) {
-      case 'quiz':
+      case model.NotificationType.quiz:
         iconData = Icons.quiz;
         iconColor = Colors.blue;
         break;
-      case 'result':
+      case model.NotificationType.course:
         iconData = Icons.grade;
         iconColor = Colors.green;
         break;
-      case 'reminder':
+      case model.NotificationType.reminder:
         iconData = Icons.alarm;
         iconColor = Colors.orange;
         break;
-      case 'announcement':
+      case model.NotificationType.system:
         iconData = Icons.campaign;
         iconColor = Colors.purple;
         break;
-      default:
-        iconData = Icons.notifications;
-        iconColor = Colors.grey;
     }
 
     return Container(
@@ -211,33 +209,29 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  Color _getTypeColor(String type) {
+  Color _getTypeColor(model.NotificationType type) {
     switch (type) {
-      case 'quiz':
+      case model.NotificationType.quiz:
         return Colors.blue;
-      case 'result':
+      case model.NotificationType.course:
         return Colors.green;
-      case 'reminder':
+      case model.NotificationType.reminder:
         return Colors.orange;
-      case 'announcement':
+      case model.NotificationType.system:
         return Colors.purple;
-      default:
-        return Colors.grey;
     }
   }
 
-  String _getTypeLabel(String type) {
+  String _getTypeLabel(model.NotificationType type) {
     switch (type) {
-      case 'quiz':
+      case model.NotificationType.quiz:
         return 'QUIZ';
-      case 'result':
-        return 'RESULT';
-      case 'reminder':
+      case model.NotificationType.course:
+        return 'COURSE';
+      case model.NotificationType.reminder:
         return 'REMINDER';
-      case 'announcement':
-        return 'NEWS';
-      default:
-        return 'INFO';
+      case model.NotificationType.system:
+        return 'SYSTEM';
     }
   }
 
@@ -256,19 +250,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  void _markAsRead(NotificationItem notification) {
+  void _markAsRead(model.Notification notification) {
     if (!notification.isRead) {
       setState(() {
-        unreadNotifications.removeWhere((n) => n.id == notification.id);
-        readNotifications.insert(0, NotificationItem(
-          id: notification.id,
-          title: notification.title,
-          message: notification.message,
-          timestamp: notification.timestamp,
-          type: notification.type,
-          isRead: true,
-          courseId: notification.courseId,
-        ));
+        unreadNotifications.removeWhere((n) => n.notificationId == notification.notificationId);
+        readNotifications.insert(0, notification.copyWith(isRead: true));
       });
     }
   }
@@ -276,15 +262,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   void _markAllAsRead() {
     setState(() {
       for (var notification in unreadNotifications) {
-        readNotifications.insert(0, NotificationItem(
-          id: notification.id,
-          title: notification.title,
-          message: notification.message,
-          timestamp: notification.timestamp,
-          type: notification.type,
-          isRead: true,
-          courseId: notification.courseId,
-        ));
+        readNotifications.insert(0, notification.copyWith(isRead: true));
       }
       unreadNotifications.clear();
       currentPage = 0;
@@ -359,7 +337,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  List<NotificationItem> _getPaginatedReadNotifications() {
+  List<model.Notification> _getPaginatedReadNotifications() {
     final startIndex = currentPage * itemsPerPage;
     final endIndex = (startIndex + itemsPerPage).clamp(0, readNotifications.length);
     return readNotifications.sublist(startIndex, endIndex);
