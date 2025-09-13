@@ -1,23 +1,28 @@
 import 'package:flutter/material.dart';
-import '../../models/quiz.dart';
-import '../../models/course.dart';
-import '../../models/quiz_result.dart';
+import '../../models/new_quiz.dart';
+import '../../models/new_course.dart';
+import '../../models/new_attempt.dart';
+import '../../data/new_mock_data.dart';
 import '../../widgets/info_card.dart';
 
 class QuizResultScreen extends StatelessWidget {
   final Quiz quiz;
   final Course? course;
+  final Attempt attempt;
 
   const QuizResultScreen({
     super.key,
     required this.quiz,
     this.course,
+    required this.attempt,
   });
 
   @override
   Widget build(BuildContext context) {
-    final result = quiz.result!;
-    final percentage = result.percentage;
+    final questions = NewMockData.getQuestionsByQuiz(quiz.quizId);
+    final totalQuestions = questions.length;
+    final totalPoints = questions.fold<double>(0.0, (sum, q) => sum + q.points);
+    final percentage = totalPoints > 0 ? (attempt.score / totalPoints) * 100 : 0.0;
     
     Color scoreColor;
     String gradeText;
@@ -56,8 +61,8 @@ class QuizResultScreen extends StatelessWidget {
         child: Column(
           children: [
             _buildResultHeader(scoreColor, gradeText, percentage),
-            _buildQuizInfo(),
-            _buildDetailedResults(result),
+            _buildQuizInfo(totalQuestions),
+            _buildDetailedResults(totalQuestions, totalPoints),
             const SizedBox(height: 20),
           ],
         ),
@@ -136,8 +141,7 @@ class QuizResultScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildQuizInfo() {
-    final result = quiz.result!;
+  Widget _buildQuizInfo(int totalQuestions) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       padding: const EdgeInsets.all(20),
@@ -170,7 +174,7 @@ class QuizResultScreen extends StatelessWidget {
               Expanded(
                 child: _buildSummaryItem(
                   'Correct Answers',
-                  '${result.correctAnswers}/${result.totalQuestions}',
+                  '${_getCorrectAnswersCount()}/$totalQuestions',
                   Icons.check_circle,
                   Colors.green,
                 ),
@@ -179,7 +183,7 @@ class QuizResultScreen extends StatelessWidget {
               Expanded(
                 child: _buildSummaryItem(
                   'Time Spent',
-                  '${result.timeSpent} min',
+                  '${_getTimeSpentMinutes()} min',
                   Icons.timer,
                   Colors.blue,
                 ),
@@ -190,13 +194,13 @@ class QuizResultScreen extends StatelessWidget {
           InfoCardPresets.compact(
             icon: Icons.calendar_today,
             title: 'Completed On',
-            value: _formatDateTime(result.completedAt),
+            value: _formatDateTime(attempt.submittedAt!),
           ),
           const SizedBox(height: 8),
           InfoCardPresets.compact(
             icon: Icons.schedule,
             title: 'Time Limit',
-            value: '${quiz.timeLimit} minutes',
+            value: quiz.timeLimitMinutes != null ? '${quiz.timeLimitMinutes} minutes' : 'No time limit',
           ),
         ],
       ),
@@ -240,9 +244,10 @@ class QuizResultScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailedResults(QuizResult result) {
-    final incorrectAnswers = result.totalQuestions - result.correctAnswers;
-    final accuracy = (result.correctAnswers / result.totalQuestions) * 100;
+  Widget _buildDetailedResults(int totalQuestions, double totalPoints) {
+    final correctAnswers = _getCorrectAnswersCount();
+    final incorrectAnswers = totalQuestions - correctAnswers;
+    final accuracy = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0.0;
     
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -271,9 +276,9 @@ class QuizResultScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          _buildResultBar('Correct', result.correctAnswers, result.totalQuestions, Colors.green),
+          _buildResultBar('Correct', correctAnswers, totalQuestions, Colors.green),
           const SizedBox(height: 12),
-          _buildResultBar('Incorrect', incorrectAnswers, result.totalQuestions, Colors.red),
+          _buildResultBar('Incorrect', incorrectAnswers, totalQuestions, Colors.red),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(16),
@@ -347,6 +352,16 @@ class QuizResultScreen extends StatelessWidget {
 
 
 
+
+  int _getCorrectAnswersCount() {
+    final attemptAnswers = NewMockData.getAnswersByAttempt(attempt.attemptId);
+    return attemptAnswers.where((answer) => answer.isCorrect == true).length;
+  }
+
+  int _getTimeSpentMinutes() {
+    if (attempt.timeSpentSeconds == null) return 0;
+    return (attempt.timeSpentSeconds! / 60).round();
+  }
 
   String _formatDateTime(DateTime dateTime) {
     final months = [

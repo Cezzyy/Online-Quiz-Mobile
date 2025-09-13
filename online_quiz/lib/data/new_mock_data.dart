@@ -180,6 +180,30 @@ class NewMockData {
       points: 2.0,
       sortOrder: 1,
     ),
+    Question(
+      questionId: 5,
+      quizId: 3,
+      type: QuestionType.single,
+      body: 'What is the limit of f(x) = x² as x approaches 2?',
+      points: 3.0,
+      sortOrder: 1,
+    ),
+    Question(
+      questionId: 6,
+      quizId: 3,
+      type: QuestionType.single,
+      body: 'A function is continuous at a point if:',
+      points: 3.0,
+      sortOrder: 2,
+    ),
+    Question(
+      questionId: 7,
+      quizId: 3,
+      type: QuestionType.text,
+      body: 'Explain the concept of continuity in calculus.',
+      points: 4.0,
+      sortOrder: 3,
+    ),
   ];
 
   // Choices
@@ -201,6 +225,18 @@ class NewMockData {
     Choice(choiceId: 10, questionId: 4, body: 'while loop', isCorrect: false),
     Choice(choiceId: 11, questionId: 4, body: 'do-while loop', isCorrect: true),
     Choice(choiceId: 12, questionId: 4, body: 'foreach loop', isCorrect: false),
+    
+    // Question 5 choices (Quiz 3)
+    Choice(choiceId: 13, questionId: 5, body: '4', isCorrect: true),
+    Choice(choiceId: 14, questionId: 5, body: '2', isCorrect: false),
+    Choice(choiceId: 15, questionId: 5, body: '0', isCorrect: false),
+    Choice(choiceId: 16, questionId: 5, body: 'undefined', isCorrect: false),
+    
+    // Question 6 choices (Quiz 3)
+    Choice(choiceId: 17, questionId: 6, body: 'The limit exists and equals the function value', isCorrect: true),
+    Choice(choiceId: 18, questionId: 6, body: 'The function is defined at that point', isCorrect: false),
+    Choice(choiceId: 19, questionId: 6, body: 'The limit exists', isCorrect: false),
+    Choice(choiceId: 20, questionId: 6, body: 'The function is differentiable', isCorrect: false),
   ];
 
   // Attempts

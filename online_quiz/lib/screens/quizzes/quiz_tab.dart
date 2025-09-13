@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../models/quiz.dart';
-import '../../models/course.dart';
-import '../../models/user.dart';
-import '../../models/mock_data.dart';
+import '../../models/new_quiz.dart';
+import '../../models/new_course.dart';
+import '../../models/new_user.dart';
+import '../../data/new_mock_data.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/filter_tab_widget.dart';
 import 'quiz_detail_screen.dart';
@@ -19,10 +19,11 @@ class _QuizTabState extends State<QuizTab> {
   final List<String> _filterOptions = ['All', 'Pending', 'Completed'];
   int _currentPage = 0;
   final int _itemsPerPage = 10;
+  final String currentUserId = 'user_4'; // Default current user (student)
 
   @override
   Widget build(BuildContext context) {
-    final User user = DummyData.getUser();
+    final User user = NewMockData.getUserById(int.parse(currentUserId.replaceAll('user_', '')))!;
     final List<Quiz> allQuizzes = _getAllQuizzes(user);
     final List<Quiz> filteredQuizzes = _getFilteredQuizzes(allQuizzes);
 
@@ -103,7 +104,10 @@ class _QuizTabState extends State<QuizTab> {
   }
 
   Widget _buildQuizStats(List<Quiz> allQuizzes) {
-    final completedCount = allQuizzes.where((quiz) => quiz.isCompleted).length;
+    final completedCount = allQuizzes.where((quiz) {
+      final attempts = NewMockData.getAttemptsByQuiz(quiz.quizId);
+      return attempts.any((a) => a.userId == int.parse(currentUserId.replaceAll('user_', '')) && a.submittedAt != null);
+    }).length;
     final pendingCount = allQuizzes.length - completedCount;
 
     return Container(
@@ -217,9 +221,11 @@ class _QuizTabState extends State<QuizTab> {
   }
 
   Widget _buildQuizCard(Quiz quiz, Course? course) {
-    final isCompleted = quiz.isCompleted;
-    final isOverdue = !isCompleted && quiz.dueDate.isBefore(DateTime.now());
-    final daysUntilDue = quiz.dueDate.difference(DateTime.now()).inDays;
+    final attempts = NewMockData.getAttemptsByQuiz(quiz.quizId);
+    final completedAttempt = attempts.where((a) => a.userId == int.parse(currentUserId.replaceAll('user_', '')) && a.submittedAt != null).firstOrNull;
+    final isCompleted = completedAttempt != null;
+    final isOverdue = !isCompleted && quiz.isOverdue;
+    final daysUntilDue = quiz.daysUntilDue;
     
     Color statusColor;
     String statusText;
@@ -328,15 +334,15 @@ class _QuizTabState extends State<QuizTab> {
                 // Quiz Details
                 Row(
                   children: [
-                    _buildDetailItem(Icons.help_outline, '${quiz.totalQuestions} Questions'),
+                    _buildDetailItem(Icons.help_outline, '${NewMockData.getQuestionsByQuiz(quiz.quizId).length} Questions'),
                     const SizedBox(width: 20),
-                    _buildDetailItem(Icons.timer_outlined, '${quiz.timeLimit} min'),
+                    _buildDetailItem(Icons.timer_outlined, quiz.hasTimeLimit ? '${quiz.timeLimitMinutes} min' : 'No limit'),
                     const SizedBox(width: 20),
-                    _buildDetailItem(Icons.calendar_today_outlined, _formatDate(quiz.dueDate)),
+                    _buildDetailItem(Icons.calendar_today_outlined, quiz.hasDueDate ? _formatDate(quiz.dueAt!) : 'No due date'),
                   ],
                 ),
                 
-                if (isCompleted && quiz.result != null) ...[
+                if (isCompleted) ...[
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -354,7 +360,7 @@ class _QuizTabState extends State<QuizTab> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Score: ${quiz.result!.correctAnswers}/${quiz.result!.totalQuestions} (${quiz.result!.percentage.toStringAsFixed(1)}%)',
+                          'Score: ${completedAttempt.score.toInt()}/${NewMockData.getQuestionsByQuiz(quiz.quizId).fold<int>(0, (sum, q) => sum + q.points.toInt())} (${((completedAttempt.score / NewMockData.getQuestionsByQuiz(quiz.quizId).fold<int>(0, (sum, q) => sum + q.points.toInt())) * 100).toStringAsFixed(1)}%)',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -398,12 +404,16 @@ class _QuizTabState extends State<QuizTab> {
   }
 
   List<Quiz> _getAllQuizzes(User user) {
-    List<Quiz> allQuizzes = [];
-    for (var course in user.courses) {
-      allQuizzes.addAll(course.quizzes);
-    }
-    // Sort by due date (earliest first)
-    allQuizzes.sort((a, b) => a.dueDate.compareTo(b.dueDate));
+    // Get all quizzes from NewMockData
+    List<Quiz> allQuizzes = NewMockData.quizzes;
+    
+    // Sort by due date (earliest first, null dates last)
+    allQuizzes.sort((a, b) {
+      if (a.dueAt == null && b.dueAt == null) return 0;
+      if (a.dueAt == null) return 1;
+      if (b.dueAt == null) return -1;
+      return a.dueAt!.compareTo(b.dueAt!);
+    });
     return allQuizzes;
   }
 
@@ -464,17 +474,24 @@ class _QuizTabState extends State<QuizTab> {
 
   List<Quiz> _getFilteredQuizzes(List<Quiz> allQuizzes) {
     List<Quiz> filtered;
+    
+    // Helper function to check if quiz is completed by current user
+    bool isQuizCompleted(Quiz quiz) {
+      final attempts = NewMockData.getAttemptsByQuiz(quiz.quizId);
+      return attempts.any((a) => a.userId == int.parse(currentUserId.replaceAll('user_', '')) && a.submittedAt != null);
+    }
+    
     switch (_selectedFilter) {
       case 'Pending':
-        filtered = allQuizzes.where((quiz) => !quiz.isCompleted).toList();
+        filtered = allQuizzes.where((quiz) => !isQuizCompleted(quiz)).toList();
         break;
       case 'Completed':
-        filtered = allQuizzes.where((quiz) => quiz.isCompleted).toList();
+        filtered = allQuizzes.where((quiz) => isQuizCompleted(quiz)).toList();
         break;
       default:
         // For 'All', prioritize pending quizzes first
-        final pending = allQuizzes.where((quiz) => !quiz.isCompleted).toList();
-        final completed = allQuizzes.where((quiz) => quiz.isCompleted).toList();
+        final pending = allQuizzes.where((quiz) => !isQuizCompleted(quiz)).toList();
+        final completed = allQuizzes.where((quiz) => isQuizCompleted(quiz)).toList();
         filtered = [...pending, ...completed];
         break;
     }
@@ -482,30 +499,48 @@ class _QuizTabState extends State<QuizTab> {
     // Sort pending quizzes by due date (earliest first)
     // Sort completed quizzes by completion date (most recent first)
     if (_selectedFilter == 'Pending' || _selectedFilter == 'All') {
-      final pendingQuizzes = filtered.where((quiz) => !quiz.isCompleted).toList();
-      pendingQuizzes.sort((a, b) => a.dueDate.compareTo(b.dueDate));
+      final pendingQuizzes = filtered.where((quiz) => !isQuizCompleted(quiz)).toList();
+      pendingQuizzes.sort((a, b) {
+        if (a.dueAt == null && b.dueAt == null) return 0;
+        if (a.dueAt == null) return 1;
+        if (b.dueAt == null) return -1;
+        return a.dueAt!.compareTo(b.dueAt!);
+      });
       
       if (_selectedFilter == 'All') {
-        final completedQuizzes = filtered.where((quiz) => quiz.isCompleted).toList();
-        completedQuizzes.sort((a, b) => b.result!.completedAt.compareTo(a.result!.completedAt));
+        final completedQuizzes = filtered.where((quiz) => isQuizCompleted(quiz)).toList();
+        completedQuizzes.sort((a, b) {
+          final attemptA = NewMockData.getAttemptsByQuiz(a.quizId)
+            .where((att) => att.userId == int.parse(currentUserId.replaceAll('user_', '')) && att.submittedAt != null)
+            .firstOrNull;
+        final attemptB = NewMockData.getAttemptsByQuiz(b.quizId)
+            .where((att) => att.userId == int.parse(currentUserId.replaceAll('user_', '')) && att.submittedAt != null)
+            .firstOrNull;
+          if (attemptA?.submittedAt == null || attemptB?.submittedAt == null) return 0;
+          return attemptB!.submittedAt!.compareTo(attemptA!.submittedAt!);
+        });
         filtered = [...pendingQuizzes, ...completedQuizzes];
       } else {
         filtered = pendingQuizzes;
       }
     } else if (_selectedFilter == 'Completed') {
-      filtered.sort((a, b) => b.result!.completedAt.compareTo(a.result!.completedAt));
+      filtered.sort((a, b) {
+        final attemptA = NewMockData.getAttemptsByQuiz(a.quizId)
+            .where((att) => att.userId == int.parse(currentUserId.replaceAll('user_', '')) && att.submittedAt != null)
+            .firstOrNull;
+        final attemptB = NewMockData.getAttemptsByQuiz(b.quizId)
+            .where((att) => att.userId == int.parse(currentUserId.replaceAll('user_', '')) && att.submittedAt != null)
+            .firstOrNull;
+        if (attemptA?.submittedAt == null || attemptB?.submittedAt == null) return 0;
+        return attemptB!.submittedAt!.compareTo(attemptA!.submittedAt!);
+      });
     }
     
     return filtered;
   }
 
   Course? _getCourseForQuiz(Quiz quiz, User user) {
-    for (var course in user.courses) {
-      if (course.quizzes.any((q) => q.id == quiz.id)) {
-        return course;
-      }
-    }
-    return null;
+    return NewMockData.getCourseById(quiz.courseId);
   }
 
   String _formatDate(DateTime date) {
@@ -526,23 +561,15 @@ class _QuizTabState extends State<QuizTab> {
   }
 
   void _navigateToQuizDetail(Quiz quiz, Course? course) {
-    if (course != null) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => QuizDetailScreen(
-            quiz: quiz,
-            course: course,
-          ),
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Course not found for ${quiz.title}'),
-          duration: const Duration(seconds: 1),
-        ),
-      );
-    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => QuizDetailScreen(
+           quiz: quiz,
+           course: course,
+           currentUserId: int.parse(currentUserId.replaceAll('user_', '')),
+         ),
+      ),
+    );
   }
 }

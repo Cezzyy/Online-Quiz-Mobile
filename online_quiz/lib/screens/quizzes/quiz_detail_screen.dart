@@ -1,24 +1,32 @@
 import 'package:flutter/material.dart';
-import '../../models/quiz.dart';
-import '../../models/course.dart';
+import '../../models/new_quiz.dart';
+import '../../models/new_course.dart';
+import '../../models/new_attempt.dart';
+import '../../data/new_mock_data.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/info_card.dart';
 
 class QuizDetailScreen extends StatelessWidget {
   final Quiz quiz;
   final Course? course;
+  final int currentUserId;
 
   const QuizDetailScreen({
     super.key,
     required this.quiz,
     this.course,
+    this.currentUserId = 4, // Default to student user
   });
 
   @override
   Widget build(BuildContext context) {
-    final isCompleted = quiz.isCompleted;
-    final isOverdue = !isCompleted && quiz.dueDate.isBefore(DateTime.now());
-    final daysUntilDue = quiz.dueDate.difference(DateTime.now()).inDays;
+    final attempt = NewMockData.getAttemptsByQuiz(quiz.quizId)
+        .where((a) => a.userId == currentUserId && a.submittedAt != null)
+        .cast<Attempt?>()
+        .firstOrNull;
+    final isCompleted = attempt != null;
+    final isOverdue = !isCompleted && quiz.isOverdue;
+    final daysUntilDue = quiz.daysUntilDue;
     
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -43,8 +51,8 @@ class QuizDetailScreen extends StatelessWidget {
             _buildQuizHeader(isCompleted, isOverdue, daysUntilDue),
             _buildQuizInfo(),
             _buildQuizStats(),
-            if (isCompleted && quiz.result != null) _buildResultSection(),
-            _buildInstructions(),
+            if (isCompleted) _buildResultSection(attempt),
+            _buildInstructions(isCompleted),
             const SizedBox(height: 100), // Space for floating button
           ],
         ),
@@ -160,6 +168,9 @@ class QuizDetailScreen extends StatelessWidget {
   }
 
   Widget _buildQuizInfo() {
+    final questions = NewMockData.getQuestionsByQuiz(quiz.quizId);
+    final instructor = course != null ? NewMockData.getUserById(course!.instructorUserId) : null;
+    
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       padding: const EdgeInsets.all(20),
@@ -190,32 +201,32 @@ class QuizDetailScreen extends StatelessWidget {
           InfoCardPresets.compact(
             icon: Icons.help_outline,
             title: 'Questions',
-            value: '${quiz.totalQuestions} questions',
+            value: '${questions.length} questions',
           ),
           const SizedBox(height: 12),
           InfoCardPresets.compact(
             icon: Icons.timer_outlined,
             title: 'Time Limit',
-            value: '${quiz.timeLimit} minutes',
+            value: quiz.hasTimeLimit ? '${quiz.timeLimitMinutes} minutes' : 'No limit',
           ),
           const SizedBox(height: 12),
           InfoCardPresets.compact(
             icon: Icons.calendar_today_outlined,
             title: 'Due Date',
-            value: _formatDateTime(quiz.dueDate),
+            value: quiz.hasDueDate ? _formatDateTime(quiz.dueAt!) : 'No due date',
           ),
           const SizedBox(height: 12),
           InfoCardPresets.compact(
             icon: Icons.add_circle_outline,
             title: 'Date Added',
-            value: _formatDateTime(quiz.dateAdded),
+            value: _formatDateTime(quiz.createdAt),
           ),
-          if (course != null) ...[
+          if (instructor != null) ...[
             const SizedBox(height: 12),
             InfoCardPresets.compact(
               icon: Icons.person_outline,
               title: 'Instructor',
-              value: course!.instructor,
+              value: instructor.fullName,
             ),
           ],
         ],
@@ -226,6 +237,13 @@ class QuizDetailScreen extends StatelessWidget {
 
 
   Widget _buildQuizStats() {
+    final questions = NewMockData.getQuestionsByQuiz(quiz.quizId);
+    final attempt = NewMockData.getAttemptsByQuiz(quiz.quizId)
+        .where((a) => a.userId == currentUserId && a.submittedAt != null)
+        .cast<Attempt?>()
+        .firstOrNull;
+    final isCompleted = attempt != null;
+    
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       padding: const EdgeInsets.all(20),
@@ -259,7 +277,7 @@ class QuizDetailScreen extends StatelessWidget {
                 child: StatCard(
                   icon: Icons.help_outline,
                   title: 'Questions',
-                  value: quiz.totalQuestions.toString(),
+                  value: questions.length.toString(),
                   color: Colors.blue,
                 ),
               ),
@@ -268,17 +286,17 @@ class QuizDetailScreen extends StatelessWidget {
                 child: StatCard(
                   icon: Icons.timer_outlined,
                   title: 'Time Limit',
-                  value: '${quiz.timeLimit}m',
+                  value: quiz.hasTimeLimit ? '${quiz.timeLimitMinutes}m' : 'None',
                   color: Colors.orange,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: StatCard(
-                  icon: quiz.isCompleted ? Icons.check_circle : Icons.schedule,
+                  icon: isCompleted ? Icons.check_circle : Icons.schedule,
                   title: 'Status',
-                  value: quiz.isCompleted ? 'Done' : 'Pending',
-                  color: quiz.isCompleted ? Colors.green : Colors.orange,
+                  value: isCompleted ? 'Done' : 'Pending',
+                  color: isCompleted ? Colors.green : Colors.orange,
                 ),
               ),
             ],
@@ -290,9 +308,10 @@ class QuizDetailScreen extends StatelessWidget {
 
 
 
-  Widget _buildResultSection() {
-    final result = quiz.result!;
-    final percentage = result.percentage;
+  Widget _buildResultSection(Attempt attempt) {
+    final questions = NewMockData.getQuestionsByQuiz(quiz.quizId);
+    final totalPoints = questions.fold<int>(0, (sum, q) => sum + q.points.toInt());
+    final percentage = totalPoints > 0 ? (attempt.score / totalPoints) * 100 : 0.0;
     
     Color scoreColor;
     if (percentage >= 90) {
@@ -370,7 +389,7 @@ class QuizDetailScreen extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '${result.correctAnswers}/${result.totalQuestions} Correct',
+                        '${attempt.score.toInt()}/${totalPoints.toInt()} Points',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey.shade600,
@@ -388,7 +407,7 @@ class QuizDetailScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       Text(
-                        '${result.timeSpent}m',
+                        '${attempt.timeSpentMinutes}m',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -411,7 +430,7 @@ class QuizDetailScreen extends StatelessWidget {
           
           const SizedBox(height: 16),
           Text(
-            'Completed on ${_formatDateTime(result.completedAt)}',
+            'Completed on ${_formatDateTime(attempt.submittedAt!)}',
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey.shade600,
@@ -422,7 +441,7 @@ class QuizDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInstructions() {
+  Widget _buildInstructions(bool isCompleted) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       padding: const EdgeInsets.all(20),
@@ -461,10 +480,10 @@ class QuizDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _buildInstructionItem('Read each question carefully before answering'),
-          _buildInstructionItem('You have ${quiz.timeLimit} minutes to complete the quiz'),
+          _buildInstructionItem(quiz.hasTimeLimit ? 'You have ${quiz.timeLimitMinutes} minutes to complete the quiz' : 'No time limit for this quiz'),
           _buildInstructionItem('Make sure you have a stable internet connection'),
           _buildInstructionItem('Once submitted, you cannot change your answers'),
-          if (!quiz.isCompleted)
+          if (!isCompleted)
             _buildInstructionItem('Click "Start Quiz" when you\'re ready to begin'),
         ],
       ),
@@ -610,7 +629,7 @@ class QuizDetailScreen extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Questions: ${quiz.totalQuestions}',
+                          'Questions: ${NewMockData.getQuestionsByQuiz(quiz.quizId).length}',
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             color: Colors.orange.shade700,
