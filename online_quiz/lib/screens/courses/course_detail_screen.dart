@@ -13,11 +13,11 @@ class CourseDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final courseQuizzes = NewMockData.quizzes.where((q) => q.courseId == course.courseId).toList();
-    final completedAttempts = NewMockData.attempts.where((a) => 
-      courseQuizzes.any((q) => q.quizId == a.quizId) && a.submittedAt != null
+    final completedQuizzes = courseQuizzes.where((quiz) => 
+      NewMockData.attempts.any((a) => a.quizId == quiz.quizId && a.submittedAt != null)
     ).length;
     final totalQuizzes = courseQuizzes.length;
-    final progress = totalQuizzes > 0 ? completedAttempts / totalQuizzes : 0.0;
+    final progress = totalQuizzes > 0 ? completedQuizzes / totalQuizzes : 0.0;
     
     return Scaffold(
       appBar: AppBar(
@@ -36,7 +36,7 @@ class CourseDetailScreen extends StatelessWidget {
         child: Column(
           children: [
             // Course Header
-            _buildCourseHeader(progress, completedAttempts, totalQuizzes),
+            _buildCourseHeader(progress, completedQuizzes, totalQuizzes),
             
             // Quizzes List
             _buildQuizzesList(courseQuizzes),
@@ -203,8 +203,9 @@ class CourseDetailScreen extends StatelessWidget {
     final isCompleted = attempt?.submittedAt != null;
     final quizQuestions = NewMockData.questions.where((q) => q.quizId == quiz.quizId).toList();
     final totalQuestions = quizQuestions.length;
-    final score = attempt != null && attempt.submittedAt != null && totalQuestions > 0
-        ? (attempt.score / totalQuestions * 100)
+    final totalPossiblePoints = quizQuestions.fold(0.0, (sum, question) => sum + question.points);
+    final score = attempt != null && attempt.submittedAt != null && totalPossiblePoints > 0
+        ? (attempt.score / totalPossiblePoints * 100)
         : 0.0;
     
     return GestureDetector(
@@ -316,7 +317,7 @@ class CourseDetailScreen extends StatelessWidget {
                 child: _buildQuizDetail(
                   icon: Icons.timer_outlined,
                   label: 'Time Limit',
-                  value: '${quiz.timeLimit} min',
+                  value: quiz.timeLimitMinutes != null ? '${quiz.timeLimitMinutes} min' : 'No limit',
                 ),
               ),
             ],
@@ -383,7 +384,7 @@ class CourseDetailScreen extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Time: ${attempt.timeSpent} min',
+                    'Time: ${attempt.timeSpentMinutes} min',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey.shade600,
