@@ -146,13 +146,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         children: [
           CustomTextField(
             controller: _emailController,
-            labelText: 'Username',
-            hintText: 'Enter your username',
+            labelText: 'Email',
+            hintText: 'Enter your email address',
             prefixIcon: Icons.email_outlined,
             keyboardType: TextInputType.emailAddress,
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Please enter your username';
+                return 'Please enter your email';
+              }
+              if (!value.contains('@')) {
+                return 'Please enter a valid email address';
               }
               return null;
             },
@@ -379,10 +382,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
   void _handleLogin() async {
     if (_formKey.currentState!.validate()) {
-      final username = _emailController.text.trim();
+      final email = _emailController.text.trim();
       final password = _passwordController.text.trim();
       
-      
+      // Clear any previous errors
+      ref.read(authProvider.notifier).clearError();
       
       try {
         // Set loading state to show progress indicator
@@ -391,15 +395,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         });
         
         // Attempt login
-        final success = await ref.read(authProvider.notifier).login(username, password);
+        final success = await ref.read(authProvider.notifier).login(email, password);
+        
+        // Always reset loading state first
+        if (mounted) {
+          setState(() {
+            _isLoggingIn = false;
+          });
+        }
         
         if (success) {
-
-          // No need to navigate - AuthWrapper will handle it automatically
-          // by returning the appropriate screen based on auth state
+          // Login successful - AuthWrapper will handle navigation
+          // Add a small delay to ensure state propagation
+          await Future.delayed(const Duration(milliseconds: 100));
         } else {
           // Show error message if login failed
-
           if (mounted) {
             final errorMsg = ref.read(authProvider).error ?? 'Login failed';
             ScaffoldMessenger.of(context).showSnackBar(
@@ -411,7 +421,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           }
         }
       } catch (e) {
-
+        // Reset loading state on error
+        if (mounted) {
+          setState(() {
+            _isLoggingIn = false;
+          });
+        }
+        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -419,13 +435,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               backgroundColor: Colors.red,
             ),
           );
-        }
-      } finally {
-        // Reset loading state
-        if (mounted) {
-          setState(() {
-            _isLoggingIn = false;
-          });
         }
       }
     }

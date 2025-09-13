@@ -8,6 +8,7 @@ import 'screens/home/admin_home_screen.dart';
 import 'utils/app_routes.dart';
 import 'utils/app_theme.dart';
 import 'providers/auth_provider.dart';
+import 'data/new_mock_data.dart';
 
 extension ColorExtension on Color {
   Color withValues({double? alpha}) {
@@ -60,14 +61,19 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     // Initialize auth and check for existing session
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(authProvider.notifier).initialize();
-      // Navigation will be handled in the build method
-  
     });
   }
+  
+
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    
+    // Listen for auth state changes to handle navigation
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      // This will trigger a rebuild when auth state changes
+    });
 
     
     // SIMPLIFIED APPROACH: Use MaterialApp.router with GoRouter for navigation
@@ -86,10 +92,10 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     
     // If authenticated, return the appropriate screen based on user role
     if (authState.isAuthenticated && authState.user != null) {
-      final userType = authState.user!.userType;
+      final userRole = NewMockData.getUserRole(authState.user!.userId);
       
       
-      switch (userType) {
+      switch (userRole?.toLowerCase()) {
         case 'teacher':
           return const TeacherHomeScreen();
         case 'admin':

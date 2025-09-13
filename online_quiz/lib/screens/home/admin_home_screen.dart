@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/app_theme.dart';
-import '../../utils/app_routes.dart';
 
 class AdminHomeScreen extends ConsumerWidget {
   const AdminHomeScreen({super.key});
@@ -22,16 +21,8 @@ class AdminHomeScreen extends ConsumerWidget {
             icon: const Icon(Icons.logout),
             tooltip: 'Sign Out',
             onPressed: () async {
-              // Perform logout
+              // Perform logout - AuthWrapper will handle navigation automatically
               await ref.read(authProvider.notifier).logout();
-              
-              // Force navigation to login screen
-              if (context.mounted) {
-                Navigator.of(context).pushNamedAndRemoveUntil(
-                  AppRoutes.login,
-                  (route) => false, // Clear all routes
-                );
-              }
             },
           ),
         ],
@@ -57,7 +48,7 @@ class AdminHomeScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Welcome back, ${user?.name ?? 'Admin'}!',
+                    'Welcome back, ${user?.fullName ?? 'Admin'}!',
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,

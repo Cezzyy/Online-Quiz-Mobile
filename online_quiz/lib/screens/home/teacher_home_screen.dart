@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/app_theme.dart';
-import '../../utils/app_routes.dart';
 
 class TeacherHomeScreen extends ConsumerWidget {
   const TeacherHomeScreen({super.key});
@@ -22,16 +21,8 @@ class TeacherHomeScreen extends ConsumerWidget {
             icon: const Icon(Icons.logout),
             tooltip: 'Sign Out',
             onPressed: () async {
-              // Perform logout
+              // Perform logout - AuthWrapper will handle navigation automatically
               await ref.read(authProvider.notifier).logout();
-              
-              // Force navigation to login screen
-              if (context.mounted) {
-                Navigator.of(context).pushNamedAndRemoveUntil(
-                  AppRoutes.login,
-                  (route) => false, // Clear all routes
-                );
-              }
             },
           ),
         ],
@@ -57,7 +48,7 @@ class TeacherHomeScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Welcome back, ${user?.name ?? 'Teacher'}!',
+                    'Welcome back, ${user?.fullName ?? 'Teacher'}!',
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,

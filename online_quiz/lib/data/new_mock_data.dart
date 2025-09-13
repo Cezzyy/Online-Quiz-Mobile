@@ -436,4 +436,66 @@ class NewMockData {
       return null;
     }
   }
+
+  // Authentication method
+  static User? getUserByCredentials(String email, String password) {
+    try {
+      // For demo purposes, we'll use simple password matching
+      // In a real app, you'd hash the password and compare with passwordHash
+      final user = users.firstWhere((user) => user.email == email);
+      
+      // Simple password validation for demo
+      String expectedPassword;
+      switch (email) {
+        case 'admin.aclc@quiz.com':
+          expectedPassword = 'admin123';
+          break;
+        case 'donald.francisco@university.edu':
+          expectedPassword = 'teacher123';
+          break;
+        case 'jan.rosalijos@student.edu':
+          expectedPassword = 'student123';
+          break;
+        default:
+          return null;
+      }
+      
+      if (password == expectedPassword && user.isActive) {
+        return user;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Get user role
+  static String? getUserRole(int userId) {
+    try {
+      final userRole = userRoles.firstWhere((ur) => ur.userId == userId);
+      final role = roles.firstWhere((r) => r.roleId == userRole.roleId);
+      return role.name;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Get mock credentials for development
+  static Map<String, Map<String, dynamic>> get mockCredentials => {
+    'Admin': {
+      'email': 'admin.aclc@quiz.com',
+      'password': 'admin123',
+      'role': 'Admin',
+    },
+    'Teacher': {
+      'email': 'donald.francisco@university.edu',
+      'password': 'teacher123',
+      'role': 'Teacher',
+    },
+    'Student': {
+      'email': 'jan.rosalijos@student.edu',
+      'password': 'student123',
+      'role': 'Student',
+    },
+  };
 }
