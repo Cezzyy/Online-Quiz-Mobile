@@ -11,14 +11,12 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _bioController;
   late TextEditingController _phoneController;
   late TextEditingController _emergencyContactController;
 
   @override
   void initState() {
     super.initState();
-    _bioController = TextEditingController();
     _phoneController = TextEditingController();
     _emergencyContactController = TextEditingController();
     
@@ -30,7 +28,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   @override
   void dispose() {
-    _bioController.dispose();
     _phoneController.dispose();
     _emergencyContactController.dispose();
     super.dispose();
@@ -38,12 +35,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   void _updateControllersFromState(UserProfileState state) {
     if (state.user != null) {
-      if (_bioController.text != state.user!.bio) {
-        _bioController.text = state.user!.bio;
-      }
-      
-      // Format phone number by removing +63 prefix if present
-      String formattedPhone = state.user!.phoneNumber;
+      // Format contact number by removing +63 prefix if present
+      String formattedPhone = state.user!.contactNumber;
       if (formattedPhone.startsWith('+63 ')) {
         formattedPhone = formattedPhone.substring(4);
       }
@@ -52,7 +45,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       }
       
       // Format emergency contact by removing +63 prefix if present
-      String formattedEmergency = state.user!.emergencyContact;
+      String formattedEmergency = state.user!.emergencyContactNumber;
       if (formattedEmergency.startsWith('+63 ')) {
         formattedEmergency = formattedEmergency.substring(4);
       }
@@ -62,59 +55,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     }
   }
 
-  void _pickImageFromGallery() {
-    // TODO: Implement image picker from gallery
-    // After setting the image URL, call:
-    // ref.read(userProfileProvider.notifier).updateProfileImageUrl(imageUrl);
-  }
 
-  void _pickImageFromCamera() {
-    // TODO: Implement image picker from camera
-    // After setting the image URL, call:
-    // ref.read(userProfileProvider.notifier).updateProfileImageUrl(imageUrl);
-  }
-
-  void _removeProfilePicture() {
-    ref.read(userProfileProvider.notifier).updateProfileImageUrl('');
-  }
-
-  void _showImagePickerOptions() {
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return SafeArea(
-          child: Wrap(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Choose from Gallery'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickImageFromGallery();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_camera),
-                title: const Text('Take a Photo'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickImageFromCamera();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete),
-                title: const Text('Remove Photo'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _removeProfilePicture();
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -213,46 +154,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         Center(
                           child: Column(
                             children: [
-                              Stack(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 60,
-                                    backgroundColor: Colors.grey[300],
-                                    backgroundImage: profileState.user?.profileImageUrl.isNotEmpty == true
-                                        ? (profileState.user!.profileImageUrl.startsWith('assets/')
-                                            ? AssetImage(profileState.user!.profileImageUrl)
-                                            : NetworkImage(profileState.user!.profileImageUrl))
-                                        : AssetImage('assets/images/aclclogo-nobg.png'),
-                                    child: null,
-                                  ),
-                                  Positioned(
-                                    bottom: 0,
-                                    right: 0,
-                                    child: GestureDetector(
-                                      onTap: _showImagePickerOptions,
-                                      child: Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: Colors.blue[600],
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: Colors.white,
-                                            width: 2,
-                                          ),
-                                        ),
-                                        child: const Icon(
-                                          Icons.camera_alt,
-                                          color: Colors.white,
-                                          size: 20,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                              CircleAvatar(
+                                radius: 60,
+                                backgroundColor: Colors.grey[300],
+                                backgroundImage: const AssetImage('assets/images/aclclogo-nobg.png'),
+                                child: null,
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                profileState.user?.name ?? 'User Name',
+                                profileState.user?.fullName ?? 'User Name',
                                 style: const TextStyle(
                                   fontSize: 24,
                                   fontWeight: FontWeight.bold,
@@ -268,7 +178,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Student ID: ${profileState.user?.studentId ?? 'Not specified'}',
+                                'Student ID: ${profileState.student?.studentId ?? 'Not specified'}',
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: Colors.grey[500],
@@ -324,7 +234,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      profileState.user?.degree ?? 'Not specified',
+                                      profileState.student?.course ?? 'Not specified',
                                       style: const TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w500,
@@ -338,56 +248,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         ),
                         const SizedBox(height: 24),
                         
-                        // Bio Field
+                        // Contact Number Field
                         const Text(
-                          'Bio',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: _bioController,
-                          maxLines: 4,
-                          maxLength: 500,
-                          onChanged: (value) {
-                            ref.read(userProfileProvider.notifier).updateBio(value);
-                          },
-                          decoration: InputDecoration(
-                            hintText: 'Tell us about yourself...',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.grey[300]!),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.grey[300]!),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.blue[600]!),
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                            contentPadding: const EdgeInsets.all(16),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Bio cannot be empty';
-                            }
-                            if (value.trim().length < 10) {
-                              return 'Bio must be at least 10 characters long';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 24),
-                        
-                        // Phone Number Field
-                        const Text(
-                          'Phone Number',
+                          'Contact Number',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -399,7 +262,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           controller: _phoneController,
                           keyboardType: TextInputType.phone,
                           onChanged: (value) {
-                            ref.read(userProfileProvider.notifier).updatePhoneNumber(value);
+                            ref.read(userProfileProvider.notifier).updateContactNumber(value);
                           },
                           decoration: InputDecoration(
                             prefixText: '+63 | ',
@@ -426,22 +289,22 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
-                              return 'Phone number is required';
+                              return 'Contact number is required';
                             }
                             if (!RegExp(r'^\d{3}\s\d{3}\s\d{4}$').hasMatch(value.trim())) {
-                              return 'Please enter a valid phone number (123 456 7890)';
+                              return 'Please enter a valid contact number (123 456 7890)';
                             }
                             if (value.trim() == _emergencyContactController.text.trim()) {
-                              return 'Phone number cannot be the same as emergency contact';
+                              return 'Contact number cannot be the same as emergency contact number';
                             }
                             return null;
                           },
                         ),
                         const SizedBox(height: 24),
                         
-                        // Emergency Contact Field
+                        // Emergency Contact Number Field
                         const Text(
-                          'Emergency Contact',
+                          'Emergency Contact Number',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -453,7 +316,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           controller: _emergencyContactController,
                           keyboardType: TextInputType.phone,
                           onChanged: (value) {
-                            ref.read(userProfileProvider.notifier).updateEmergencyContact(value);
+                            ref.read(userProfileProvider.notifier).updateEmergencyContactNumber(value);
                           },
                           decoration: InputDecoration(
                             prefixText: '+63 | ',
@@ -480,13 +343,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
-                              return 'Emergency contact is required';
+                              return 'Emergency contact number is required';
                             }
                             if (!RegExp(r'^\d{3}\s\d{3}\s\d{4}$').hasMatch(value.trim())) {
-                              return 'Please enter a valid emergency contact (987 654 3210)';
+                              return 'Please enter a valid emergency contact number (987 654 3210)';
                             }
                             if (value.trim() == _phoneController.text.trim()) {
-                              return 'Emergency contact cannot be the same as phone number';
+                              return 'Emergency contact number cannot be the same as contact number';
                             }
                             return null;
                           },

@@ -1,48 +1,49 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user.dart';
-import '../models/mock_data.dart';
+import '../models/student.dart';
+import '../data/mock_data.dart';
 
 // State class to hold user profile data and UI state
 class UserProfileState {
   final User? user;
+  final Student? student;
   final bool isLoading;
   final String? error;
   final bool hasChanges;
-  final String originalBio;
-  final String originalPhone;
-  final String originalEmergencyContact;
-  final String originalProfileImageUrl;
+  final String originalContactNumber;
+  final String originalEmergencyContactNumber;
+
 
   const UserProfileState({
     this.user,
+    this.student,
     this.isLoading = false,
     this.error,
     this.hasChanges = false,
-    this.originalBio = '',
-    this.originalPhone = '',
-    this.originalEmergencyContact = '',
-    this.originalProfileImageUrl = '',
+    this.originalContactNumber = '',
+    this.originalEmergencyContactNumber = '',
+
   });
 
   UserProfileState copyWith({
     User? user,
+    Student? student,
     bool? isLoading,
     String? error,
     bool? hasChanges,
-    String? originalBio,
-    String? originalPhone,
-    String? originalEmergencyContact,
-    String? originalProfileImageUrl,
+    String? originalContactNumber,
+    String? originalEmergencyContactNumber,
+
   }) {
     return UserProfileState(
       user: user ?? this.user,
+      student: student ?? this.student,
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
       hasChanges: hasChanges ?? this.hasChanges,
-      originalBio: originalBio ?? this.originalBio,
-      originalPhone: originalPhone ?? this.originalPhone,
-      originalEmergencyContact: originalEmergencyContact ?? this.originalEmergencyContact,
-      originalProfileImageUrl: originalProfileImageUrl ?? this.originalProfileImageUrl,
+      originalContactNumber: originalContactNumber ?? this.originalContactNumber,
+      originalEmergencyContactNumber: originalEmergencyContactNumber ?? this.originalEmergencyContactNumber,
+
     );
   }
 }
@@ -59,15 +60,17 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
       // This is all early development pa, will be changed once naa nay backend ug DB so mock data sa ta
       await Future.delayed(const Duration(milliseconds: 500));
       
-      final user = DummyData.getUser();
+      // Get user with ID 4 (Jan Rosalijos)
+      final user = MockData.users.firstWhere((u) => u.userId == 4);
+      final student = MockData.students.firstWhere((s) => s.userId == 4);
       
       state = state.copyWith(
         user: user,
+        student: student,
         isLoading: false,
-        originalBio: user.bio,
-        originalPhone: user.phoneNumber,
-        originalEmergencyContact: user.emergencyContact,
-        originalProfileImageUrl: user.profileImageUrl,
+        originalContactNumber: user.contactNumber,
+        originalEmergencyContactNumber: user.emergencyContactNumber,
+
         hasChanges: false,
       );
     } catch (e) {
@@ -78,131 +81,51 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
     }
   }
 
-  // Update bio and check for changes
-  void updateBio(String bio) {
+  // Update contact number and check for changes
+  void updateContactNumber(String contactNumber) {
     if (state.user != null) {
-      final updatedUser = User(
-        id: state.user!.id,
-        name: state.user!.name,
-        email: state.user!.email,
-        studentId: state.user!.studentId,
-        courses: state.user!.courses,
-        notifications: state.user!.notifications,
-        bio: bio,
-        phoneNumber: state.user!.phoneNumber,
-        emergencyContact: state.user!.emergencyContact,
-        profileImageUrl: state.user!.profileImageUrl,
-        degree: state.user!.degree,
-      );
-      
-      state = state.copyWith(
-        user: updatedUser,
-        hasChanges: _checkForChanges(
-          bio: bio,
-          phone: state.user!.phoneNumber,
-          emergencyContact: state.user!.emergencyContact,
-          profileImageUrl: state.user!.profileImageUrl,
-        ),
-      );
-    }
-  }
-
-  // Update phone number and check for changes
-  void updatePhoneNumber(String phoneNumber) {
-    if (state.user != null) {
-      String formattedPhone = phoneNumber.trim();
+      String formattedPhone = contactNumber.trim();
       if (!formattedPhone.startsWith('+63 ') && formattedPhone.isNotEmpty) {
         formattedPhone = '+63 $formattedPhone';
       }
       
-      final updatedUser = User(
-        id: state.user!.id,
-        name: state.user!.name,
-        email: state.user!.email,
-        studentId: state.user!.studentId,
-        courses: state.user!.courses,
-        notifications: state.user!.notifications,
-        bio: state.user!.bio,
-        phoneNumber: formattedPhone,
-        emergencyContact: state.user!.emergencyContact,
-        profileImageUrl: state.user!.profileImageUrl,
-        degree: state.user!.degree,
+      final updatedUser = state.user!.copyWith(
+        contactNumber: formattedPhone,
       );
       
       state = state.copyWith(
         user: updatedUser,
         hasChanges: _checkForChanges(
-          bio: state.user!.bio,
-          phone: formattedPhone,
-          emergencyContact: state.user!.emergencyContact,
-          profileImageUrl: state.user!.profileImageUrl,
+          contactNumber: formattedPhone,
+          emergencyContactNumber: updatedUser.emergencyContactNumber,
         ),
       );
     }
   }
 
-  // Update emergency contact and check for changes
-  void updateEmergencyContact(String emergencyContact) {
+  // Update emergency contact number and check for changes
+  void updateEmergencyContactNumber(String emergencyContactNumber) {
     if (state.user != null) {
-      String formattedEmergency = emergencyContact.trim();
+      String formattedEmergency = emergencyContactNumber.trim();
       if (!formattedEmergency.startsWith('+63 ') && formattedEmergency.isNotEmpty) {
         formattedEmergency = '+63 $formattedEmergency';
       }
       
-      final updatedUser = User(
-        id: state.user!.id,
-        name: state.user!.name,
-        email: state.user!.email,
-        studentId: state.user!.studentId,
-        courses: state.user!.courses,
-        notifications: state.user!.notifications,
-        bio: state.user!.bio,
-        phoneNumber: state.user!.phoneNumber,
-        emergencyContact: formattedEmergency,
-        profileImageUrl: state.user!.profileImageUrl,
-        degree: state.user!.degree,
+      final updatedUser = state.user!.copyWith(
+        emergencyContactNumber: formattedEmergency,
       );
       
       state = state.copyWith(
         user: updatedUser,
         hasChanges: _checkForChanges(
-          bio: state.user!.bio,
-          phone: state.user!.phoneNumber,
-          emergencyContact: formattedEmergency,
-          profileImageUrl: state.user!.profileImageUrl,
+          contactNumber: updatedUser.contactNumber,
+          emergencyContactNumber: formattedEmergency,
         ),
       );
     }
   }
 
-  // Update profile image URL and check for changes
-  void updateProfileImageUrl(String profileImageUrl) {
-    if (state.user != null) {
-      final updatedUser = User(
-        id: state.user!.id,
-        name: state.user!.name,
-        email: state.user!.email,
-        studentId: state.user!.studentId,
-        courses: state.user!.courses,
-        notifications: state.user!.notifications,
-        bio: state.user!.bio,
-        phoneNumber: state.user!.phoneNumber,
-        emergencyContact: state.user!.emergencyContact,
-        profileImageUrl: profileImageUrl,
-        degree: state.user!.degree,
-      );
-      
-      state = state.copyWith(
-        user: updatedUser,
-        hasChanges: _checkForChanges(
-          bio: state.user!.bio,
-          phone: state.user!.phoneNumber,
-          emergencyContact: state.user!.emergencyContact,
-          profileImageUrl: profileImageUrl,
-        ),
-      );
-    }
-  }
+
 
   // Save profile changes
   Future<void> saveProfile() async {
@@ -216,10 +139,9 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
       state = state.copyWith(
         isLoading: false,
         hasChanges: false,
-        originalBio: state.user!.bio,
-        originalPhone: state.user!.phoneNumber,
-        originalEmergencyContact: state.user!.emergencyContact,
-        originalProfileImageUrl: state.user!.profileImageUrl,
+        originalContactNumber: state.user!.contactNumber,
+        originalEmergencyContactNumber: state.user!.emergencyContactNumber,
+
       );
     } catch (e) {
       state = state.copyWith(
@@ -231,32 +153,19 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
 
   // Check if any field has changed from original values
   bool _checkForChanges({
-    required String bio,
-    required String phone,
-    required String emergencyContact,
-    required String profileImageUrl,
+    required String contactNumber,
+    required String emergencyContactNumber,
   }) {
-    return bio != state.originalBio ||
-           phone != state.originalPhone ||
-           emergencyContact != state.originalEmergencyContact ||
-           profileImageUrl != state.originalProfileImageUrl;
+    return contactNumber != state.originalContactNumber ||
+           emergencyContactNumber != state.originalEmergencyContactNumber;
   }
 
   // Reset to original values
   void resetChanges() {
     if (state.user != null) {
-      final resetUser = User(
-        id: state.user!.id,
-        name: state.user!.name,
-        studentId: state.user!.studentId,
-        courses: state.user!.courses,
-        notifications: state.user!.notifications,
-        email: state.user!.email,
-        bio: state.originalBio,
-        phoneNumber: state.originalPhone,
-        emergencyContact: state.originalEmergencyContact,
-        profileImageUrl: state.originalProfileImageUrl,
-        degree: state.user!.degree,
+      final resetUser = state.user!.copyWith(
+        contactNumber: state.originalContactNumber,
+        emergencyContactNumber: state.originalEmergencyContactNumber,
       );
       
       state = state.copyWith(

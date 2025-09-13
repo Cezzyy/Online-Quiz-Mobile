@@ -16,15 +16,15 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _tabs = [
-    const HomeTab(),
-    const CoursesTab(),
-    const QuizTab(),
-    const ResultsTab(),
-    const ProfileTab(),
+  static const List<Widget> _tabs = [
+    HomeTab(),
+    CoursesTab(),
+    QuizTab(),
+    ResultsTab(),
+    ProfileTab(),
   ];
 
-  final List<String> _tabTitles = [
+  static const List<String> _tabTitles = [
     'Home',
     'Courses',
     'Quiz',
@@ -69,7 +69,10 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ],
       ),
-      body: _tabs[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _tabs,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         currentIndex: _currentIndex,

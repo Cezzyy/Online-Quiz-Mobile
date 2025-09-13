@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../models/quiz.dart';
-import '../../models/quiz_result.dart';
 import '../../models/course.dart';
-import '../../models/mock_data.dart';
+import '../../models/attempt.dart';
+import '../../data/mock_data.dart';
 import '../quizzes/quiz_result_screen.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/filter_tab_widget.dart';
@@ -106,10 +106,10 @@ class _ResultsTabState extends State<ResultsTab> {
   Widget _buildStatsOverview(List<QuizResultWithDetails> allResults) {
     final totalQuizzes = allResults.length;
     final averageScore = totalQuizzes > 0 
-        ? allResults.map((r) => r.result.percentage).reduce((a, b) => a + b) / totalQuizzes
+        ? allResults.map((r) => r.percentage).reduce((a, b) => a + b) / totalQuizzes
         : 0.0;
-    final excellentCount = allResults.where((r) => r.result.percentage >= 90).length;
-    final goodCount = allResults.where((r) => r.result.percentage >= 75 && r.result.percentage < 90).length;
+    final excellentCount = allResults.where((r) => r.percentage >= 90).length;
+    final goodCount = allResults.where((r) => r.percentage >= 75 && r.percentage < 90).length;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -186,10 +186,10 @@ class _ResultsTabState extends State<ResultsTab> {
   }
 
   Widget _buildResultCard(QuizResultWithDetails resultDetails) {
-    final result = resultDetails.result;
+    final attempt = resultDetails.attempt;
     final quiz = resultDetails.quiz;
     final course = resultDetails.course;
-    final percentage = result.percentage;
+    final percentage = resultDetails.percentage;
     
     Color scoreColor;
     String grade;
@@ -215,16 +215,17 @@ class _ResultsTabState extends State<ResultsTab> {
 
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => QuizResultScreen(
-              quiz: quiz,
-              course: course,
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => QuizResultScreen(
+                quiz: quiz,
+                course: course,
+                attempt: attempt,
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
@@ -311,17 +312,17 @@ class _ResultsTabState extends State<ResultsTab> {
                 _buildDetailItem(
                   Icons.check_circle_outline,
                   'Score',
-                  '${result.correctAnswers}/${result.totalQuestions}',
+                  '${resultDetails.correctAnswers}/${resultDetails.totalQuestions}',
                 ),
                 _buildDetailItem(
-                  Icons.access_time,
-                  'Time',
-                  '${result.timeSpent} min',
-                ),
+                   Icons.access_time,
+                   'Time',
+                   '${(attempt.timeSpentSeconds ?? 0) ~/ 60} min',
+                 ),
                 _buildDetailItem(
                   Icons.calendar_today,
                   'Completed',
-                  _formatDate(result.completedAt),
+                  _formatDate(attempt.submittedAt!),
                 ),
               ],
             ),
@@ -424,21 +425,41 @@ class _ResultsTabState extends State<ResultsTab> {
 
   List<QuizResultWithDetails> _getAllQuizResults() {
     final List<QuizResultWithDetails> allResults = [];
+    const int currentUserId = 4; // Default student user
     
-    for (final course in DummyData.getUser().courses) {
-      for (final quiz in course.quizzes) {
-        if (quiz.isCompleted && quiz.result != null) {
-          allResults.add(QuizResultWithDetails(
-            result: quiz.result!,
-            quiz: quiz,
-            course: course,
-          ));
-        }
+    // Get all completed attempts for the current user
+    final completedAttempts = MockData.getAttemptsByUser(currentUserId)
+        .where((attempt) => attempt.submittedAt != null)
+        .toList();
+    
+    for (final attempt in completedAttempts) {
+      final quiz = MockData.getQuizById(attempt.quizId);
+      final course = quiz != null ? MockData.getCourseById(quiz.courseId) : null;
+      
+      if (quiz != null && course != null) {
+        // Calculate quiz results
+        final questions = MockData.getQuestionsByQuiz(quiz.quizId);
+        final totalQuestions = questions.length;
+        final totalPoints = questions.fold<double>(0.0, (sum, q) => sum + q.points);
+        final percentage = totalPoints > 0 ? (attempt.score / totalPoints) * 100 : 0.0;
+        
+        // Calculate correct answers
+        final attemptAnswers = MockData.getAnswersByAttempt(attempt.attemptId);
+        final correctAnswers = attemptAnswers.where((answer) => answer.isCorrect == true).length;
+        
+        allResults.add(QuizResultWithDetails(
+          attempt: attempt,
+          quiz: quiz,
+          course: course,
+          percentage: percentage,
+          correctAnswers: correctAnswers,
+          totalQuestions: totalQuestions,
+        ));
       }
     }
     
     // Sort by completion date (most recent first)
-    allResults.sort((a, b) => b.result.completedAt.compareTo(a.result.completedAt));
+    allResults.sort((a, b) => b.attempt.submittedAt!.compareTo(a.attempt.submittedAt!));
     
     return allResults;
   }
@@ -446,13 +467,13 @@ class _ResultsTabState extends State<ResultsTab> {
   List<QuizResultWithDetails> _getFilteredResults(List<QuizResultWithDetails> allResults) {
     switch (_selectedFilter) {
       case 'Excellent':
-        return allResults.where((r) => r.result.percentage >= 90).toList();
+        return allResults.where((r) => r.percentage >= 90).toList();
       case 'Good':
-        return allResults.where((r) => r.result.percentage >= 75 && r.result.percentage < 90).toList();
+        return allResults.where((r) => r.percentage >= 75 && r.percentage < 90).toList();
       case 'Fair':
-        return allResults.where((r) => r.result.percentage >= 60 && r.result.percentage < 75).toList();
+        return allResults.where((r) => r.percentage >= 60 && r.percentage < 75).toList();
       case 'Poor':
-        return allResults.where((r) => r.result.percentage < 60).toList();
+        return allResults.where((r) => r.percentage < 60).toList();
       default:
         return allResults;
     }
@@ -475,13 +496,19 @@ class _ResultsTabState extends State<ResultsTab> {
 }
 
 class QuizResultWithDetails {
-  final QuizResult result;
+  final Attempt attempt;
   final Quiz quiz;
   final Course course;
+  final double percentage;
+  final int correctAnswers;
+  final int totalQuestions;
 
   QuizResultWithDetails({
-    required this.result,
+    required this.attempt,
     required this.quiz,
     required this.course,
+    required this.percentage,
+    required this.correctAnswers,
+    required this.totalQuestions,
   });
 }

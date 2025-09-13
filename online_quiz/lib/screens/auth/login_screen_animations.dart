@@ -37,22 +37,19 @@ mixin LoginScreenAnimations<T extends StatefulWidget> on State<T>, TickerProvide
 
   /// Run the actual staggered animation sequence
   void _runStaggeredAnimations() async {
-    // Add a small delay to ensure smooth transition from previous screen
-    await Future.delayed(const Duration(milliseconds: 100));
-    
-    // Start animations with delays for staggered effect
+    // Start animations with minimal delays for better performance
     logoController.forward();
     
-    await Future.delayed(const Duration(milliseconds: 200));
+    await Future.delayed(const Duration(milliseconds: 100));
     titleController.forward();
     
-    await Future.delayed(const Duration(milliseconds: 200));
+    await Future.delayed(const Duration(milliseconds: 100));
     subtitleController.forward();
     
-    await Future.delayed(const Duration(milliseconds: 300));
+    await Future.delayed(const Duration(milliseconds: 150));
     formController.forward();
     
-    await Future.delayed(const Duration(milliseconds: 200));
+    await Future.delayed(const Duration(milliseconds: 100));
     forgotPasswordController.forward();
   }
 

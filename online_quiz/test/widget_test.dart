@@ -7,13 +7,18 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:online_quiz/main.dart';
 
 void main() {
   testWidgets('ACLC Quiz App smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const ACLCQuizApp());
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: ACLCQuizApp(),
+      ),
+    );
 
     // Wait for any animations to complete
     await tester.pumpAndSettle();
