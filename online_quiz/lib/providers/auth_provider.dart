@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/new_user.dart';
-import '../data/new_mock_data.dart';
+import '../models/user.dart';
+import '../data/mock_data.dart';
 
 // Authentication state class
 class AuthState {
@@ -76,7 +76,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await Future.delayed(const Duration(milliseconds: 300));
       
       // Validate credentials (mock data for early development)
-      final user = NewMockData.getUserByCredentials(username, password);
+      final user = MockData.getUserByCredentials(username, password);
       
       if (user != null) {
         // Update state with authenticated user
@@ -143,7 +143,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   User? get currentUser => state.user;
 
   // Get available mock credentials for development
-  static Map<String, Map<String, dynamic>> get mockCredentials => NewMockData.mockCredentials;
+  static Map<String, Map<String, dynamic>> get mockCredentials => MockData.mockCredentials;
 }
 
 // Auth provider

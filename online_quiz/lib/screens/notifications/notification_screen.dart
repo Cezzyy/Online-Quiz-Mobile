@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../data/new_mock_data.dart';
-import '../../models/new_notification.dart' as model;
+import '../../data/mock_data.dart';
+import '../../models/notification.dart' as model;
 import '../../widgets/empty_state_widget.dart';
 
 class NotificationScreen extends StatefulWidget {
@@ -24,7 +24,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   void _loadNotifications() {
-    final allNotifications = NewMockData.getNotificationsByUser(currentUserId);
+    final allNotifications = MockData.getNotificationsByUser(currentUserId);
     unreadNotifications = allNotifications.where((n) => !n.isRead).toList();
     readNotifications = allNotifications.where((n) => n.isRead).toList();
   }

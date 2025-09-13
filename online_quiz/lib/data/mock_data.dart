@@ -1,19 +1,19 @@
-import '../models/new_user.dart';
-import '../models/new_role.dart';
-import '../models/new_user_role.dart';
-import '../models/new_teacher.dart';
-import '../models/new_student.dart';
-import '../models/new_course.dart';
-import '../models/new_enrollment.dart';
-import '../models/new_quiz.dart';
-import '../models/new_question.dart';
-import '../models/new_choice.dart';
-import '../models/new_attempt.dart';
-import '../models/new_attempt_answer.dart';
-import '../models/new_notification.dart';
-import '../models/new_export_import_log.dart';
+import '../models/user.dart';
+import '../models/role.dart';
+import '../models/user_role.dart';
+import '../models/teacher.dart';
+import '../models/student.dart';
+import '../models/course.dart';
+import '../models/enrollment.dart';
+import '../models/quiz.dart';
+import '../models/question.dart';
+import '../models/choice.dart';
+import '../models/attempt.dart';
+import '../models/attempt_answer.dart';
+import '../models/notification.dart';
+import '../models/export_import_log.dart';
 
-class NewMockData {
+class MockData {
   // Users
   static final List<User> users = [
     User(

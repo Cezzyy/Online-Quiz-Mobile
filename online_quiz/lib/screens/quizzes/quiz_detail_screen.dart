@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../models/new_quiz.dart';
-import '../../models/new_course.dart';
-import '../../models/new_attempt.dart';
-import '../../data/new_mock_data.dart';
+import '../../models/quiz.dart';
+import '../../models/course.dart';
+import '../../models/attempt.dart';
+import '../../data/mock_data.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/info_card.dart';
 
@@ -20,7 +20,7 @@ class QuizDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final attempt = NewMockData.getAttemptsByQuiz(quiz.quizId)
+    final attempt = MockData.getAttemptsByQuiz(quiz.quizId)
         .where((a) => a.userId == currentUserId && a.submittedAt != null)
         .cast<Attempt?>()
         .firstOrNull;
@@ -168,8 +168,8 @@ class QuizDetailScreen extends StatelessWidget {
   }
 
   Widget _buildQuizInfo() {
-    final questions = NewMockData.getQuestionsByQuiz(quiz.quizId);
-    final instructor = course != null ? NewMockData.getUserById(course!.instructorUserId) : null;
+    final questions = MockData.getQuestionsByQuiz(quiz.quizId);
+    final instructor = course != null ? MockData.getUserById(course!.instructorUserId) : null;
     
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -237,8 +237,8 @@ class QuizDetailScreen extends StatelessWidget {
 
 
   Widget _buildQuizStats() {
-    final questions = NewMockData.getQuestionsByQuiz(quiz.quizId);
-    final attempt = NewMockData.getAttemptsByQuiz(quiz.quizId)
+    final questions = MockData.getQuestionsByQuiz(quiz.quizId);
+    final attempt = MockData.getAttemptsByQuiz(quiz.quizId)
         .where((a) => a.userId == currentUserId && a.submittedAt != null)
         .cast<Attempt?>()
         .firstOrNull;
@@ -309,7 +309,7 @@ class QuizDetailScreen extends StatelessWidget {
 
 
   Widget _buildResultSection(Attempt attempt) {
-    final questions = NewMockData.getQuestionsByQuiz(quiz.quizId);
+    final questions = MockData.getQuestionsByQuiz(quiz.quizId);
     final totalPoints = questions.fold<int>(0, (sum, q) => sum + q.points.toInt());
     final percentage = totalPoints > 0 ? (attempt.score / totalPoints) * 100 : 0.0;
     
@@ -629,7 +629,7 @@ class QuizDetailScreen extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Questions: ${NewMockData.getQuestionsByQuiz(quiz.quizId).length}',
+                          'Questions: ${MockData.getQuestionsByQuiz(quiz.quizId).length}',
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             color: Colors.orange.shade700,

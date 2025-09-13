@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../data/new_mock_data.dart';
+import '../../data/mock_data.dart';
 import 'edit_profile_screen.dart';
 import '../settings/settings_screen.dart';
 
@@ -9,8 +9,8 @@ class ProfileTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Get the student user (Jan Rosalijos - userId: 4)
-    final user = NewMockData.users.firstWhere((u) => u.userId == 4);
-    final student = NewMockData.students.firstWhere((s) => s.userId == 4);
+    final user = MockData.users.firstWhere((u) => u.userId == 4);
+    final student = MockData.students.firstWhere((s) => s.userId == 4);
 
     return Scaffold(
       body: SingleChildScrollView(

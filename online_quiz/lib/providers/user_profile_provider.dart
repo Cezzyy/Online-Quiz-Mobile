@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/new_user.dart';
-import '../models/new_student.dart';
-import '../data/new_mock_data.dart';
+import '../models/user.dart';
+import '../models/student.dart';
+import '../data/mock_data.dart';
 
 // State class to hold user profile data and UI state
 class UserProfileState {
@@ -61,8 +61,8 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
       await Future.delayed(const Duration(milliseconds: 500));
       
       // Get user with ID 4 (Jan Rosalijos)
-      final user = NewMockData.users.firstWhere((u) => u.userId == 4);
-      final student = NewMockData.students.firstWhere((s) => s.userId == 4);
+      final user = MockData.users.firstWhere((u) => u.userId == 4);
+      final student = MockData.students.firstWhere((s) => s.userId == 4);
       
       state = state.copyWith(
         user: user,

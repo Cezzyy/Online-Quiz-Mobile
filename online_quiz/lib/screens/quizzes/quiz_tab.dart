@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../models/new_quiz.dart';
-import '../../models/new_course.dart';
-import '../../models/new_user.dart';
-import '../../data/new_mock_data.dart';
+import '../../models/quiz.dart';
+import '../../models/course.dart';
+import '../../models/user.dart';
+import '../../data/mock_data.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/filter_tab_widget.dart';
 import 'quiz_detail_screen.dart';
@@ -23,7 +23,7 @@ class _QuizTabState extends State<QuizTab> {
 
   @override
   Widget build(BuildContext context) {
-    final User user = NewMockData.getUserById(int.parse(currentUserId.replaceAll('user_', '')))!;
+    final User user = MockData.getUserById(int.parse(currentUserId.replaceAll('user_', '')))!;
     final List<Quiz> allQuizzes = _getAllQuizzes(user);
     final List<Quiz> filteredQuizzes = _getFilteredQuizzes(allQuizzes);
 
@@ -105,7 +105,7 @@ class _QuizTabState extends State<QuizTab> {
 
   Widget _buildQuizStats(List<Quiz> allQuizzes) {
     final completedCount = allQuizzes.where((quiz) {
-      final attempts = NewMockData.getAttemptsByQuiz(quiz.quizId);
+      final attempts = MockData.getAttemptsByQuiz(quiz.quizId);
       return attempts.any((a) => a.userId == int.parse(currentUserId.replaceAll('user_', '')) && a.submittedAt != null);
     }).length;
     final pendingCount = allQuizzes.length - completedCount;
@@ -221,7 +221,7 @@ class _QuizTabState extends State<QuizTab> {
   }
 
   Widget _buildQuizCard(Quiz quiz, Course? course) {
-    final attempts = NewMockData.getAttemptsByQuiz(quiz.quizId);
+    final attempts = MockData.getAttemptsByQuiz(quiz.quizId);
     final completedAttempt = attempts.where((a) => a.userId == int.parse(currentUserId.replaceAll('user_', '')) && a.submittedAt != null).firstOrNull;
     final isCompleted = completedAttempt != null;
     final isOverdue = !isCompleted && quiz.isOverdue;
@@ -334,7 +334,7 @@ class _QuizTabState extends State<QuizTab> {
                 // Quiz Details
                 Row(
                   children: [
-                    _buildDetailItem(Icons.help_outline, '${NewMockData.getQuestionsByQuiz(quiz.quizId).length} Questions'),
+                    _buildDetailItem(Icons.help_outline, '${MockData.getQuestionsByQuiz(quiz.quizId).length} Questions'),
                     const SizedBox(width: 20),
                     _buildDetailItem(Icons.timer_outlined, quiz.hasTimeLimit ? '${quiz.timeLimitMinutes} min' : 'No limit'),
                     const SizedBox(width: 20),
@@ -360,7 +360,7 @@ class _QuizTabState extends State<QuizTab> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Score: ${completedAttempt.score.toInt()}/${NewMockData.getQuestionsByQuiz(quiz.quizId).fold<int>(0, (sum, q) => sum + q.points.toInt())} (${((completedAttempt.score / NewMockData.getQuestionsByQuiz(quiz.quizId).fold<int>(0, (sum, q) => sum + q.points.toInt())) * 100).toStringAsFixed(1)}%)',
+                          'Score: ${completedAttempt.score.toInt()}/${MockData.getQuestionsByQuiz(quiz.quizId).fold<int>(0, (sum, q) => sum + q.points.toInt())} (${((completedAttempt.score / MockData.getQuestionsByQuiz(quiz.quizId).fold<int>(0, (sum, q) => sum + q.points.toInt())) * 100).toStringAsFixed(1)}%)',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -404,8 +404,8 @@ class _QuizTabState extends State<QuizTab> {
   }
 
   List<Quiz> _getAllQuizzes(User user) {
-    // Get all quizzes from NewMockData
-    List<Quiz> allQuizzes = NewMockData.quizzes;
+    // Get all quizzes from MockData
+    List<Quiz> allQuizzes = MockData.quizzes;
     
     // Sort by due date (earliest first, null dates last)
     allQuizzes.sort((a, b) {
@@ -477,7 +477,7 @@ class _QuizTabState extends State<QuizTab> {
     
     // Helper function to check if quiz is completed by current user
     bool isQuizCompleted(Quiz quiz) {
-      final attempts = NewMockData.getAttemptsByQuiz(quiz.quizId);
+      final attempts = MockData.getAttemptsByQuiz(quiz.quizId);
       return attempts.any((a) => a.userId == int.parse(currentUserId.replaceAll('user_', '')) && a.submittedAt != null);
     }
     
@@ -510,10 +510,10 @@ class _QuizTabState extends State<QuizTab> {
       if (_selectedFilter == 'All') {
         final completedQuizzes = filtered.where((quiz) => isQuizCompleted(quiz)).toList();
         completedQuizzes.sort((a, b) {
-          final attemptA = NewMockData.getAttemptsByQuiz(a.quizId)
+          final attemptA = MockData.getAttemptsByQuiz(a.quizId)
             .where((att) => att.userId == int.parse(currentUserId.replaceAll('user_', '')) && att.submittedAt != null)
             .firstOrNull;
-        final attemptB = NewMockData.getAttemptsByQuiz(b.quizId)
+        final attemptB = MockData.getAttemptsByQuiz(b.quizId)
             .where((att) => att.userId == int.parse(currentUserId.replaceAll('user_', '')) && att.submittedAt != null)
             .firstOrNull;
           if (attemptA?.submittedAt == null || attemptB?.submittedAt == null) return 0;
@@ -525,10 +525,10 @@ class _QuizTabState extends State<QuizTab> {
       }
     } else if (_selectedFilter == 'Completed') {
       filtered.sort((a, b) {
-        final attemptA = NewMockData.getAttemptsByQuiz(a.quizId)
+        final attemptA = MockData.getAttemptsByQuiz(a.quizId)
             .where((att) => att.userId == int.parse(currentUserId.replaceAll('user_', '')) && att.submittedAt != null)
             .firstOrNull;
-        final attemptB = NewMockData.getAttemptsByQuiz(b.quizId)
+        final attemptB = MockData.getAttemptsByQuiz(b.quizId)
             .where((att) => att.userId == int.parse(currentUserId.replaceAll('user_', '')) && att.submittedAt != null)
             .firstOrNull;
         if (attemptA?.submittedAt == null || attemptB?.submittedAt == null) return 0;
@@ -540,7 +540,7 @@ class _QuizTabState extends State<QuizTab> {
   }
 
   Course? _getCourseForQuiz(Quiz quiz, User user) {
-    return NewMockData.getCourseById(quiz.courseId);
+    return MockData.getCourseById(quiz.courseId);
   }
 
   String _formatDate(DateTime date) {

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../models/new_course.dart';
-import '../../data/new_mock_data.dart';
-import '../../models/new_attempt.dart';
-import '../../models/new_user.dart';
+import '../../models/course.dart';
+import '../../data/mock_data.dart';
+import '../../models/attempt.dart';
+import '../../models/user.dart';
 import '../../widgets/stat_card.dart';
 
 class HomeTab extends StatelessWidget {
@@ -10,8 +10,8 @@ class HomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = NewMockData.users.firstWhere((u) => u.userId == 4); // Get first student for demo
-    // final student = NewMockData.students.where((s) => s.userId == user.userId).firstOrNull;
+    final user = MockData.users.firstWhere((u) => u.userId == 4); // Get first student for demo
+    // final student = MockData.students.where((s) => s.userId == user.userId).firstOrNull;
     final userCourses = _getUserCourses(user.userId);
     final completedAttempts = _getCompletedAttempts(user.userId);
     final totalQuizzes = _getTotalQuizzes(userCourses);
@@ -148,7 +148,7 @@ class HomeTab extends StatelessWidget {
               child: StatCard(
                 icon: Icons.school_outlined,
                 title: 'Courses',
-                value: NewMockData.enrollments.where((e) => e.userId == 4).length.toString(),
+                value: MockData.enrollments.where((e) => e.userId == 4).length.toString(),
                 color: Colors.purple,
               ),
             ),
@@ -189,8 +189,8 @@ class HomeTab extends StatelessWidget {
           ),
           child: Column(
             children: userCourses.take(3).map((course) {
-              final courseQuizzes = NewMockData.quizzes.where((q) => q.courseId == course.courseId).toList();
-              final completedAttempts = NewMockData.attempts.where((a) => 
+              final courseQuizzes = MockData.quizzes.where((q) => q.courseId == course.courseId).toList();
+              final completedAttempts = MockData.attempts.where((a) => 
                 courseQuizzes.any((q) => q.quizId == a.quizId) && a.submittedAt != null
               ).length;
               final totalQuizzes = courseQuizzes.length;
@@ -278,7 +278,7 @@ class HomeTab extends StatelessWidget {
           ),
           child: Column(
             children: recentAttempts.take(3).map((attempt) {
-              final quiz = NewMockData.quizzes.firstWhere((q) => q.quizId == attempt.quizId);
+              final quiz = MockData.quizzes.firstWhere((q) => q.quizId == attempt.quizId);
               final score = attempt.score;
               
               return Padding(
@@ -338,14 +338,14 @@ class HomeTab extends StatelessWidget {
   }
   
   List<Course> _getUserCourses(int userId) {
-    final enrollments = NewMockData.enrollments.where((e) => e.userId == userId).toList();
+    final enrollments = MockData.enrollments.where((e) => e.userId == userId).toList();
     return enrollments.map((enrollment) => 
-      NewMockData.courses.firstWhere((c) => c.courseId == enrollment.courseId)
+      MockData.courses.firstWhere((c) => c.courseId == enrollment.courseId)
     ).toList();
   }
   
   List<Attempt> _getCompletedAttempts(int userId) {
-    return NewMockData.attempts.where((a) => 
+    return MockData.attempts.where((a) => 
       a.userId == userId && a.submittedAt != null
     ).toList();
   }
@@ -353,7 +353,7 @@ class HomeTab extends StatelessWidget {
   int _getTotalQuizzes(List<Course> userCourses) {
     int total = 0;
     for (var course in userCourses) {
-      total += NewMockData.quizzes.where((q) => q.courseId == course.courseId).length;
+      total += MockData.quizzes.where((q) => q.courseId == course.courseId).length;
     }
     return total;
   }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../data/new_mock_data.dart';
-import '../../models/new_course.dart';
+import '../../data/mock_data.dart';
+import '../../models/course.dart';
 import 'course_detail_screen.dart';
 import '../../widgets/empty_state_widget.dart';
 
@@ -9,7 +9,7 @@ class CoursesTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = NewMockData.users.firstWhere((u) => u.userId == 4); // Get first student for demo
+    final user = MockData.users.firstWhere((u) => u.userId == 4); // Get first student for demo
     final userCourses = _getUserCourses(user.userId);
     
     return Scaffold(
@@ -80,13 +80,13 @@ class CoursesTab extends StatelessWidget {
   }
   
   Widget _buildCourseCard(BuildContext context, Course course) {
-    final courseQuizzes = NewMockData.quizzes.where((q) => q.courseId == course.courseId).toList();
-    final completedAttempts = NewMockData.attempts.where((a) => 
+    final courseQuizzes = MockData.quizzes.where((q) => q.courseId == course.courseId).toList();
+    final completedAttempts = MockData.attempts.where((a) => 
       courseQuizzes.any((q) => q.quizId == a.quizId) && a.submittedAt != null
     ).length;
     final totalQuizzes = courseQuizzes.length;
     final progress = totalQuizzes > 0 ? completedAttempts / totalQuizzes : 0.0;
-    final teacherUser = NewMockData.users.where((u) => u.userId == course.instructorUserId).firstOrNull;
+    final teacherUser = MockData.users.where((u) => u.userId == course.instructorUserId).firstOrNull;
     
     return GestureDetector(
       onTap: () {
@@ -226,9 +226,9 @@ class CoursesTab extends StatelessWidget {
   }
   
   List<Course> _getUserCourses(int userId) {
-    final enrollments = NewMockData.enrollments.where((e) => e.userId == userId).toList();
+    final enrollments = MockData.enrollments.where((e) => e.userId == userId).toList();
     return enrollments.map((enrollment) => 
-      NewMockData.courses.firstWhere((c) => c.courseId == enrollment.courseId)
+      MockData.courses.firstWhere((c) => c.courseId == enrollment.courseId)
     ).toList();
   }
   

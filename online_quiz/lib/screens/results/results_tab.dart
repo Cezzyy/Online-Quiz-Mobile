@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../models/new_quiz.dart';
-import '../../models/new_course.dart';
-import '../../models/new_attempt.dart';
-import '../../data/new_mock_data.dart';
+import '../../models/quiz.dart';
+import '../../models/course.dart';
+import '../../models/attempt.dart';
+import '../../data/mock_data.dart';
 import '../quizzes/quiz_result_screen.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/filter_tab_widget.dart';
@@ -428,23 +428,23 @@ class _ResultsTabState extends State<ResultsTab> {
     const int currentUserId = 4; // Default student user
     
     // Get all completed attempts for the current user
-    final completedAttempts = NewMockData.getAttemptsByUser(currentUserId)
+    final completedAttempts = MockData.getAttemptsByUser(currentUserId)
         .where((attempt) => attempt.submittedAt != null)
         .toList();
     
     for (final attempt in completedAttempts) {
-      final quiz = NewMockData.getQuizById(attempt.quizId);
-      final course = quiz != null ? NewMockData.getCourseById(quiz.courseId) : null;
+      final quiz = MockData.getQuizById(attempt.quizId);
+      final course = quiz != null ? MockData.getCourseById(quiz.courseId) : null;
       
       if (quiz != null && course != null) {
         // Calculate quiz results
-        final questions = NewMockData.getQuestionsByQuiz(quiz.quizId);
+        final questions = MockData.getQuestionsByQuiz(quiz.quizId);
         final totalQuestions = questions.length;
         final totalPoints = questions.fold<double>(0.0, (sum, q) => sum + q.points);
         final percentage = totalPoints > 0 ? (attempt.score / totalPoints) * 100 : 0.0;
         
         // Calculate correct answers
-        final attemptAnswers = NewMockData.getAnswersByAttempt(attempt.attemptId);
+        final attemptAnswers = MockData.getAnswersByAttempt(attempt.attemptId);
         final correctAnswers = attemptAnswers.where((answer) => answer.isCorrect == true).length;
         
         allResults.add(QuizResultWithDetails(

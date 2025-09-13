@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../data/new_mock_data.dart';
-import '../../models/new_course.dart';
-import '../../models/new_quiz.dart';
-import '../../models/new_teacher.dart';
-import '../../models/new_user.dart';
+import '../../data/mock_data.dart';
+import '../../models/course.dart';
+import '../../models/quiz.dart';
+import '../../models/teacher.dart';
+import '../../models/user.dart';
 
 class CourseDetailScreen extends StatelessWidget {
   final Course course;
@@ -12,9 +12,9 @@ class CourseDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final courseQuizzes = NewMockData.quizzes.where((q) => q.courseId == course.courseId).toList();
+    final courseQuizzes = MockData.quizzes.where((q) => q.courseId == course.courseId).toList();
     final completedQuizzes = courseQuizzes.where((quiz) => 
-      NewMockData.attempts.any((a) => a.quizId == quiz.quizId && a.submittedAt != null)
+      MockData.attempts.any((a) => a.quizId == quiz.quizId && a.submittedAt != null)
     ).length;
     final totalQuizzes = courseQuizzes.length;
     final progress = totalQuizzes > 0 ? completedQuizzes / totalQuizzes : 0.0;
@@ -47,14 +47,14 @@ class CourseDetailScreen extends StatelessWidget {
   }
   
   Widget _buildCourseHeader(double progress, int completedQuizzes, int totalQuizzes) {
-    final teacher = NewMockData.teachers.firstWhere(
+    final teacher = MockData.teachers.firstWhere(
       (t) => t.userId == course.instructorUserId,
       orElse: () => Teacher(
         userId: 0,
         department: 'Unknown Department',
       ),
     );
-    final teacherUser = NewMockData.users.firstWhere(
+    final teacherUser = MockData.users.firstWhere(
       (u) => u.userId == teacher.userId,
       orElse: () => User(
         userId: 0,
@@ -199,9 +199,9 @@ class CourseDetailScreen extends StatelessWidget {
   }
   
   Widget _buildQuizCard(BuildContext context, Quiz quiz) {
-    final attempt = NewMockData.attempts.where((a) => a.quizId == quiz.quizId).firstOrNull;
+    final attempt = MockData.attempts.where((a) => a.quizId == quiz.quizId).firstOrNull;
     final isCompleted = attempt?.submittedAt != null;
-    final quizQuestions = NewMockData.questions.where((q) => q.quizId == quiz.quizId).toList();
+    final quizQuestions = MockData.questions.where((q) => q.quizId == quiz.quizId).toList();
     final totalQuestions = quizQuestions.length;
     final totalPossiblePoints = quizQuestions.fold(0.0, (sum, question) => sum + question.points);
     final score = attempt != null && attempt.submittedAt != null && totalPossiblePoints > 0
