@@ -4,6 +4,7 @@ import '../../models/course.dart';
 import '../../models/quiz.dart';
 import '../../models/teacher.dart';
 import '../../models/user.dart';
+import '../quizzes/quiz_detail_screen.dart';
 
 class CourseDetailScreen extends StatelessWidget {
   final Course course;
@@ -210,10 +211,14 @@ class CourseDetailScreen extends StatelessWidget {
     
     return GestureDetector(
       onTap: () {
-        // TODO: Navigate to quiz screens when they support new models
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isCompleted ? 'Quiz completed with ${score.toStringAsFixed(1)}% score' : 'Quiz: ${quiz.title}'),
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => QuizDetailScreen(
+              quiz: quiz,
+              course: course,
+              currentUserId: 4, // Default student user ID
+            ),
           ),
         );
       },
