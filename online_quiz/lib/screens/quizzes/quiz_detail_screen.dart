@@ -5,6 +5,7 @@ import '../../models/attempt.dart';
 import '../../data/mock_data.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/info_card.dart';
+import '../../widgets/dialog.dart';
 
 class QuizDetailScreen extends StatelessWidget {
   final Quiz quiz;
@@ -558,136 +559,134 @@ class QuizDetailScreen extends StatelessWidget {
   }
 
   void _showStartQuizDialog(BuildContext context) {
-    showDialog(
+    final questions = MockData.getQuestionsByQuiz(quiz.quizId);
+    
+    AppDialog.show(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+      title: 'Start Quiz',
+      subtitle: 'Are you ready to start "${quiz.title}"?',
+      type: DialogType.confirmation,
+      icon: Icons.quiz_outlined,
+      iconColor: Colors.blue,
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildQuizInfoRow(
+             Icons.access_time,
+             'Time Limit',
+             '${quiz.timeLimitMinutes ?? 'No limit'} minutes',
+             Colors.orange,
+           ),
+          const SizedBox(height: 12),
+          _buildQuizInfoRow(
+            Icons.quiz,
+            'Questions',
+            '${questions.length}',
+            Colors.blue,
           ),
-          title: Row(
-            children: [
-              Icon(
-                Icons.quiz,
-                color: Colors.blue,
-                size: 28,
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Start Quiz',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Are you ready to start "${quiz.title}"?',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
-                ),
-                child: Column(
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.timer,
-                          color: Colors.orange,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Time Limit: ${quiz.timeLimit} minutes',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.orange.shade700,
-                          ),
-                        ),
-                      ],
+                    Icon(
+                      Icons.info_outline,
+                      color: Colors.orange.shade700,
+                      size: 20,
                     ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.help,
-                          color: Colors.orange,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Questions: ${MockData.getQuestionsByQuiz(quiz.quizId).length}',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.orange.shade700,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(width: 8),
+                    Text(
+                      'Important Notice',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange.shade700,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Once you start, the timer will begin and you cannot pause the quiz.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Starting ${quiz.title}...'),
-                    duration: const Duration(seconds: 2),
+                const SizedBox(height: 8),
+                Text(
+                  'Once you start, the timer will begin and you cannot pause the quiz.',
+                  style: TextStyle(
+                    color: Colors.orange.shade700,
+                    fontSize: 13,
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        DialogAction.cancel(
+          text: 'Cancel',
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        DialogAction(
+          text: 'Start Quiz',
+          icon: Icons.play_arrow,
+          color: Colors.green,
+          flex: 2,
+          onPressed: () {
+            Navigator.of(context).pop();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Starting ${quiz.title}...'),
+                duration: const Duration(seconds: 2),
                 backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: const Text(
-                'Start Quiz',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuizInfoRow(IconData icon, String label, String value, Color color) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            color: color,
+            size: 16,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          '$label: ',
+          style: const TextStyle(
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
     );
   }
 
