@@ -161,10 +161,10 @@ class AppDialog extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 if (subtitle != null) ...[
@@ -173,7 +173,7 @@ class AppDialog extends StatelessWidget {
                     subtitle!,
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey.shade600,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -185,7 +185,7 @@ class AppDialog extends StatelessWidget {
               onPressed: onClose ?? () => Navigator.of(context).pop(),
               icon: Icon(
                 Icons.close,
-                color: Colors.grey.shade600,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 size: 20,
               ),
               padding: EdgeInsets.zero,
@@ -212,7 +212,7 @@ class AppDialog extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(24),
           bottomRight: Radius.circular(24),
@@ -242,7 +242,7 @@ class AppDialog extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           side: BorderSide(
-            color: action.color ?? Colors.grey.shade300,
+            color: action.color ?? Theme.of(context).colorScheme.outline,
             width: 1,
           ),
         ),
@@ -262,7 +262,7 @@ class AppDialog extends StatelessWidget {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: action.color ?? Colors.grey.shade700,
+                color: action.color ?? Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ],
@@ -362,12 +362,13 @@ class DialogAction {
   static DialogAction cancel({
     String text = 'Cancel',
     VoidCallback? onPressed,
+    BuildContext? context,
   }) {
     return DialogAction(
       text: text,
       onPressed: onPressed,
       isOutlined: true,
-      color: Colors.grey.shade600,
+      color: context != null ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7) : null,
     );
   }
 
@@ -449,15 +450,16 @@ class DialogUtils {
       type: isDestructive ? DialogType.warning : DialogType.confirmation,
       content: Text(
         message,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
-          color: Colors.black87,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
       actions: [
         DialogAction.cancel(
           text: cancelText,
           onPressed: () => Navigator.of(context).pop(false),
+          context: context,
         ),
         DialogAction(
           text: confirmText,
@@ -481,9 +483,9 @@ class DialogUtils {
       type: DialogType.info,
       content: Text(
         message,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
-          color: Colors.black87,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
       actions: [
@@ -504,9 +506,9 @@ class DialogUtils {
       type: DialogType.error,
       content: Text(
         message,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
-          color: Colors.black87,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
       actions: [
@@ -527,9 +529,9 @@ class DialogUtils {
       type: DialogType.success,
       content: Text(
         message,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
-          color: Colors.black87,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
       actions: [
