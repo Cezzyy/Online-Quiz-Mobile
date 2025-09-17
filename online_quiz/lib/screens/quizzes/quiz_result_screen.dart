@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../models/quiz.dart';
 import '../../models/course.dart';
 import '../../models/attempt.dart';
+import '../../models/question.dart';
+import '../../models/attempt_answer.dart';
 import '../../data/mock_data.dart';
 import '../../widgets/info_card.dart';
 import '../../utils/app_theme.dart';
@@ -311,6 +313,8 @@ class QuizResultScreen extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: 24),
+          _buildAnswerDetails(context),
         ],
       ),
     );
@@ -372,5 +376,148 @@ class QuizResultScreen extends StatelessWidget {
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
     return '${months[dateTime.month - 1]} ${dateTime.day}, ${dateTime.year} at ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+  }
+
+  Widget _buildAnswerDetails(BuildContext context) {
+    final questions = MockData.getQuestionsByQuiz(quiz.quizId);
+    final attemptAnswers = MockData.getAnswersByAttempt(attempt.attemptId);
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Your Answers',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 16),
+        ...questions.asMap().entries.map((entry) {
+          final index = entry.key;
+          final question = entry.value;
+          final questionAnswers = attemptAnswers.where(
+            (answer) => answer.questionId == question.questionId,
+          ).toList();
+          
+          // Determine if the question is correct overall
+          bool isQuestionCorrect = questionAnswers.isNotEmpty && 
+              questionAnswers.any((answer) => answer.isCorrect == true);
+          
+          // For multiple choice questions, check if all correct answers are selected
+          if (question.type == QuestionType.multiple) {
+            final choices = MockData.getChoicesByQuestion(question.questionId);
+            final correctChoices = choices.where((c) => c.isCorrect).toList();
+            final selectedCorrectChoices = questionAnswers.where((a) => a.isCorrect == true).toList();
+            final selectedIncorrectChoices = questionAnswers.where((a) => a.isCorrect == false).toList();
+            
+            isQuestionCorrect = selectedCorrectChoices.length == correctChoices.length && 
+                               selectedIncorrectChoices.isEmpty;
+          }
+          
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isQuestionCorrect
+                  ? Colors.green.withValues(alpha: 0.05)
+                  : Colors.red.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isQuestionCorrect
+                    ? Colors.green.withValues(alpha: 0.2)
+                    : Colors.red.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      isQuestionCorrect
+                          ? Icons.check_circle
+                          : Icons.cancel,
+                      color: isQuestionCorrect
+                          ? Colors.green
+                          : Colors.red,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Question ${index + 1}',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${question.points} pts',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  question.body,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Your answer: ${_formatUserAnswer(question, questionAnswers)}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: isQuestionCorrect
+                        ? Colors.green
+                        : Colors.red,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  String _formatUserAnswer(Question question, List<AttemptAnswer> answers) {
+    if (answers.isEmpty) {
+      return "Not answered";
+    }
+
+    switch (question.type) {
+      case QuestionType.single:
+        final answer = answers.first;
+        if (answer.choiceId != null) {
+          final choice = MockData.getChoicesByQuestion(question.questionId)
+              .firstWhere((c) => c.choiceId == answer.choiceId);
+          return choice.body;
+        }
+        return "Not answered";
+
+      case QuestionType.multiple:
+        final selectedChoices = answers
+            .where((a) => a.choiceId != null)
+            .map((a) => MockData.getChoicesByQuestion(question.questionId)
+                .firstWhere((c) => c.choiceId == a.choiceId!).body)
+            .toList();
+        return selectedChoices.isEmpty ? "Not answered" : selectedChoices.join(", ");
+
+      case QuestionType.text:
+        final answer = answers.first;
+        return answer.freeText?.isNotEmpty == true ? answer.freeText! : "Not answered";
+    }
   }
 }

@@ -7,6 +7,7 @@ import '../../widgets/stat_card.dart';
 import '../../widgets/info_card.dart';
 import '../../widgets/dialog.dart';
 import '../../utils/app_theme.dart';
+import 'quiz_screen.dart';
 
 class QuizDetailScreen extends StatelessWidget {
   final Quiz quiz;
@@ -574,25 +575,27 @@ class QuizDetailScreen extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildQuizInfoRow(
+             context,
              Icons.access_time,
              'Time Limit',
              '${quiz.timeLimitMinutes ?? 'No limit'} minutes',
-             Colors.orange,
+             Theme.of(context).colorScheme.primary,
            ),
           const SizedBox(height: 12),
           _buildQuizInfoRow(
+            context,
             Icons.quiz,
             'Questions',
             '${questions.length}',
-            Colors.blue,
+            Theme.of(context).colorScheme.secondary,
           ),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.orange.shade50,
+              color: Theme.of(context).colorScheme.errorContainer,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.orange.shade200),
+              border: Border.all(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.3)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -601,7 +604,7 @@ class QuizDetailScreen extends StatelessWidget {
                   children: [
                     Icon(
                       Icons.info_outline,
-                      color: Colors.orange.shade700,
+                      color: Theme.of(context).colorScheme.onErrorContainer,
                       size: 20,
                     ),
                     const SizedBox(width: 8),
@@ -609,7 +612,7 @@ class QuizDetailScreen extends StatelessWidget {
                       'Important Notice',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Colors.orange.shade700,
+                        color: Theme.of(context).colorScheme.onErrorContainer,
                         fontSize: 14,
                       ),
                     ),
@@ -619,7 +622,7 @@ class QuizDetailScreen extends StatelessWidget {
                 Text(
                   'Once you start, the timer will begin and you cannot pause the quiz.',
                   style: TextStyle(
-                    color: Colors.orange.shade700,
+                    color: Theme.of(context).colorScheme.onErrorContainer,
                     fontSize: 13,
                   ),
                 ),
@@ -640,14 +643,11 @@ class QuizDetailScreen extends StatelessWidget {
           flex: 2,
           onPressed: () {
             Navigator.of(context).pop();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Starting ${quiz.title}...'),
-                duration: const Duration(seconds: 2),
-                backgroundColor: Colors.green,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => QuizScreen(
+                  quiz: quiz,
+                  currentUserId: currentUserId,
                 ),
               ),
             );
@@ -657,7 +657,7 @@ class QuizDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildQuizInfoRow(IconData icon, String label, String value, Color color) {
+  Widget _buildQuizInfoRow(BuildContext context, IconData icon, String label, String value, Color color) {
     return Row(
       children: [
         Container(
@@ -675,9 +675,9 @@ class QuizDetailScreen extends StatelessWidget {
         const SizedBox(width: 12),
         Text(
           '$label: ',
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w500,
-            color: Colors.black87,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         Text(
