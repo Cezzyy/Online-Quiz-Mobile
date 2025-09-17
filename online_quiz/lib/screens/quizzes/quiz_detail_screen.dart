@@ -5,6 +5,9 @@ import '../../models/attempt.dart';
 import '../../data/mock_data.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/info_card.dart';
+import '../../widgets/dialog.dart';
+import '../../utils/app_theme.dart';
+import 'quiz_screen.dart';
 
 class QuizDetailScreen extends StatelessWidget {
   final Quiz quiz;
@@ -29,18 +32,18 @@ class QuizDetailScreen extends StatelessWidget {
     final daysUntilDue = quiz.daysUntilDue;
     
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Quiz Details',
-          style: const TextStyle(
-            color: Colors.black87,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -48,11 +51,11 @@ class QuizDetailScreen extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            _buildQuizHeader(isCompleted, isOverdue, daysUntilDue),
-            _buildQuizInfo(),
-            _buildQuizStats(),
-            if (isCompleted) _buildResultSection(attempt),
-            _buildInstructions(isCompleted),
+            _buildQuizHeader(context, isCompleted, isOverdue, daysUntilDue),
+            _buildQuizInfo(context),
+            _buildQuizStats(context),
+            if (isCompleted) _buildResultSection(context, attempt),
+            _buildInstructions(context, isCompleted),
             const SizedBox(height: 100), // Space for floating button
           ],
         ),
@@ -62,7 +65,7 @@ class QuizDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildQuizHeader(bool isCompleted, bool isOverdue, int daysUntilDue) {
+  Widget _buildQuizHeader(BuildContext context, bool isCompleted, bool isOverdue, int daysUntilDue) {
     Color statusColor;
     String statusText;
     IconData statusIcon;
@@ -116,7 +119,7 @@ class QuizDetailScreen extends StatelessWidget {
                 ),
                 child: Icon(
                   statusIcon,
-                  color: Colors.white,
+                  color: AppTheme.getCardColor(context),
                   size: 24,
                 ),
               ),
@@ -167,7 +170,7 @@ class QuizDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildQuizInfo() {
+  Widget _buildQuizInfo(BuildContext context) {
     final questions = MockData.getQuestionsByQuiz(quiz.quizId);
     final instructor = course != null ? MockData.getUserById(course!.instructorUserId) : null;
     
@@ -175,11 +178,11 @@ class QuizDetailScreen extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 6,
             offset: const Offset(0, 2),
@@ -189,12 +192,12 @@ class QuizDetailScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Quiz Information',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 16),
@@ -236,7 +239,7 @@ class QuizDetailScreen extends StatelessWidget {
 
 
 
-  Widget _buildQuizStats() {
+  Widget _buildQuizStats(BuildContext context) {
     final questions = MockData.getQuestionsByQuiz(quiz.quizId);
     final attempt = MockData.getAttemptsByQuiz(quiz.quizId)
         .where((a) => a.userId == currentUserId && a.submittedAt != null)
@@ -248,11 +251,11 @@ class QuizDetailScreen extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 6,
             offset: const Offset(0, 2),
@@ -262,12 +265,12 @@ class QuizDetailScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Quiz Statistics',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 16),
@@ -278,7 +281,7 @@ class QuizDetailScreen extends StatelessWidget {
                   icon: Icons.help_outline,
                   title: 'Questions',
                   value: questions.length.toString(),
-                  color: Colors.blue,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
               const SizedBox(width: 12),
@@ -308,7 +311,7 @@ class QuizDetailScreen extends StatelessWidget {
 
 
 
-  Widget _buildResultSection(Attempt attempt) {
+  Widget _buildResultSection(BuildContext context, Attempt attempt) {
     final questions = MockData.getQuestionsByQuiz(quiz.quizId);
     final totalPoints = questions.fold<int>(0, (sum, q) => sum + q.points.toInt());
     final percentage = totalPoints > 0 ? (attempt.score / totalPoints) * 100 : 0.0;
@@ -328,11 +331,11 @@ class QuizDetailScreen extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 6,
             offset: const Offset(0, 2),
@@ -350,12 +353,12 @@ class QuizDetailScreen extends StatelessWidget {
                 size: 24,
               ),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'Your Result',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: AppTheme.getTextColor(context),
                 ),
               ),
             ],
@@ -392,7 +395,7 @@ class QuizDetailScreen extends StatelessWidget {
                         '${attempt.score.toInt()}/${totalPoints.toInt()} Points',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey.shade600,
+                          color: AppTheme.getSecondaryTextColor(context),
                         ),
                       ),
                     ],
@@ -401,7 +404,7 @@ class QuizDetailScreen extends StatelessWidget {
                 Container(
                   width: 1,
                   height: 60,
-                  color: Colors.grey.withValues(alpha: 0.3),
+                  color: AppTheme.getDividerColor(context),
                 ),
                 Expanded(
                   child: Column(
@@ -411,14 +414,14 @@ class QuizDetailScreen extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: Colors.grey.shade700,
+                          color: AppTheme.getTextColor(context),
                         ),
                       ),
                       Text(
                         'Time Spent',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey.shade600,
+                          color: AppTheme.getSecondaryTextColor(context),
                         ),
                       ),
                     ],
@@ -433,7 +436,7 @@ class QuizDetailScreen extends StatelessWidget {
             'Completed on ${_formatDateTime(attempt.submittedAt!)}',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey.shade600,
+              color: AppTheme.getSecondaryTextColor(context),
             ),
           ),
         ],
@@ -441,16 +444,16 @@ class QuizDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInstructions(bool isCompleted) {
+  Widget _buildInstructions(BuildContext context, bool isCompleted) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 6,
             offset: const Offset(0, 2),
@@ -464,33 +467,33 @@ class QuizDetailScreen extends StatelessWidget {
             children: [
               Icon(
                 Icons.info_outline,
-                color: Colors.blue,
+                color: Theme.of(context).colorScheme.primary,
                 size: 24,
               ),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'Instructions',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          _buildInstructionItem('Read each question carefully before answering'),
-          _buildInstructionItem(quiz.hasTimeLimit ? 'You have ${quiz.timeLimitMinutes} minutes to complete the quiz' : 'No time limit for this quiz'),
-          _buildInstructionItem('Make sure you have a stable internet connection'),
-          _buildInstructionItem('Once submitted, you cannot change your answers'),
+          _buildInstructionItem(context, 'Read each question carefully before answering'),
+          _buildInstructionItem(context, quiz.hasTimeLimit ? 'You have ${quiz.timeLimitMinutes} minutes to complete the quiz' : 'No time limit for this quiz'),
+          _buildInstructionItem(context, 'Make sure you have a stable internet connection'),
+          _buildInstructionItem(context, 'Once submitted, you cannot change your answers'),
           if (!isCompleted)
-            _buildInstructionItem('Click "Start Quiz" when you\'re ready to begin'),
+            _buildInstructionItem(context, 'Click "Start Quiz" when you\'re ready to begin'),
         ],
       ),
     );
   }
 
-  Widget _buildInstructionItem(String text) {
+  Widget _buildInstructionItem(BuildContext context, String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -501,7 +504,7 @@ class QuizDetailScreen extends StatelessWidget {
             width: 6,
             height: 6,
             decoration: BoxDecoration(
-              color: Colors.blue,
+              color: Theme.of(context).colorScheme.primary,
               borderRadius: BorderRadius.circular(3),
             ),
           ),
@@ -511,7 +514,7 @@ class QuizDetailScreen extends StatelessWidget {
               text,
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey.shade700,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 height: 1.4,
               ),
             ),
@@ -558,136 +561,133 @@ class QuizDetailScreen extends StatelessWidget {
   }
 
   void _showStartQuizDialog(BuildContext context) {
-    showDialog(
+    final questions = MockData.getQuestionsByQuiz(quiz.quizId);
+    
+    AppDialog.show(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+      title: 'Start Quiz',
+      subtitle: 'Are you ready to start "${quiz.title}"?',
+      type: DialogType.confirmation,
+      icon: Icons.quiz_outlined,
+      iconColor: Colors.blue,
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildQuizInfoRow(
+             context,
+             Icons.access_time,
+             'Time Limit',
+             '${quiz.timeLimitMinutes ?? 'No limit'} minutes',
+             Theme.of(context).colorScheme.primary,
+           ),
+          const SizedBox(height: 12),
+          _buildQuizInfoRow(
+            context,
+            Icons.quiz,
+            'Questions',
+            '${questions.length}',
+            Theme.of(context).colorScheme.secondary,
           ),
-          title: Row(
-            children: [
-              Icon(
-                Icons.quiz,
-                color: Colors.blue,
-                size: 28,
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Start Quiz',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Are you ready to start "${quiz.title}"?',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
-                ),
-                child: Column(
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.errorContainer,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.timer,
-                          color: Colors.orange,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Time Limit: ${quiz.timeLimit} minutes',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.orange.shade700,
-                          ),
-                        ),
-                      ],
+                    Icon(
+                      Icons.info_outline,
+                      color: Theme.of(context).colorScheme.onErrorContainer,
+                      size: 20,
                     ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.help,
-                          color: Colors.orange,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Questions: ${MockData.getQuestionsByQuiz(quiz.quizId).length}',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.orange.shade700,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(width: 8),
+                    Text(
+                      'Important Notice',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onErrorContainer,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Once you start, the timer will begin and you cannot pause the quiz.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Starting ${quiz.title}...'),
-                    duration: const Duration(seconds: 2),
+                const SizedBox(height: 8),
+                Text(
+                  'Once you start, the timer will begin and you cannot pause the quiz.',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                    fontSize: 13,
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
                 ),
-              ),
-              child: const Text(
-                'Start Quiz',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              ],
             ),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
+      actions: [
+        DialogAction.cancel(
+          text: 'Cancel',
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        DialogAction(
+          text: 'Start Quiz',
+          icon: Icons.play_arrow,
+          color: Colors.green,
+          flex: 2,
+          onPressed: () {
+            Navigator.of(context).pop();
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => QuizScreen(
+                  quiz: quiz,
+                  currentUserId: currentUserId,
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuizInfoRow(BuildContext context, IconData icon, String label, String value, Color color) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            color: color,
+            size: 16,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          '$label: ',
+          style: TextStyle(
+            fontWeight: FontWeight.w500,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
     );
   }
 

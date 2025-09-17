@@ -71,8 +71,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 const SizedBox(height: 60),
                 
                 // Loading Indicator
-                const CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2196F3)),
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
                 ),
                 const SizedBox(height: 20),
                 
@@ -81,7 +81,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   'Loading...',
                   style: TextStyle(
                     fontSize: 16,
-                    color: Colors.grey[600],
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ],

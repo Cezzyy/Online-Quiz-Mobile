@@ -4,6 +4,7 @@ import '../../data/mock_data.dart';
 import '../../models/attempt.dart';
 import '../../models/user.dart';
 import '../../widgets/stat_card.dart';
+import '../../utils/app_theme.dart';
 
 class HomeTab extends StatelessWidget {
   const HomeTab({super.key});
@@ -25,26 +26,26 @@ class HomeTab extends StatelessWidget {
           children: [
             const SizedBox(height: 20),
             // Welcome Section
-            _buildWelcomeSection(user),
+            _buildWelcomeSection(context, user),
             const SizedBox(height: 30),
             
             // Statistics Cards
-            _buildStatsSection(totalQuizzes, completedAttempts.length, averageScore),
+            _buildStatsSection(context, totalQuizzes, completedAttempts.length, averageScore),
             const SizedBox(height: 30),
             
             // Progress Chart Section
-            _buildProgressSection(userCourses),
+            _buildProgressSection(context, userCourses),
             const SizedBox(height: 30),
             
             // Recent Activity
-            _buildRecentActivity(completedAttempts),
+            _buildRecentActivity(context, completedAttempts),
           ],
         ),
       ),
     );
   }
   
-  Widget _buildWelcomeSection(User user) {
+  Widget _buildWelcomeSection(BuildContext context, User user) {
     final hour = DateTime.now().hour;
     String greeting;
     if (hour < 12) {
@@ -60,7 +61,10 @@ class HomeTab extends StatelessWidget {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.blue.shade600, Colors.blue.shade400],
+          colors: [
+            AppTheme.primaryColor,
+            AppTheme.primaryColor.withValues(alpha: 0.8),
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -98,16 +102,16 @@ class HomeTab extends StatelessWidget {
     );
   }
   
-  Widget _buildStatsSection(int totalQuizzes, int completedQuizzes, double averageScore) {
+  Widget _buildStatsSection(BuildContext context, int totalQuizzes, int completedQuizzes, double averageScore) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Your Statistics',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 16),
@@ -160,27 +164,27 @@ class HomeTab extends StatelessWidget {
   
 
   
-  Widget _buildProgressSection(List<Course> userCourses) {
+  Widget _buildProgressSection(BuildContext context, List<Course> userCourses) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Course Progress',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 16),
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withValues(alpha: 0.1),
+                color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
                 spreadRadius: 1,
                 blurRadius: 6,
                 offset: const Offset(0, 2),
@@ -207,10 +211,10 @@ class HomeTab extends StatelessWidget {
                         Expanded(
                           child: Text(
                             course.name,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: Colors.black87,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                         ),
@@ -219,7 +223,7 @@ class HomeTab extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: Colors.blue.shade600,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                       ],
@@ -227,8 +231,8 @@ class HomeTab extends StatelessWidget {
                     const SizedBox(height: 8),
                     LinearProgressIndicator(
                       value: progress,
-                      backgroundColor: Colors.grey.shade200,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade600),
+                      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
                       minHeight: 6,
                     ),
                     const SizedBox(height: 4),
@@ -236,7 +240,7 @@ class HomeTab extends StatelessWidget {
                       '$completedAttempts of $totalQuizzes quizzes completed',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey.shade600,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -249,27 +253,27 @@ class HomeTab extends StatelessWidget {
     );
   }
   
-  Widget _buildRecentActivity(List<Attempt> recentAttempts) {
+  Widget _buildRecentActivity(BuildContext context, List<Attempt> recentAttempts) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Recent Activity',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 16),
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withValues(alpha: 0.1),
+                color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
                 spreadRadius: 1,
                 blurRadius: 6,
                 offset: const Offset(0, 2),
@@ -293,7 +297,7 @@ class HomeTab extends StatelessWidget {
                       ),
                       child: Icon(
                         Icons.quiz,
-                        color: Colors.green.shade600,
+                        color: Colors.green,
                         size: 20,
                       ),
                     ),
@@ -304,17 +308,17 @@ class HomeTab extends StatelessWidget {
                         children: [
                           Text(
                             quiz.title,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: Colors.black87,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           Text(
                             'Score: ${score.toStringAsFixed(1)}%',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey.shade600,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                           ),
                         ],
@@ -324,7 +328,7 @@ class HomeTab extends StatelessWidget {
                       _formatDate(attempt.submittedAt ?? DateTime.now()),
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey.shade500,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                     ),
                   ],

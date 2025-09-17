@@ -65,7 +65,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _updateControllersFromState(profileState);
     
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text(
           'Edit Profile',
@@ -74,8 +74,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             fontSize: 20,
           ),
         ),
-        backgroundColor: Colors.blue[600],
-        foregroundColor: Colors.white,
+
         elevation: 0,
         actions: [
           Padding(
@@ -133,7 +132,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     children: [
                       Text(
                         'Error: ${profileState.error}',
-                        style: const TextStyle(color: Colors.red),
+                        style: TextStyle(color: Theme.of(context).colorScheme.error),
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
@@ -156,7 +155,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             children: [
                               CircleAvatar(
                                 radius: 60,
-                                backgroundColor: Colors.grey[300],
+                                backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
                                 backgroundImage: const AssetImage('assets/images/aclclogo-nobg.png'),
                                 child: null,
                               ),
@@ -173,7 +172,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                 profileState.user?.email ?? 'user@example.com',
                                 style: TextStyle(
                                   fontSize: 16,
-                                  color: Colors.grey[600],
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -181,7 +180,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                 'Student ID: ${profileState.student?.studentId ?? 'Not specified'}',
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: Colors.grey[500],
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -194,11 +193,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.surface,
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.grey.withValues(alpha: 0.1),
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
                                 spreadRadius: 1,
                                 blurRadius: 6,
                                 offset: const Offset(0, 2),
@@ -210,12 +209,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: Colors.grey[100],
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Icon(
                                   Icons.school,
-                                  color: Colors.grey[600],
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                   size: 24,
                                 ),
                               ),
@@ -224,13 +223,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
+                                    Text(
                                       'Degree Program',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey,
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        fontWeight: FontWeight.w500,
+                      ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
@@ -249,13 +248,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         const SizedBox(height: 24),
                         
                         // Contact Number Field
-                        const Text(
+                        Text(
                           'Contact Number',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                         ),
                         const SizedBox(height: 8),
                         TextFormField(
@@ -267,24 +266,24 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           decoration: InputDecoration(
                             prefixText: '+63 | ',
                             prefixStyle: TextStyle(
-                              color: Colors.grey[600],
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                               fontWeight: FontWeight.w500,
                             ),
                             hintText: '123 456 7890',
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.grey[300]!),
+                              borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.grey[300]!),
+                              borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.blue[600]!),
+                              borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
                             ),
                             filled: true,
-                            fillColor: Colors.white,
+                            fillColor: Theme.of(context).colorScheme.surface,
                             contentPadding: const EdgeInsets.all(16),
                           ),
                           validator: (value) {
@@ -303,13 +302,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         const SizedBox(height: 24),
                         
                         // Emergency Contact Number Field
-                        const Text(
+                        Text(
                           'Emergency Contact Number',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                         ),
                         const SizedBox(height: 8),
                         TextFormField(
@@ -321,24 +320,24 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           decoration: InputDecoration(
                             prefixText: '+63 | ',
                             prefixStyle: TextStyle(
-                              color: Colors.grey[600],
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                               fontWeight: FontWeight.w500,
                             ),
                             hintText: '987 654 3210',
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.grey[300]!),
+                              borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.grey[300]!),
+                              borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.blue[600]!),
+                              borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
                             ),
                             filled: true,
-                            fillColor: Colors.white,
+                            fillColor: Theme.of(context).colorScheme.surface,
                             contentPadding: const EdgeInsets.all(16),
                           ),
                           validator: (value) {

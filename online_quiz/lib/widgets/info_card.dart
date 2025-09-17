@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/app_theme.dart';
 
 class InfoCard extends StatelessWidget {
   final IconData icon;
@@ -50,15 +51,15 @@ class InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final defaultIconColor = iconColor ?? Colors.blue.shade600;
-    final defaultBackgroundColor = backgroundColor ?? Colors.white;
-    final defaultTitleColor = titleColor ?? Colors.grey.shade600;
-    final defaultValueColor = valueColor ?? Colors.black87;
+    final defaultIconColor = iconColor ?? Theme.of(context).primaryColor;
+    final defaultBackgroundColor = backgroundColor ?? AppTheme.getCardColor(context);
+    final defaultTitleColor = titleColor ?? AppTheme.getSecondaryTextColor(context);
+    final defaultValueColor = valueColor ?? AppTheme.getTextColor(context);
     final defaultPadding = padding ?? const EdgeInsets.all(20);
     final defaultBorderRadius = borderRadius ?? BorderRadius.circular(12);
     final defaultBoxShadow = boxShadow ?? [
       BoxShadow(
-        color: Colors.grey.withValues(alpha: 0.1),
+        color: AppTheme.getDividerColor(context).withValues(alpha: 0.1),
         spreadRadius: 1,
         blurRadius: 6,
         offset: const Offset(0, 2),
@@ -74,7 +75,7 @@ class InfoCard extends StatelessWidget {
         boxShadow: defaultBoxShadow,
         border: showBorder
             ? Border.all(
-                color: borderColor ?? Colors.grey.shade300,
+                color: borderColor ?? AppTheme.getDividerColor(context),
                 width: 1,
               )
             : null,
@@ -153,8 +154,8 @@ class InfoCardPresets {
       title: title,
       value: value,
       onTap: onTap,
-      iconColor: Colors.blue.shade600,
-      backgroundColor: Colors.white,
+      iconColor: null, // Will use theme primary color
+      backgroundColor: null, // Will use theme card color
     );
   }
 
@@ -210,10 +211,10 @@ class InfoCardPresets {
       title: title,
       value: value,
       onTap: onTap,
-      iconColor: Colors.orange.shade600,
-      backgroundColor: Colors.orange.shade50,
+      iconColor: AppTheme.getQuizTypeColor('reminder'),
+      backgroundColor: null, // Will use theme card color
       showBorder: true,
-      borderColor: Colors.orange.shade200,
+      borderColor: AppTheme.getQuizTypeColor('reminder').withValues(alpha: 0.3),
     );
   }
 
@@ -229,10 +230,10 @@ class InfoCardPresets {
       title: title,
       value: value,
       onTap: onTap,
-      iconColor: Colors.red.shade600,
-      backgroundColor: Colors.red.shade50,
+      iconColor: const Color(0xFFF44336),
+      backgroundColor: null, // Will use theme card color
       showBorder: true,
-      borderColor: Colors.red.shade200,
+      borderColor: const Color(0xFFF44336).withValues(alpha: 0.3),
     );
   }
 
@@ -250,7 +251,7 @@ class InfoCardPresets {
       value: value,
       trailing: trailing,
       onTap: onTap,
-      iconColor: Colors.blue.shade600,
+      iconColor: null, // Will use theme primary color
     );
   }
 
@@ -267,11 +268,11 @@ class InfoCardPresets {
       title: title,
       value: value,
       onTap: onTap,
-      iconColor: color ?? Colors.blue.shade600,
-      backgroundColor: Colors.grey.shade50,
+      iconColor: color,
+      backgroundColor: null, // Will use theme card color
       boxShadow: [],
       showBorder: true,
-      borderColor: Colors.grey.shade200,
+      borderColor: null, // Will use theme divider color
     );
   }
 }

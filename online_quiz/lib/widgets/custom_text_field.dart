@@ -38,11 +38,28 @@ class CustomTextField extends StatelessWidget {
       onChanged: onChanged,
       enabled: enabled,
       maxLines: maxLines,
+      style: TextStyle(
+        color: Theme.of(context).colorScheme.onSurface,
+      ),
       decoration: InputDecoration(
         labelText: labelText,
         hintText: hintText,
-        prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
-        suffixIcon: suffixIcon,
+        labelStyle: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+        ),
+        hintStyle: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+        ),
+        prefixIcon: prefixIcon != null ? Icon(
+          prefixIcon,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+        ) : null,
+        suffixIcon: suffixIcon != null ? IconTheme(
+          data: IconThemeData(
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+          child: suffixIcon!,
+        ) : null,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
         ),
@@ -68,7 +85,7 @@ class CustomTextField extends StatelessWidget {
           ),
         ),
         filled: true,
-        fillColor: enabled ? Colors.white : Colors.grey[100],
+        fillColor: enabled ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
       ),
     );
   }

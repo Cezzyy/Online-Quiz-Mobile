@@ -65,7 +65,7 @@ class _QuizTabState extends State<QuizTab> {
             ),
           ),
           const SizedBox(width: 16),
-          const Column(
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
@@ -73,14 +73,14 @@ class _QuizTabState extends State<QuizTab> {
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               Text(
                 'Take your quizzes and track progress',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
             ],
@@ -92,6 +92,7 @@ class _QuizTabState extends State<QuizTab> {
 
   Widget _buildFilterTabs() {
     return FilterTabPresets.quizStyle(
+      context: context,
       options: _filterOptions,
       selectedFilter: _selectedFilter,
       onFilterChanged: (filter) {
@@ -114,9 +115,9 @@ class _QuizTabState extends State<QuizTab> {
       margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.blue.withValues(alpha: 0.05),
+        color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.withValues(alpha: 0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
@@ -126,7 +127,7 @@ class _QuizTabState extends State<QuizTab> {
           Container(
             width: 1,
             height: 40,
-            color: Colors.grey.withValues(alpha: 0.3),
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
           ),
           Expanded(
             child: _buildStatItem('Pending', pendingCount.toString(), Colors.orange),
@@ -159,7 +160,7 @@ class _QuizTabState extends State<QuizTab> {
           label,
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey.shade600,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],
@@ -175,14 +176,14 @@ class _QuizTabState extends State<QuizTab> {
             Icon(
               Icons.quiz_outlined,
               size: 64,
-              color: Colors.grey.shade400,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
             ),
             const SizedBox(height: 16),
             Text(
               'No ${_selectedFilter.toLowerCase()} quizzes found',
               style: TextStyle(
                 fontSize: 18,
-                color: Colors.grey.shade600,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -191,7 +192,7 @@ class _QuizTabState extends State<QuizTab> {
               'Check back later for new quizzes',
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey.shade500,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
             ),
           ],
@@ -248,7 +249,7 @@ class _QuizTabState extends State<QuizTab> {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: statusColor.withValues(alpha: 0.3),
@@ -256,7 +257,7 @@ class _QuizTabState extends State<QuizTab> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 6,
             offset: const Offset(0, 2),
@@ -279,7 +280,7 @@ class _QuizTabState extends State<QuizTab> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.1),
+                  color: statusColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -295,10 +296,10 @@ class _QuizTabState extends State<QuizTab> {
                         children: [
                           Text(
                             quiz.title,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: Colors.black87,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           if (course != null)
@@ -306,7 +307,7 @@ class _QuizTabState extends State<QuizTab> {
                               '${course.code} - ${course.name}',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey.shade600,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                               ),
                             ),
                         ],
@@ -315,7 +316,7 @@ class _QuizTabState extends State<QuizTab> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.1),
+                  color: statusColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -385,14 +386,14 @@ class _QuizTabState extends State<QuizTab> {
         Icon(
           icon,
           size: 16,
-          color: Colors.grey.shade600,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         ),
         const SizedBox(width: 4),
         Text(
           text,
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey.shade600,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],

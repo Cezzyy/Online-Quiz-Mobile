@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/mock_data.dart';
 import '../../models/notification.dart' as model;
 import '../../widgets/empty_state_widget.dart';
+import '../../utils/app_theme.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -60,15 +61,15 @@ class _NotificationScreenState extends State<NotificationScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: notification.isRead ? Colors.white : Colors.blue.shade50,
+        color: notification.isRead ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: notification.isRead ? Colors.grey.shade200 : Colors.blue.shade200,
+          color: notification.isRead ? Theme.of(context).colorScheme.outline : Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, 1),
@@ -99,7 +100,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                               fontWeight: notification.isRead 
                                   ? FontWeight.w500 
                                   : FontWeight.bold,
-                              color: Colors.grey.shade800,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                         ),
@@ -107,10 +108,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           Container(
                             width: 8,
                             height: 8,
-                            decoration: const BoxDecoration(
-                              color: Colors.blue,
-                              shape: BoxShape.circle,
-                            ),
+                            decoration: BoxDecoration(
+                               color: Theme.of(context).colorScheme.primary,
+                               shape: BoxShape.circle,
+                             ),
                           ),
                       ],
                     ),
@@ -119,7 +120,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                       notification.message,
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey.shade600,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         height: 1.3,
                       ),
                     ),
@@ -129,14 +130,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
                         Icon(
                           Icons.access_time,
                           size: 14,
-                          color: Colors.grey.shade500,
+                          color: AppTheme.getSecondaryTextColor(context),
                         ),
                         const SizedBox(width: 4),
                         Text(
                           _formatTimestamp(notification.createdAt),
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey.shade500,
+                            color: AppTheme.getSecondaryTextColor(context),
                           ),
                         ),
                         if (notification.type != model.NotificationType.system) ...[
@@ -179,19 +180,19 @@ class _NotificationScreenState extends State<NotificationScreen> {
     switch (type) {
       case model.NotificationType.quiz:
         iconData = Icons.quiz;
-        iconColor = Colors.blue;
+        iconColor = AppTheme.getQuizTypeColor('quiz');
         break;
       case model.NotificationType.course:
         iconData = Icons.grade;
-        iconColor = Colors.green;
+        iconColor = AppTheme.getQuizTypeColor('course');
         break;
       case model.NotificationType.reminder:
         iconData = Icons.alarm;
-        iconColor = Colors.orange;
+        iconColor = AppTheme.getQuizTypeColor('reminder');
         break;
       case model.NotificationType.system:
         iconData = Icons.campaign;
-        iconColor = Colors.purple;
+        iconColor = AppTheme.getQuizTypeColor('system');
         break;
     }
 
@@ -212,13 +213,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Color _getTypeColor(model.NotificationType type) {
     switch (type) {
       case model.NotificationType.quiz:
-        return Colors.blue;
+        return AppTheme.getQuizTypeColor('quiz');
       case model.NotificationType.course:
-        return Colors.green;
+        return AppTheme.getQuizTypeColor('course');
       case model.NotificationType.reminder:
-        return Colors.orange;
+        return AppTheme.getQuizTypeColor('reminder');
       case model.NotificationType.system:
-        return Colors.purple;
+        return AppTheme.getQuizTypeColor('system');
     }
   }
 
@@ -285,18 +286,18 @@ class _NotificationScreenState extends State<NotificationScreen> {
             children: [
               // Unread notifications section
               if (unreadNotifications.isNotEmpty) ...[
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 12),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
                   child: Row(
                     children: [
-                      Icon(Icons.circle, color: Colors.blue, size: 8),
-                      SizedBox(width: 8),
+                      Icon(Icons.circle, color: Theme.of(context).colorScheme.primary, size: 8),
+                      const SizedBox(width: 8),
                       Text(
                         'Unread',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.blue,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                     ],
@@ -308,18 +309,18 @@ class _NotificationScreenState extends State<NotificationScreen> {
               ],
               // Read notifications section
               if (readNotifications.isNotEmpty) ...[
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 12),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
                   child: Row(
                     children: [
-                      Icon(Icons.check_circle_outline, color: Colors.grey, size: 16),
-                      SizedBox(width: 8),
+                      Icon(Icons.check_circle_outline, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6), size: 16),
+                      const SizedBox(width: 8),
                       Text(
                         'Read',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.grey,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                     ],
@@ -369,9 +370,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
             margin: const EdgeInsets.symmetric(horizontal: 12),
             child: Text(
               '${currentPage + 1} / $totalPages',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ),

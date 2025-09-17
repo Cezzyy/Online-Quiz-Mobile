@@ -12,7 +12,12 @@ import 'data/mock_data.dart';
 
 extension ColorExtension on Color {
   Color withValues({double? alpha}) {
-    return withValues(alpha: 1);
+    return Color.fromARGB(
+      ((alpha ?? 1.0) * 255).round(),
+      (r * 255.0).round() & 0xff,
+      (g * 255.0).round() & 0xff,
+      (b * 255.0).round() & 0xff,
+    );
   }
 }
 
