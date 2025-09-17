@@ -3,6 +3,7 @@ import '../../data/mock_data.dart';
 import '../../models/course.dart';
 import 'course_detail_screen.dart';
 import '../../widgets/empty_state_widget.dart';
+import '../../utils/app_theme.dart';
 
 class CoursesTab extends StatelessWidget {
   const CoursesTab({super.key});
@@ -20,7 +21,7 @@ class CoursesTab extends StatelessWidget {
           children: [
             const SizedBox(height: 20),
             // Header Section
-            _buildHeader(userCourses),
+            _buildHeader(context, userCourses),
             const SizedBox(height: 30),
             
             // Courses Grid
@@ -35,16 +36,16 @@ class CoursesTab extends StatelessWidget {
     );
   }
   
-  Widget _buildHeader(List<Course> userCourses) {
+  Widget _buildHeader(BuildContext context, List<Course> userCourses) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'My Courses',
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
@@ -52,7 +53,7 @@ class CoursesTab extends StatelessWidget {
           'You are enrolled in ${userCourses.length} courses',
           style: TextStyle(
             fontSize: 16,
-            color: Colors.grey.shade600,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],
@@ -99,11 +100,11 @@ class CoursesTab extends StatelessWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withValues(alpha: 0.1),
+              color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
               spreadRadius: 1,
               blurRadius: 8,
               offset: const Offset(0, 2),
@@ -122,7 +123,7 @@ class CoursesTab extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: _getCourseColor(course.code).withValues(alpha: 0.1),
+                  color: _getCourseColor(course.code).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
@@ -138,10 +139,10 @@ class CoursesTab extends StatelessWidget {
                       children: [
                         Text(
                           course.name,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -151,7 +152,7 @@ class CoursesTab extends StatelessWidget {
                           course.code,
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey.shade600,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -160,7 +161,7 @@ class CoursesTab extends StatelessWidget {
                   ),
                   Icon(
                     Icons.arrow_forward_ios,
-                    color: Colors.grey.shade400,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                     size: 16,
                   ),
                 ],
@@ -178,7 +179,7 @@ class CoursesTab extends StatelessWidget {
                           'Instructor: ${teacherUser?.fullName ?? 'Unknown'}',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey.shade600,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -186,7 +187,7 @@ class CoursesTab extends StatelessWidget {
                           '$totalQuizzes Quizzes',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey.shade600,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                       ],
@@ -214,7 +215,7 @@ class CoursesTab extends StatelessWidget {
               // Progress Bar
               LinearProgressIndicator(
                 value: progress,
-                backgroundColor: Colors.grey.shade200,
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                 valueColor: AlwaysStoppedAnimation<Color>(_getProgressColor(progress)),
                 minHeight: 4,
               ),
@@ -233,20 +234,12 @@ class CoursesTab extends StatelessWidget {
   }
   
   Color _getCourseColor(String courseCode) {
-    final colors = [
-      Colors.blue,
-      Colors.green,
-      Colors.orange,
-      Colors.purple,
-      Colors.red,
-      Colors.teal,
-    ];
-    return colors[courseCode.hashCode % colors.length];
+    return AppTheme.getCourseColor(courseCode);
   }
   
   Color _getProgressColor(double progress) {
-    if (progress >= 0.8) return Colors.green;
-    if (progress >= 0.5) return Colors.orange;
-    return Colors.red;
+    if (progress >= 0.8) return AppTheme.getScoreColor(85);
+    if (progress >= 0.5) return AppTheme.getScoreColor(65);
+    return AppTheme.getScoreColor(45);
   }
 }

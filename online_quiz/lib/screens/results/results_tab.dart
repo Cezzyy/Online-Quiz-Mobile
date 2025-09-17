@@ -26,32 +26,32 @@ class _ResultsTabState extends State<ResultsTab> {
     final totalPages = (filteredResults.length / _itemsPerPage).ceil();
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
         child: Column(
           children: [
             // Header
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              decoration: const BoxDecoration(
-                color: Colors.white,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black12,
+                    color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
                     blurRadius: 4,
-                    offset: Offset(0, 2),
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.analytics,
-                    color: Colors.blue,
+                    color: Theme.of(context).colorScheme.primary,
                     size: 24,
                   ),
                   const SizedBox(width: 10),
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -59,14 +59,14 @@ class _ResultsTabState extends State<ResultsTab> {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       Text(
                         'View your quiz performance and scores',
                         style: TextStyle(
                           fontSize: 13,
-                          color: Colors.grey,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                     ],
@@ -92,6 +92,7 @@ class _ResultsTabState extends State<ResultsTab> {
     final filters = ['All', 'Excellent', 'Good', 'Fair', 'Poor'];
     
     return FilterTabPresets.resultsStyle(
+      context: context,
       options: filters,
       selectedFilter: _selectedFilter,
       onFilterChanged: (filter) {
@@ -115,11 +116,11 @@ class _ResultsTabState extends State<ResultsTab> {
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -127,16 +128,16 @@ class _ResultsTabState extends State<ResultsTab> {
       ),
       child: Row(
         children: [
-          _buildStatItem(totalQuizzes.toString(), 'Total', Colors.blue),
-          _buildStatItem('${averageScore.toStringAsFixed(1)}%', 'Average', Colors.green),
-          _buildStatItem(excellentCount.toString(), 'Excellent', Colors.purple),
-          _buildStatItem(goodCount.toString(), 'Good', Colors.orange),
+          _buildStatItem(context, totalQuizzes.toString(), 'Total', Theme.of(context).colorScheme.primary),
+          _buildStatItem(context, '${averageScore.toStringAsFixed(1)}%', 'Average', Colors.green),
+          _buildStatItem(context, excellentCount.toString(), 'Excellent', Colors.purple),
+          _buildStatItem(context, goodCount.toString(), 'Good', Colors.orange),
         ],
       ),
     );
   }
 
-  Widget _buildStatItem(String value, String label, Color color) {
+  Widget _buildStatItem(BuildContext context, String value, String label, Color color) {
     return Expanded(
       child: Column(
         children: [
@@ -151,9 +152,9 @@ class _ResultsTabState extends State<ResultsTab> {
           const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
-              color: Colors.grey,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -229,11 +230,11 @@ class _ResultsTabState extends State<ResultsTab> {
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: Theme.of(context).shadowColor.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
@@ -250,7 +251,7 @@ class _ResultsTabState extends State<ResultsTab> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: scoreColor.withValues(alpha: 0.1),
+                  color: scoreColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
@@ -266,17 +267,17 @@ class _ResultsTabState extends State<ResultsTab> {
                     children: [
                       Text(
                         quiz.title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       Text(
                         '${course.code} - ${course.name}',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey.shade600,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                     ],
@@ -340,7 +341,7 @@ class _ResultsTabState extends State<ResultsTab> {
           Icon(
             icon,
             size: 16,
-            color: Colors.grey.shade600,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
           const SizedBox(width: 6),
           Column(
@@ -350,15 +351,15 @@ class _ResultsTabState extends State<ResultsTab> {
                 label,
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.grey.shade600,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               Text(
                 value,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: Colors.black87,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],
@@ -398,9 +399,9 @@ class _ResultsTabState extends State<ResultsTab> {
             margin: const EdgeInsets.symmetric(horizontal: 12),
             child: Text(
               '${_currentPage + 1} / $totalPages',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ),

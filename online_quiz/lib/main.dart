@@ -12,7 +12,7 @@ import 'data/mock_data.dart';
 
 extension ColorExtension on Color {
   Color withValues({double? alpha}) {
-    return withValues(alpha: 1);
+    return withValues(alpha: 1.0);
   }
 }
 

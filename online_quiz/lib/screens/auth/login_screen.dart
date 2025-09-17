@@ -37,7 +37,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -88,7 +88,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             'ACLC Online Quiz',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Theme.of(context).primaryColor,
+              color: Theme.of(context).brightness == Brightness.dark 
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).primaryColor,
               fontSize: 28,
             ),
           ),
@@ -101,7 +103,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           child: Text(
             'Welcome back! Please sign in to continue',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.grey[600],
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               fontSize: 16,
             ),
           ),
@@ -117,11 +119,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       child: Container(
         padding: const EdgeInsets.all(32.0),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: Theme.of(context).shadowColor.withValues(alpha: 0.05),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -170,7 +172,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             suffixIcon: IconButton(
               icon: Icon(
                 _isPasswordVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
               onPressed: () {
                 setState(() {
@@ -295,13 +297,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         borderRadius: BorderRadius.circular(16),
         gradient: LinearGradient(
           colors: [
-            Theme.of(context).primaryColor,
-            Theme.of(context).primaryColor.withValues(alpha: 0.8),
+            Theme.of(context).colorScheme.primary,
+            Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
           ],
         ),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -344,15 +346,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.blue[50],
+          color: Theme.of(context).colorScheme.primaryContainer,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.blue[100]!),
+          border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
         ),
         child: Column(
           children: [
             Icon(
               Icons.info_outline,
-              color: Colors.blue[600],
+              color: Theme.of(context).colorScheme.primary,
               size: 24,
             ),
             const SizedBox(height: 8),
@@ -361,7 +363,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Colors.blue[800],
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
               ),
             ),
             const SizedBox(height: 4),
@@ -370,7 +372,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.blue[700],
+                color: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
                 height: 1.4,
               ),
             ),

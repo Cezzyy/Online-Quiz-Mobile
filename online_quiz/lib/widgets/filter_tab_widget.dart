@@ -36,9 +36,9 @@ class FilterTabWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final defaultBorderColor = borderColor ?? Colors.grey.shade300;
+    final defaultBorderColor = borderColor ?? Theme.of(context).colorScheme.outline;
     final defaultUnselectedColor = unselectedColor == Colors.transparent
-        ? Colors.grey.withValues(alpha: 0.1)
+        ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)
         : unselectedColor;
     
     Widget tabRow = Row(
@@ -103,6 +103,7 @@ class FilterTabPresets {
     required List<String> options,
     required String selectedFilter,
     required Function(String) onFilterChanged,
+    required BuildContext context,
   }) {
     return FilterTabWidget(
       options: options,
@@ -111,7 +112,7 @@ class FilterTabPresets {
       isScrollable: false,
       borderRadius: 25.0,
       showBorder: false,
-      unselectedColor: Colors.grey.withValues(alpha: 0.1),
+      unselectedColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
     );
   }
 
@@ -120,6 +121,7 @@ class FilterTabPresets {
     required List<String> options,
     required String selectedFilter,
     required Function(String) onFilterChanged,
+    required BuildContext context,
   }) {
     return FilterTabWidget(
       options: options,
@@ -131,7 +133,7 @@ class FilterTabPresets {
       unselectedColor: Colors.transparent,
       margin: EdgeInsets.zero,
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
     );
   }
 

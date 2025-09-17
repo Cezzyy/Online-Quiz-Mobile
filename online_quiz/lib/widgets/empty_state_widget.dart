@@ -38,10 +38,10 @@ class EmptyStateWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final defaultIconColor = iconColor ?? Colors.grey.shade400;
-    final defaultTitleColor = titleColor ?? Colors.grey.shade700;
-    final defaultMessageColor = messageColor ?? Colors.grey.shade600;
-    final defaultInfoCardColor = infoCardColor ?? Colors.blue.shade50;
+    final defaultIconColor = iconColor ?? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4);
+    final defaultTitleColor = titleColor ?? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7);
+    final defaultMessageColor = messageColor ?? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6);
+    final defaultInfoCardColor = infoCardColor ?? Theme.of(context).colorScheme.primaryContainer;
 
     return Center(
       child: Padding(
@@ -92,7 +92,7 @@ class EmptyStateWidget extends StatelessWidget {
                   color: defaultInfoCardColor,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: (infoCardColor ?? Colors.blue).withValues(alpha: 0.2),
+                    color: (infoCardColor ?? Theme.of(context).colorScheme.primary).withValues(alpha: 0.2),
                   ),
                 ),
                 child: Row(

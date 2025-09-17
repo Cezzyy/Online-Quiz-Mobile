@@ -22,7 +22,7 @@ class ProfileTab extends StatelessWidget {
             // Profile Picture
             CircleAvatar(
               radius: 60,
-              backgroundColor: Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               backgroundImage: const AssetImage('assets/images/aclclogo-nobg.png'),
             ),
             const SizedBox(height: 24),
@@ -30,10 +30,10 @@ class ProfileTab extends StatelessWidget {
             // User Name
             Text(
               user.fullName,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
               textAlign: TextAlign.center,
             ),
@@ -44,7 +44,7 @@ class ProfileTab extends StatelessWidget {
               'Student ID: ${student.studentId}',
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -55,7 +55,7 @@ class ProfileTab extends StatelessWidget {
                user.email,
                style: TextStyle(
                  fontSize: 14,
-                 color: Colors.grey[600],
+                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                ),
              ),
              const SizedBox(height: 32),
@@ -65,11 +65,11 @@ class ProfileTab extends StatelessWidget {
                width: double.infinity,
                padding: const EdgeInsets.all(20),
                decoration: BoxDecoration(
-                 color: Colors.white,
+                 color: Theme.of(context).colorScheme.surface,
                  borderRadius: BorderRadius.circular(16),
                  boxShadow: [
                    BoxShadow(
-                     color: Colors.grey.withValues(alpha: 0.1),
+                     color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
                      spreadRadius: 1,
                      blurRadius: 10,
                      offset: const Offset(0, 2),
@@ -79,22 +79,22 @@ class ProfileTab extends StatelessWidget {
                child: Column(
                  crossAxisAlignment: CrossAxisAlignment.start,
                  children: [
-                   const Text(
+                   Text(
                      'Profile Details',
                      style: TextStyle(
                        fontSize: 18,
                        fontWeight: FontWeight.bold,
-                       color: Colors.black87,
+                       color: Theme.of(context).colorScheme.onSurface,
                      ),
                    ),
                    const SizedBox(height: 16),
-                   _buildDetailRow(Icons.school_outlined, 'Degree Program', student.course ?? 'N/A'),
+                   _buildDetailRow(context, Icons.school_outlined, 'Degree Program', student.course ?? 'N/A'),
                    const SizedBox(height: 12),
-                   _buildDetailRow(Icons.class_outlined, 'Year Level', 'Year ${student.yearLevel}'),
+                   _buildDetailRow(context, Icons.class_outlined, 'Year Level', 'Year ${student.yearLevel}'),
                    const SizedBox(height: 12),
-                   _buildDetailRow(Icons.group_outlined, 'Section', student.section ?? 'N/A'),
+                   _buildDetailRow(context, Icons.group_outlined, 'Section', student.section ?? 'N/A'),
                    const SizedBox(height: 12),
-                   _buildDetailRow(Icons.badge_outlined, 'Status', user.status),
+                   _buildDetailRow(context, Icons.badge_outlined, 'Status', user.status),
                  ],
                ),
              ),
@@ -116,7 +116,7 @@ class ProfileTab extends StatelessWidget {
                      icon: const Icon(Icons.edit_outlined),
                      label: const Text('Edit Profile'),
                      style: ElevatedButton.styleFrom(
-                       backgroundColor: Colors.blue.shade600,
+                       backgroundColor: Theme.of(context).colorScheme.primary,
                        foregroundColor: Colors.white,
                        padding: const EdgeInsets.symmetric(vertical: 16),
                        shape: RoundedRectangleBorder(
@@ -139,8 +139,8 @@ class ProfileTab extends StatelessWidget {
                      icon: const Icon(Icons.settings_outlined),
                      label: const Text('Settings'),
                      style: OutlinedButton.styleFrom(
-                       foregroundColor: Colors.blue.shade600,
-                       side: BorderSide(color: Colors.blue.shade600),
+                       foregroundColor: Theme.of(context).colorScheme.primary,
+                       side: BorderSide(color: Theme.of(context).colorScheme.primary),
                        padding: const EdgeInsets.symmetric(vertical: 16),
                        shape: RoundedRectangleBorder(
                          borderRadius: BorderRadius.circular(12),
@@ -157,14 +157,14 @@ class ProfileTab extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value) {
+  Widget _buildDetailRow(BuildContext context, IconData icon, String label, String value) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(
           icon,
           size: 20,
-          color: Colors.blue.shade600,
+          color: Theme.of(context).colorScheme.primary,
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -176,15 +176,15 @@ class ProfileTab extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: Colors.grey[600],
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 value,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
-                  color: Colors.black87,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],

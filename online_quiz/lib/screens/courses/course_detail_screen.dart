@@ -5,6 +5,7 @@ import '../../models/quiz.dart';
 import '../../models/teacher.dart';
 import '../../models/user.dart';
 import '../quizzes/quiz_detail_screen.dart';
+import '../../utils/app_theme.dart';
 
 class CourseDetailScreen extends StatelessWidget {
   final Course course;
@@ -40,7 +41,7 @@ class CourseDetailScreen extends StatelessWidget {
             _buildCourseHeader(progress, completedQuizzes, totalQuizzes),
             
             // Quizzes List
-            _buildQuizzesList(courseQuizzes),
+            _buildQuizzesList(context, courseQuizzes),
           ],
         ),
       ),
@@ -169,21 +170,21 @@ class CourseDetailScreen extends StatelessWidget {
     );
   }
   
-  Widget _buildQuizzesList(List<Quiz> courseQuizzes) {
+  Widget _buildQuizzesList(BuildContext context, List<Quiz> courseQuizzes) {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            'Quizzes',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
+          Text(
+              'Quizzes',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
-          ),
           const SizedBox(height: 16),
           ListView.builder(
             shrinkWrap: true,
@@ -226,7 +227,7 @@ class CourseDetailScreen extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isCompleted ? Colors.green.withValues(alpha: 0.3) : Colors.grey.withValues(alpha: 0.2),
@@ -234,7 +235,7 @@ class CourseDetailScreen extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 6,
             offset: const Offset(0, 2),
@@ -268,10 +269,10 @@ class CourseDetailScreen extends StatelessWidget {
                   children: [
                     Text(
                       quiz.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                       overflow: TextOverflow.ellipsis,
                       maxLines: 2,
@@ -335,7 +336,7 @@ class CourseDetailScreen extends StatelessWidget {
                 Icon(
                   Icons.calendar_today,
                   size: 16,
-                  color: Colors.grey.shade600,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -344,7 +345,7 @@ class CourseDetailScreen extends StatelessWidget {
                       : 'No due date',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.grey.shade600,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -355,14 +356,14 @@ class CourseDetailScreen extends StatelessWidget {
                 Icon(
                   Icons.add_circle_outline,
                   size: 16,
-                  color: Colors.grey.shade600,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   'Added: ${_formatDate(quiz.createdAt)}',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.grey.shade600,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -374,7 +375,7 @@ class CourseDetailScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -384,7 +385,7 @@ class CourseDetailScreen extends StatelessWidget {
                       'Completed on ${_formatDate(attempt.submittedAt!)}',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey.shade600,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                   ),
@@ -392,7 +393,7 @@ class CourseDetailScreen extends StatelessWidget {
                     'Time: ${attempt.timeSpentMinutes} min',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.grey.shade600,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -410,47 +411,41 @@ class CourseDetailScreen extends StatelessWidget {
     required String label,
     required String value,
   }) {
-    return Column(
-      children: [
-        Icon(
-          icon,
-          size: 20,
-          color: Colors.grey.shade600,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
+    return Builder(
+      builder: (context) => Column(
+        children: [
+          Icon(
+            icon,
+            size: 20,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade600,
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
           ),
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
-        ),
-      ],
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
   
   Color _getCourseColor(String courseCode) {
-    final colors = [
-      Colors.blue,
-      Colors.green,
-      Colors.orange,
-      Colors.purple,
-      Colors.red,
-      Colors.teal,
-    ];
-    return colors[courseCode.hashCode % colors.length];
+    return AppTheme.getCourseColor(courseCode);
   }
   
   String _formatDate(DateTime date) {
@@ -462,8 +457,6 @@ class CourseDetailScreen extends StatelessWidget {
   }
   
   Color _getScoreColor(double score) {
-    if (score >= 80) return Colors.green;
-    if (score >= 60) return Colors.orange;
-    return Colors.red;
+    return AppTheme.getScoreColor(score);
   }
 }
