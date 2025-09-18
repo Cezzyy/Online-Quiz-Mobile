@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/app_theme.dart';
+import '../courses/teacher_course_management_screen.dart';
 
 class TeacherHomeScreen extends ConsumerWidget {
   const TeacherHomeScreen({super.key});
@@ -102,9 +103,11 @@ class TeacherHomeScreen extends ConsumerWidget {
                     subtitle: 'Manage your classes',
                     color: Colors.green,
                     onTap: () {
-                      // TODO: Navigate to classes screen
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('My Classes - Coming Soon!')),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const TeacherCourseManagementScreen(),
+                        ),
                       );
                     },
                   ),
