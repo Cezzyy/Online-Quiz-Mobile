@@ -265,40 +265,43 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              RadioListTile<ThemeMode>(
+              ListTile(
+                leading: Radio<ThemeMode>(
+                  value: ThemeMode.light,
+                  toggleable: false,
+                ),
                 title: const Text('Light'),
                 subtitle: const Text('Light theme'),
-                value: ThemeMode.light,
-                groupValue: settingsState.themeMode,
-                onChanged: (ThemeMode? value) {
-                  if (value != null) {
-                    ref.read(settingsProvider.notifier).setThemeMode(value);
-                    Navigator.of(context).pop();
-                  }
+                selected: settingsState.themeMode == ThemeMode.light,
+                onTap: () {
+                  ref.read(settingsProvider.notifier).setThemeMode(ThemeMode.light);
+                  Navigator.of(context).pop();
                 },
               ),
-              RadioListTile<ThemeMode>(
+              ListTile(
+                leading: Radio<ThemeMode>(
+                  value: ThemeMode.dark,
+                  toggleable: false,
+                ),
                 title: const Text('Dark'),
                 subtitle: const Text('Dark theme'),
-                value: ThemeMode.dark,
-                groupValue: settingsState.themeMode,
-                onChanged: (ThemeMode? value) {
-                  if (value != null) {
-                    ref.read(settingsProvider.notifier).setThemeMode(value);
-                    Navigator.of(context).pop();
-                  }
+                selected: settingsState.themeMode == ThemeMode.dark,
+                onTap: () {
+                  ref.read(settingsProvider.notifier).setThemeMode(ThemeMode.dark);
+                  Navigator.of(context).pop();
                 },
               ),
-              RadioListTile<ThemeMode>(
+              ListTile(
+                leading: Radio<ThemeMode>(
+                  value: ThemeMode.system,
+                  toggleable: false,
+                ),
                 title: const Text('System'),
                 subtitle: const Text('Follow system setting'),
-                value: ThemeMode.system,
-                groupValue: settingsState.themeMode,
-                onChanged: (ThemeMode? value) {
-                  if (value != null) {
-                    ref.read(settingsProvider.notifier).setThemeMode(value);
-                    Navigator.of(context).pop();
-                  }
+                selected: settingsState.themeMode == ThemeMode.system,
+                onTap: () {
+                  ref.read(settingsProvider.notifier).setThemeMode(ThemeMode.system);
+                  Navigator.of(context).pop();
                 },
               ),
             ],
