@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../providers/auth_provider.dart';
+import '../../utils/app_theme.dart';
 import 'login_screen_animations.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -74,7 +75,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               return Icon(
                 Icons.school,
                 size: 130,
-                color: Theme.of(context).primaryColor,
+                color: AppTheme.primaryColor,
               );
             },
           ),
@@ -88,9 +89,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             'ACLC Online Quiz',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Theme.of(context).brightness == Brightness.dark 
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).primaryColor,
+              color: AppTheme.primaryColor,
               fontSize: 28,
             ),
           ),
@@ -297,13 +296,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         borderRadius: BorderRadius.circular(16),
         gradient: LinearGradient(
           colors: [
-            Theme.of(context).colorScheme.primary,
-            Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
+            AppTheme.primaryColor,
+            AppTheme.primaryColor.withValues(alpha: 0.8),
           ],
         ),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+            color: AppTheme.primaryColor.withValues(alpha: 0.3),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -346,15 +345,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primaryContainer,
+          color: AppTheme.primaryColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
+          border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)),
         ),
         child: Column(
           children: [
             Icon(
               Icons.info_outline,
-              color: Theme.of(context).colorScheme.primary,
+              color: AppTheme.primaryColor,
               size: 24,
             ),
             const SizedBox(height: 8),
@@ -363,7 +362,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
+                color: AppTheme.primaryColor,
               ),
             ),
             const SizedBox(height: 4),
@@ -372,7 +371,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 height: 1.4,
               ),
             ),
