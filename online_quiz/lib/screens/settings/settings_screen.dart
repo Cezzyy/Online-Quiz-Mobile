@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/settings_provider.dart';
 import '../../utils/app_routes.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -11,12 +12,10 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  bool _notificationsEnabled = true;
-  bool _darkModeEnabled = false;
-  bool _autoSubmitEnabled = false;
-
   @override
   Widget build(BuildContext context) {
+    final settingsState = ref.watch(settingsProvider);
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -39,17 +38,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           // Profile Section
           _buildSectionHeader('Profile'),
           _buildSettingsTile(
-            icon: Icons.person,
-            title: 'Edit Profile',
-            subtitle: 'Update your personal information',
-            onTap: () {
-              // Navigate to edit profile screen
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Edit Profile feature coming soon')),
-              );
-            },
-          ),
-          _buildSettingsTile(
             icon: Icons.lock,
             title: 'Change Password',
             subtitle: 'Update your account password',
@@ -69,11 +57,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             icon: Icons.notifications,
             title: 'Push Notifications',
             subtitle: 'Receive quiz reminders and updates',
-            value: _notificationsEnabled,
+            value: settingsState.notificationsEnabled,
             onChanged: (value) {
-              setState(() {
-                _notificationsEnabled = value;
-              });
+              ref.read(settingsProvider.notifier).setNotificationsEnabled(value);
             },
           ),
 
@@ -82,26 +68,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           
           // App Preferences Section
           _buildSectionHeader('App Preferences'),
-          _buildSwitchTile(
-            icon: Icons.dark_mode,
-            title: 'Dark Mode',
-            subtitle: 'Switch to dark theme',
-            value: _darkModeEnabled,
-            onChanged: (value) {
-              setState(() {
-                _darkModeEnabled = value;
-              });
-            },
-          ),
-          _buildSwitchTile(
-            icon: Icons.timer,
-            title: 'Auto-Submit Quizzes',
-            subtitle: 'Automatically submit when time expires',
-            value: _autoSubmitEnabled,
-            onChanged: (value) {
-              setState(() {
-                _autoSubmitEnabled = value;
-              });
+          _buildSettingsTile(
+            icon: Icons.palette,
+            title: 'Theme Mode',
+            subtitle: _getThemeModeSubtitle(settingsState.themeMode),
+            onTap: () {
+              _showThemeModeDialog();
             },
           ),
 
@@ -152,6 +124,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onTap: () {
               _showAboutDialog();
             },
+          ),
+          _buildSettingsTile(
+            icon: Icons.restore,
+            title: 'Reset Settings',
+            subtitle: 'Reset all settings to default',
+            onTap: () {
+              _showResetSettingsDialog();
+            },
+            textColor: Colors.orange,
           ),
           
           const SizedBox(height: 24),
@@ -259,6 +240,117 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           'A comprehensive quiz application for ACLC students to practice and improve their knowledge across various subjects.',
         ),
       ],
+    );
+  }
+
+  String _getThemeModeSubtitle(ThemeMode themeMode) {
+    switch (themeMode) {
+      case ThemeMode.light:
+        return 'Light theme';
+      case ThemeMode.dark:
+        return 'Dark theme';
+      case ThemeMode.system:
+        return 'Follow system setting';
+    }
+  }
+
+  void _showThemeModeDialog() {
+    final settingsState = ref.read(settingsProvider);
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Choose Theme'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<ThemeMode>(
+                title: const Text('Light'),
+                subtitle: const Text('Light theme'),
+                value: ThemeMode.light,
+                groupValue: settingsState.themeMode,
+                onChanged: (ThemeMode? value) {
+                  if (value != null) {
+                    ref.read(settingsProvider.notifier).setThemeMode(value);
+                    Navigator.of(context).pop();
+                  }
+                },
+              ),
+              RadioListTile<ThemeMode>(
+                title: const Text('Dark'),
+                subtitle: const Text('Dark theme'),
+                value: ThemeMode.dark,
+                groupValue: settingsState.themeMode,
+                onChanged: (ThemeMode? value) {
+                  if (value != null) {
+                    ref.read(settingsProvider.notifier).setThemeMode(value);
+                    Navigator.of(context).pop();
+                  }
+                },
+              ),
+              RadioListTile<ThemeMode>(
+                title: const Text('System'),
+                subtitle: const Text('Follow system setting'),
+                value: ThemeMode.system,
+                groupValue: settingsState.themeMode,
+                onChanged: (ThemeMode? value) {
+                  if (value != null) {
+                    ref.read(settingsProvider.notifier).setThemeMode(value);
+                    Navigator.of(context).pop();
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showResetSettingsDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Reset Settings'),
+          content: const Text('Are you sure you want to reset all settings to their default values? This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await ref.read(settingsProvider.notifier).resetSettings();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Settings have been reset to default'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              },
+              child: const Text(
+                'Reset',
+                style: TextStyle(color: Colors.orange),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 

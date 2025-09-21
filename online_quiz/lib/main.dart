@@ -8,6 +8,7 @@ import 'screens/home/admin_home_screen.dart';
 import 'utils/app_routes.dart';
 import 'utils/app_theme.dart';
 import 'providers/auth_provider.dart';
+import 'providers/settings_provider.dart';
 import 'data/mock_data.dart';
 
 extension ColorExtension on Color {
@@ -34,11 +35,13 @@ class ACLCQuizApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final settingsState = ref.watch(settingsProvider);
+    
     return MaterialApp(
       title: 'ACLC Online Quiz',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      themeMode: settingsState.themeMode,
       debugShowCheckedModeBanner: false,
       home: const AuthWrapper(),
       routes: {
