@@ -6,6 +6,7 @@ import '../models/attempt_answer.dart';
 import '../models/choice.dart';
 import '../models/course.dart';
 import '../data/mock_data.dart';
+import 'course_provider.dart';
 
 // Quiz state class to hold all quiz-related data and UI state
 class QuizState {
@@ -109,7 +110,9 @@ class QuizState {
 
 // Quiz notifier class to manage quiz state
 class QuizNotifier extends StateNotifier<QuizState> {
-  QuizNotifier() : super(const QuizState());
+  final Ref ref;
+  
+  QuizNotifier(this.ref) : super(const QuizState());
 
   // Initialize quiz data for a specific user
   Future<void> initializeQuizzes(int userId) async {
@@ -506,6 +509,9 @@ class QuizNotifier extends StateNotifier<QuizState> {
       // Refresh quiz data to reflect the new attempt
       await initializeQuizzes(userId);
       
+      // Also refresh course provider to update progress
+      await ref.read(courseProvider.notifier).initializeCourses(userId);
+      
       // Update state with attempt answers
       state = state.copyWith(
         isLoading: false,
@@ -524,7 +530,7 @@ class QuizNotifier extends StateNotifier<QuizState> {
 
 // Main quiz provider
 final quizProvider = StateNotifierProvider<QuizNotifier, QuizState>(
-  (ref) => QuizNotifier(),
+  (ref) => QuizNotifier(ref),
 );
 
 // Convenience providers for specific data

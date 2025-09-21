@@ -8,6 +8,7 @@ import '../../models/user.dart';
 import '../quizzes/quiz_detail_screen.dart';
 import '../../utils/app_theme.dart';
 import '../../providers/course_provider.dart';
+import '../../providers/quiz_provider.dart';
 
 
 class CourseDetailScreen extends ConsumerStatefulWidget {
@@ -26,6 +27,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     // Load course details when screen is opened
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(courseProvider.notifier).loadCourseDetails(widget.course.courseId);
+      ref.read(quizProvider.notifier).initializeQuizzes(4); // Default student user ID
     });
   }
 
@@ -38,10 +40,16 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     final course = courseState.selectedCourse ?? widget.course;
     final courseQuizzes = courseState.selectedCourseQuizzes;
     
-    // Get progress data from provider
-    final progress = courseState.getCourseProgress(course.courseId);
-    final totalQuizzes = courseState.getCourseQuizCount(course.courseId);
-    final completedQuizzes = courseState.getCompletedQuizCount(course.courseId);
+    // Calculate progress directly from MockData (same approach as quiz tab)
+    final allCourseQuizzes = MockData.getQuizzesByCourse(course.courseId);
+    final totalQuizzes = allCourseQuizzes.length;
+    final completedAttempts = MockData.getAttemptsByUser(4)
+        .where((attempt) => 
+            allCourseQuizzes.any((quiz) => quiz.quizId == attempt.quizId) && 
+            attempt.submittedAt != null)
+        .length;
+    final completedQuizzes = completedAttempts;
+    final progress = totalQuizzes > 0 ? completedAttempts / totalQuizzes : 0.0;
     
     return Scaffold(
       appBar: AppBar(
@@ -265,13 +273,15 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   }
   
   Widget _buildQuizCard(BuildContext context, Quiz quiz, Course course) {
-    final attempt = MockData.attempts.where((a) => a.quizId == quiz.quizId).firstOrNull;
-    final isCompleted = attempt?.submittedAt != null;
+    // Use the same approach as quiz tab - directly check MockData for latest completion status
+    final attempts = MockData.getAttemptsByQuiz(quiz.quizId);
+    final completedAttempt = attempts.where((a) => a.userId == 4 && a.submittedAt != null).firstOrNull;
+    final isCompleted = completedAttempt != null;
     final quizQuestions = MockData.questions.where((q) => q.quizId == quiz.quizId).toList();
     final totalQuestions = quizQuestions.length;
     final totalPossiblePoints = quizQuestions.fold(0.0, (sum, question) => sum + question.points);
-    final score = attempt != null && attempt.submittedAt != null && totalPossiblePoints > 0
-        ? (attempt.score / totalPossiblePoints * 100)
+    final score = completedAttempt != null && totalPossiblePoints > 0
+        ? (completedAttempt.score / totalPossiblePoints * 100)
         : 0.0;
     
     return GestureDetector(
@@ -434,7 +444,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
             ),
           ],
           
-          if (isCompleted && attempt != null) ...[
+          if (isCompleted) ...[
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
@@ -446,7 +456,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Completed on ${_formatDate(attempt.submittedAt!)}',
+                      'Completed on ${_formatDate(completedAttempt.submittedAt!)}',
                       style: TextStyle(
                         fontSize: 12,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -454,7 +464,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                     ),
                   ),
                   Text(
-                    'Time: ${attempt.timeSpentMinutes} min',
+                    'Time: ${completedAttempt.timeSpentMinutes} min',
                     style: TextStyle(
                       fontSize: 12,
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
