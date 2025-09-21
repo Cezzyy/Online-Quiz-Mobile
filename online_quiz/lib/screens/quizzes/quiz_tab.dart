@@ -1,31 +1,93 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/quiz.dart';
 import '../../models/course.dart';
 import '../../models/user.dart';
 import '../../data/mock_data.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/filter_tab_widget.dart';
+import '../../providers/quiz_provider.dart';
 import 'quiz_detail_screen.dart';
 
-class QuizTab extends StatefulWidget {
+class QuizTab extends ConsumerStatefulWidget {
   const QuizTab({super.key});
 
   @override
-  State<QuizTab> createState() => _QuizTabState();
+  ConsumerState<QuizTab> createState() => _QuizTabState();
 }
 
-class _QuizTabState extends State<QuizTab> {
-  String _selectedFilter = 'All';
+class _QuizTabState extends ConsumerState<QuizTab> {
   final List<String> _filterOptions = ['All', 'Pending', 'Completed'];
-  int _currentPage = 0;
-  final int _itemsPerPage = 10;
   final String currentUserId = 'user_4'; // Default current user (student)
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize quizzes when the widget is first created
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(quizProvider.notifier).initializeQuizzes(int.parse(currentUserId.replaceAll('user_', '')));
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final User user = MockData.getUserById(int.parse(currentUserId.replaceAll('user_', '')))!;
-    final List<Quiz> allQuizzes = _getAllQuizzes(user);
-    final List<Quiz> filteredQuizzes = _getFilteredQuizzes(allQuizzes);
+    final isLoading = ref.watch(quizLoadingProvider);
+    final error = ref.watch(quizErrorProvider);
+    final allQuizzes = ref.watch(allQuizzesProvider);
+    final paginatedQuizzes = ref.watch(paginatedQuizzesProvider);
+    final selectedFilter = ref.watch(quizFilterProvider);
+    final quizStats = ref.watch(quizStatsProvider);
+
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (error != null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Error loading quizzes',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                error,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  ref.read(quizProvider.notifier).refreshQuizzes(int.parse(currentUserId.replaceAll('user_', '')));
+                },
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       body: SafeArea(
@@ -33,13 +95,13 @@ class _QuizTabState extends State<QuizTab> {
           children: [
             _buildHeader(),
             if (allQuizzes.isNotEmpty) ...[
-              _buildFilterTabs(),
-              _buildQuizStats(allQuizzes),
+              _buildFilterTabs(selectedFilter),
+              _buildQuizStats(quizStats),
             ],
             Expanded(
               child: allQuizzes.isEmpty
                   ? _buildEmptyState()
-                  : _buildQuizList(filteredQuizzes, user),
+                  : _buildQuizList(paginatedQuizzes, user),
             ),
           ],
         ),
@@ -90,27 +152,18 @@ class _QuizTabState extends State<QuizTab> {
     );
   }
 
-  Widget _buildFilterTabs() {
+  Widget _buildFilterTabs(String selectedFilter) {
     return FilterTabPresets.quizStyle(
       context: context,
       options: _filterOptions,
-      selectedFilter: _selectedFilter,
+      selectedFilter: selectedFilter,
       onFilterChanged: (filter) {
-        setState(() {
-          _selectedFilter = filter;
-          _currentPage = 0; // Reset to first page when filter changes
-        });
+        ref.read(quizProvider.notifier).setFilter(filter);
       },
     );
   }
 
-  Widget _buildQuizStats(List<Quiz> allQuizzes) {
-    final completedCount = allQuizzes.where((quiz) {
-      final attempts = MockData.getAttemptsByQuiz(quiz.quizId);
-      return attempts.any((a) => a.userId == int.parse(currentUserId.replaceAll('user_', '')) && a.submittedAt != null);
-    }).length;
-    final pendingCount = allQuizzes.length - completedCount;
-
+  Widget _buildQuizStats(Map<String, int> stats) {
     return Container(
       margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(16),
@@ -122,7 +175,7 @@ class _QuizTabState extends State<QuizTab> {
       child: Row(
         children: [
           Expanded(
-            child: _buildStatItem('Total', allQuizzes.length.toString(), Colors.blue),
+            child: _buildStatItem('Total', stats['total'].toString(), Colors.blue),
           ),
           Container(
             width: 1,
@@ -130,7 +183,7 @@ class _QuizTabState extends State<QuizTab> {
             color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
           ),
           Expanded(
-            child: _buildStatItem('Pending', pendingCount.toString(), Colors.orange),
+            child: _buildStatItem('Pending', stats['pending'].toString(), Colors.orange),
           ),
           Container(
             width: 1,
@@ -138,7 +191,7 @@ class _QuizTabState extends State<QuizTab> {
             color: Colors.grey.withValues(alpha: 0.3),
           ),
           Expanded(
-            child: _buildStatItem('Completed', completedCount.toString(), Colors.green),
+            child: _buildStatItem('Completed', stats['completed'].toString(), Colors.green),
           ),
         ],
       ),
@@ -168,6 +221,10 @@ class _QuizTabState extends State<QuizTab> {
   }
 
   Widget _buildQuizList(List<Quiz> quizzes, User user) {
+    final selectedFilter = ref.watch(quizFilterProvider);
+    final paginationInfo = ref.watch(quizPaginationProvider);
+    final filteredQuizzes = ref.watch(filteredQuizzesProvider);
+    
     if (quizzes.isEmpty) {
       return Center(
         child: Column(
@@ -180,7 +237,7 @@ class _QuizTabState extends State<QuizTab> {
             ),
             const SizedBox(height: 16),
             Text(
-              'No ${_selectedFilter.toLowerCase()} quizzes found',
+              'No ${selectedFilter.toLowerCase()} quizzes found',
               style: TextStyle(
                 fontSize: 18,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -200,23 +257,21 @@ class _QuizTabState extends State<QuizTab> {
       );
     }
 
-    final paginatedQuizzes = _getPaginatedQuizzes(quizzes);
-    final totalPages = (quizzes.length / _itemsPerPage).ceil();
-
     return Column(
       children: [
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: paginatedQuizzes.length,
+            itemCount: quizzes.length,
             itemBuilder: (context, index) {
-              final quiz = paginatedQuizzes[index];
-              final course = _getCourseForQuiz(quiz, user);
+              final quiz = quizzes[index];
+              final course = ref.read(quizProvider.notifier).getCourseForQuiz(quiz.quizId);
               return _buildQuizCard(quiz, course);
             },
           ),
         ),
-        if (quizzes.length > _itemsPerPage) _buildPaginationControls(totalPages),
+        if (filteredQuizzes.length > paginationInfo['itemsPerPage']!) 
+          _buildPaginationControls(paginationInfo),
       ],
     );
   }
@@ -404,37 +459,18 @@ class _QuizTabState extends State<QuizTab> {
     return EmptyStatePresets.quizzes();
   }
 
-  List<Quiz> _getAllQuizzes(User user) {
-    // Get all quizzes from MockData
-    List<Quiz> allQuizzes = MockData.quizzes;
+  Widget _buildPaginationControls(Map<String, int> paginationInfo) {
+    final currentPage = paginationInfo['currentPage']!;
+    final totalPages = paginationInfo['totalPages']!;
     
-    // Sort by due date (earliest first, null dates last)
-    allQuizzes.sort((a, b) {
-      if (a.dueAt == null && b.dueAt == null) return 0;
-      if (a.dueAt == null) return 1;
-      if (b.dueAt == null) return -1;
-      return a.dueAt!.compareTo(b.dueAt!);
-    });
-    return allQuizzes;
-  }
-
-  List<Quiz> _getPaginatedQuizzes(List<Quiz> quizzes) {
-    final startIndex = _currentPage * _itemsPerPage;
-    final endIndex = (startIndex + _itemsPerPage).clamp(0, quizzes.length);
-    return quizzes.sublist(startIndex, endIndex);
-  }
-
-  Widget _buildPaginationControls(int totalPages) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           IconButton(
-            onPressed: _currentPage > 0 ? () {
-              setState(() {
-                _currentPage--;
-              });
+            onPressed: currentPage > 0 ? () {
+              ref.read(quizProvider.notifier).setPage(currentPage - 1);
             } : null,
             icon: const Icon(Icons.chevron_left),
             iconSize: 20,
@@ -447,7 +483,7 @@ class _QuizTabState extends State<QuizTab> {
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 12),
             child: Text(
-              '${_currentPage + 1} / $totalPages',
+              '${currentPage + 1} / $totalPages',
               style: const TextStyle(
                 fontSize: 14,
                 color: Colors.grey,
@@ -455,10 +491,8 @@ class _QuizTabState extends State<QuizTab> {
             ),
           ),
           IconButton(
-            onPressed: _currentPage < totalPages - 1 ? () {
-              setState(() {
-                _currentPage++;
-              });
+            onPressed: currentPage < totalPages - 1 ? () {
+              ref.read(quizProvider.notifier).setPage(currentPage + 1);
             } : null,
             icon: const Icon(Icons.chevron_right),
             iconSize: 20,
@@ -473,76 +507,7 @@ class _QuizTabState extends State<QuizTab> {
     );
   }
 
-  List<Quiz> _getFilteredQuizzes(List<Quiz> allQuizzes) {
-    List<Quiz> filtered;
-    
-    // Helper function to check if quiz is completed by current user
-    bool isQuizCompleted(Quiz quiz) {
-      final attempts = MockData.getAttemptsByQuiz(quiz.quizId);
-      return attempts.any((a) => a.userId == int.parse(currentUserId.replaceAll('user_', '')) && a.submittedAt != null);
-    }
-    
-    switch (_selectedFilter) {
-      case 'Pending':
-        filtered = allQuizzes.where((quiz) => !isQuizCompleted(quiz)).toList();
-        break;
-      case 'Completed':
-        filtered = allQuizzes.where((quiz) => isQuizCompleted(quiz)).toList();
-        break;
-      default:
-        // For 'All', prioritize pending quizzes first
-        final pending = allQuizzes.where((quiz) => !isQuizCompleted(quiz)).toList();
-        final completed = allQuizzes.where((quiz) => isQuizCompleted(quiz)).toList();
-        filtered = [...pending, ...completed];
-        break;
-    }
-    
-    // Sort pending quizzes by due date (earliest first)
-    // Sort completed quizzes by completion date (most recent first)
-    if (_selectedFilter == 'Pending' || _selectedFilter == 'All') {
-      final pendingQuizzes = filtered.where((quiz) => !isQuizCompleted(quiz)).toList();
-      pendingQuizzes.sort((a, b) {
-        if (a.dueAt == null && b.dueAt == null) return 0;
-        if (a.dueAt == null) return 1;
-        if (b.dueAt == null) return -1;
-        return a.dueAt!.compareTo(b.dueAt!);
-      });
-      
-      if (_selectedFilter == 'All') {
-        final completedQuizzes = filtered.where((quiz) => isQuizCompleted(quiz)).toList();
-        completedQuizzes.sort((a, b) {
-          final attemptA = MockData.getAttemptsByQuiz(a.quizId)
-            .where((att) => att.userId == int.parse(currentUserId.replaceAll('user_', '')) && att.submittedAt != null)
-            .firstOrNull;
-        final attemptB = MockData.getAttemptsByQuiz(b.quizId)
-            .where((att) => att.userId == int.parse(currentUserId.replaceAll('user_', '')) && att.submittedAt != null)
-            .firstOrNull;
-          if (attemptA?.submittedAt == null || attemptB?.submittedAt == null) return 0;
-          return attemptB!.submittedAt!.compareTo(attemptA!.submittedAt!);
-        });
-        filtered = [...pendingQuizzes, ...completedQuizzes];
-      } else {
-        filtered = pendingQuizzes;
-      }
-    } else if (_selectedFilter == 'Completed') {
-      filtered.sort((a, b) {
-        final attemptA = MockData.getAttemptsByQuiz(a.quizId)
-            .where((att) => att.userId == int.parse(currentUserId.replaceAll('user_', '')) && att.submittedAt != null)
-            .firstOrNull;
-        final attemptB = MockData.getAttemptsByQuiz(b.quizId)
-            .where((att) => att.userId == int.parse(currentUserId.replaceAll('user_', '')) && att.submittedAt != null)
-            .firstOrNull;
-        if (attemptA?.submittedAt == null || attemptB?.submittedAt == null) return 0;
-        return attemptB!.submittedAt!.compareTo(attemptA!.submittedAt!);
-      });
-    }
-    
-    return filtered;
-  }
 
-  Course? _getCourseForQuiz(Quiz quiz, User user) {
-    return MockData.getCourseById(quiz.courseId);
-  }
 
   String _formatDate(DateTime date) {
     final now = DateTime.now();

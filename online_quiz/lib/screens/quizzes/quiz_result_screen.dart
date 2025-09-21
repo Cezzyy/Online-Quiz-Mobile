@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/quiz.dart';
 import '../../models/course.dart';
 import '../../models/attempt.dart';
 import '../../models/question.dart';
 import '../../models/attempt_answer.dart';
 import '../../data/mock_data.dart';
+import '../../widgets/stat_card.dart';
 import '../../widgets/info_card.dart';
 import '../../utils/app_theme.dart';
+import '../../providers/quiz_provider.dart';
 
-class QuizResultScreen extends StatelessWidget {
+class QuizResultScreen extends ConsumerWidget {
   final Quiz quiz;
   final Course? course;
   final Attempt attempt;
@@ -21,8 +24,11 @@ class QuizResultScreen extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final questions = MockData.getQuestionsByQuiz(quiz.quizId);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final quizState = ref.watch(quizProvider);
+    final questions = quizState.selectedQuizQuestions.isNotEmpty 
+        ? quizState.selectedQuizQuestions 
+        : MockData.getQuestionsByQuiz(quiz.quizId);
     final totalQuestions = questions.length;
     final totalPoints = questions.fold<double>(0.0, (sum, q) => sum + q.points);
     final percentage = totalPoints > 0 ? (attempt.score / totalPoints) * 100 : 0.0;
@@ -64,8 +70,8 @@ class QuizResultScreen extends StatelessWidget {
         child: Column(
           children: [
             _buildResultHeader(scoreColor, gradeText, percentage),
-            _buildQuizInfo(context, totalQuestions),
-            _buildDetailedResults(context, totalQuestions, totalPoints),
+            _buildQuizInfo(context, ref, totalQuestions),
+            _buildDetailedResults(context, ref, totalQuestions, totalPoints),
             const SizedBox(height: 20),
           ],
         ),
@@ -144,7 +150,7 @@ class QuizResultScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildQuizInfo(BuildContext context, int totalQuestions) {
+  Widget _buildQuizInfo(BuildContext context, WidgetRef ref, int totalQuestions) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       padding: const EdgeInsets.all(20),
@@ -175,22 +181,20 @@ class QuizResultScreen extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _buildSummaryItem(
-                  context,
-                  'Correct Answers',
-                  '${_getCorrectAnswersCount()}/$totalQuestions',
-                  Icons.check_circle,
-                  Colors.green,
+                child: StatCard(
+                  icon: Icons.check_circle,
+                  title: 'Correct Answers',
+                  value: '${_getCorrectAnswersCount(ref)}/$totalQuestions',
+                  color: Colors.green,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _buildSummaryItem(
-                  context,
-                  'Time Spent',
-                  '${_getTimeSpentMinutes()} min',
-                  Icons.timer,
-                  Colors.blue,
+                child: StatCard(
+                  icon: Icons.timer,
+                  title: 'Time Spent',
+                  value: '${_getTimeSpentMinutes()} min',
+                  color: Colors.blue,
                 ),
               ),
             ],
@@ -212,45 +216,10 @@ class QuizResultScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryItem(BuildContext context, String label, String value, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            color: color,
-            size: 24,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildDetailedResults(BuildContext context, int totalQuestions, double totalPoints) {
-    final correctAnswers = _getCorrectAnswersCount();
+
+  Widget _buildDetailedResults(BuildContext context, WidgetRef ref, int totalQuestions, double totalPoints) {
+    final correctAnswers = _getCorrectAnswersCount(ref);
     final incorrectAnswers = totalQuestions - correctAnswers;
     final accuracy = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0.0;
     
@@ -314,7 +283,7 @@ class QuizResultScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          _buildAnswerDetails(context),
+          _buildAnswerDetails(context, ref),
         ],
       ),
     );
@@ -360,8 +329,9 @@ class QuizResultScreen extends StatelessWidget {
 
 
 
-  int _getCorrectAnswersCount() {
-    final attemptAnswers = MockData.getAnswersByAttempt(attempt.attemptId);
+  int _getCorrectAnswersCount(WidgetRef ref) {
+    final quizState = ref.watch(quizProvider);
+    final attemptAnswers = quizState.attemptAnswers[attempt.attemptId] ?? [];
     return attemptAnswers.where((answer) => answer.isCorrect == true).length;
   }
 
@@ -378,9 +348,12 @@ class QuizResultScreen extends StatelessWidget {
     return '${months[dateTime.month - 1]} ${dateTime.day}, ${dateTime.year} at ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 
-  Widget _buildAnswerDetails(BuildContext context) {
-    final questions = MockData.getQuestionsByQuiz(quiz.quizId);
-    final attemptAnswers = MockData.getAnswersByAttempt(attempt.attemptId);
+  Widget _buildAnswerDetails(BuildContext context, WidgetRef ref) {
+    final quizState = ref.watch(quizProvider);
+    final questions = quizState.selectedQuizQuestions.isNotEmpty 
+        ? quizState.selectedQuizQuestions 
+        : MockData.getQuestionsByQuiz(quiz.quizId);
+    final attemptAnswers = quizState.attemptAnswers[attempt.attemptId] ?? [];
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -407,7 +380,8 @@ class QuizResultScreen extends StatelessWidget {
           
           // For multiple choice questions, check if all correct answers are selected
           if (question.type == QuestionType.multiple) {
-            final choices = MockData.getChoicesByQuestion(question.questionId);
+            final choices = quizState.questionChoices[question.questionId] ?? 
+                            MockData.getChoicesByQuestion(question.questionId);
             final correctChoices = choices.where((c) => c.isCorrect).toList();
             final selectedCorrectChoices = questionAnswers.where((a) => a.isCorrect == true).toList();
             final selectedIncorrectChoices = questionAnswers.where((a) => a.isCorrect == false).toList();
@@ -475,7 +449,7 @@ class QuizResultScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Your answer: ${_formatUserAnswer(question, questionAnswers)}',
+                  'Your answer: ${_formatUserAnswer(ref, question, questionAnswers)}',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
@@ -492,26 +466,30 @@ class QuizResultScreen extends StatelessWidget {
     );
   }
 
-  String _formatUserAnswer(Question question, List<AttemptAnswer> answers) {
+  String _formatUserAnswer(WidgetRef ref, Question question, List<AttemptAnswer> answers) {
     if (answers.isEmpty) {
       return "Not answered";
     }
+
+    final quizState = ref.watch(quizProvider);
 
     switch (question.type) {
       case QuestionType.single:
         final answer = answers.first;
         if (answer.choiceId != null) {
-          final choice = MockData.getChoicesByQuestion(question.questionId)
-              .firstWhere((c) => c.choiceId == answer.choiceId);
+          final choices = quizState.questionChoices[question.questionId] ?? 
+                         MockData.getChoicesByQuestion(question.questionId);
+          final choice = choices.firstWhere((c) => c.choiceId == answer.choiceId);
           return choice.body;
         }
         return "Not answered";
 
       case QuestionType.multiple:
+        final choices = quizState.questionChoices[question.questionId] ?? 
+                       MockData.getChoicesByQuestion(question.questionId);
         final selectedChoices = answers
             .where((a) => a.choiceId != null)
-            .map((a) => MockData.getChoicesByQuestion(question.questionId)
-                .firstWhere((c) => c.choiceId == a.choiceId!).body)
+            .map((a) => choices.firstWhere((c) => c.choiceId == a.choiceId!).body)
             .toList();
         return selectedChoices.isEmpty ? "Not answered" : selectedChoices.join(", ");
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/quiz.dart';
 import '../../models/course.dart';
 import '../../models/attempt.dart';
@@ -7,9 +8,10 @@ import '../../widgets/stat_card.dart';
 import '../../widgets/info_card.dart';
 import '../../widgets/dialog.dart';
 import '../../utils/app_theme.dart';
+import '../../providers/quiz_provider.dart';
 import 'quiz_screen.dart';
 
-class QuizDetailScreen extends StatelessWidget {
+class QuizDetailScreen extends ConsumerWidget {
   final Quiz quiz;
   final Course? course;
   final int currentUserId;
@@ -22,11 +24,10 @@ class QuizDetailScreen extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final attempt = MockData.getAttemptsByQuiz(quiz.quizId)
-        .where((a) => a.userId == currentUserId && a.submittedAt != null)
-        .cast<Attempt?>()
-        .firstOrNull;
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Get quiz data from provider
+    final quizState = ref.watch(quizProvider);
+    final attempt = quizState.quizAttempts[quiz.quizId];
     final isCompleted = attempt != null;
     final isOverdue = !isCompleted && quiz.isOverdue;
     final daysUntilDue = quiz.daysUntilDue;
@@ -52,15 +53,15 @@ class QuizDetailScreen extends StatelessWidget {
         child: Column(
           children: [
             _buildQuizHeader(context, isCompleted, isOverdue, daysUntilDue),
-            _buildQuizInfo(context),
-            _buildQuizStats(context),
-            if (isCompleted) _buildResultSection(context, attempt),
+            _buildQuizInfo(context, ref),
+            _buildQuizStats(context, ref),
+            if (isCompleted) _buildResultSection(context, ref, attempt),
             _buildInstructions(context, isCompleted),
             const SizedBox(height: 100), // Space for floating button
           ],
         ),
       ),
-      floatingActionButton: _buildActionButton(context, isCompleted, isOverdue),
+      floatingActionButton: _buildActionButton(context, ref, isCompleted, isOverdue),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
@@ -170,8 +171,11 @@ class QuizDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildQuizInfo(BuildContext context) {
-    final questions = MockData.getQuestionsByQuiz(quiz.quizId);
+  Widget _buildQuizInfo(BuildContext context, WidgetRef ref) {
+    final quizState = ref.watch(quizProvider);
+    final questions = quizState.selectedQuizQuestions.isNotEmpty 
+        ? quizState.selectedQuizQuestions 
+        : MockData.getQuestionsByQuiz(quiz.quizId);
     final instructor = course != null ? MockData.getUserById(course!.instructorUserId) : null;
     
     return Container(
@@ -239,12 +243,12 @@ class QuizDetailScreen extends StatelessWidget {
 
 
 
-  Widget _buildQuizStats(BuildContext context) {
-    final questions = MockData.getQuestionsByQuiz(quiz.quizId);
-    final attempt = MockData.getAttemptsByQuiz(quiz.quizId)
-        .where((a) => a.userId == currentUserId && a.submittedAt != null)
-        .cast<Attempt?>()
-        .firstOrNull;
+  Widget _buildQuizStats(BuildContext context, WidgetRef ref) {
+    final quizState = ref.watch(quizProvider);
+    final questions = quizState.selectedQuizQuestions.isNotEmpty 
+        ? quizState.selectedQuizQuestions 
+        : MockData.getQuestionsByQuiz(quiz.quizId);
+    final attempt = quizState.quizAttempts[quiz.quizId];
     final isCompleted = attempt != null;
     
     return Container(
@@ -311,8 +315,11 @@ class QuizDetailScreen extends StatelessWidget {
 
 
 
-  Widget _buildResultSection(BuildContext context, Attempt attempt) {
-    final questions = MockData.getQuestionsByQuiz(quiz.quizId);
+  Widget _buildResultSection(BuildContext context, WidgetRef ref, Attempt attempt) {
+    final quizState = ref.watch(quizProvider);
+    final questions = quizState.selectedQuizQuestions.isNotEmpty 
+        ? quizState.selectedQuizQuestions 
+        : MockData.getQuestionsByQuiz(quiz.quizId);
     final totalPoints = questions.fold<int>(0, (sum, q) => sum + q.points.toInt());
     final percentage = totalPoints > 0 ? (attempt.score / totalPoints) * 100 : 0.0;
     
@@ -524,7 +531,7 @@ class QuizDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButton(BuildContext context, bool isCompleted, bool isOverdue) {
+  Widget _buildActionButton(BuildContext context, WidgetRef ref, bool isCompleted, bool isOverdue) {
     if (isCompleted) {
       return const SizedBox.shrink(); // Hide the button when quiz is completed
     }
@@ -534,7 +541,7 @@ class QuizDetailScreen extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 20),
       child: ElevatedButton.icon(
         onPressed: isOverdue ? null : () {
-          _showStartQuizDialog(context);
+          _showStartQuizDialog(context, ref);
         },
         icon: Icon(
           isOverdue ? Icons.error : Icons.play_arrow,
@@ -560,8 +567,11 @@ class QuizDetailScreen extends StatelessWidget {
     );
   }
 
-  void _showStartQuizDialog(BuildContext context) {
-    final questions = MockData.getQuestionsByQuiz(quiz.quizId);
+  void _showStartQuizDialog(BuildContext context, WidgetRef ref) {
+    final quizState = ref.watch(quizProvider);
+    final questions = quizState.selectedQuizQuestions.isNotEmpty 
+        ? quizState.selectedQuizQuestions 
+        : MockData.getQuestionsByQuiz(quiz.quizId);
     
     AppDialog.show(
       context: context,
