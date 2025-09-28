@@ -297,7 +297,11 @@ class HomeTab extends ConsumerWidget {
           child: Column(
             children: recentAttempts.take(3).map((attempt) {
               final quiz = MockData.quizzes.firstWhere((q) => q.quizId == attempt.quizId);
-              final score = attempt.score;
+              
+              // Calculate percentage score
+              final questions = MockData.getQuestionsByQuiz(attempt.quizId);
+              final totalPoints = questions.fold<double>(0.0, (sum, q) => sum + q.points);
+              final scorePercentage = totalPoints > 0 ? (attempt.score / totalPoints) * 100 : 0.0;
               
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
@@ -329,7 +333,7 @@ class HomeTab extends ConsumerWidget {
                             ),
                           ),
                           Text(
-                            'Score: ${score.toStringAsFixed(1)}%',
+                            'Score: ${scorePercentage.toStringAsFixed(1)}%',
                             style: TextStyle(
                               fontSize: 14,
                               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -374,11 +378,17 @@ class HomeTab extends ConsumerWidget {
   double _calculateAverageScore(List<Attempt> completedAttempts) {
     if (completedAttempts.isEmpty) return 0.0;
     
-    double totalScore = 0;
+    double totalPercentage = 0;
     for (var attempt in completedAttempts) {
-      totalScore += attempt.score;
+      // Get the questions for this quiz to calculate total points
+      final questions = MockData.getQuestionsByQuiz(attempt.quizId);
+      final totalPoints = questions.fold<double>(0.0, (sum, q) => sum + q.points);
+      
+      // Convert score to percentage
+      final percentage = totalPoints > 0 ? (attempt.score / totalPoints) * 100 : 0.0;
+      totalPercentage += percentage;
     }
-    return totalScore / completedAttempts.length;
+    return totalPercentage / completedAttempts.length;
   }
   
   String _formatDate(DateTime date) {
