@@ -255,67 +255,127 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showThemeModeDialog() {
-    final settingsState = ref.read(settingsProvider);
-    
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Choose Theme'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: Radio<ThemeMode>(
-                  value: ThemeMode.light,
-                  toggleable: false,
-                ),
-                title: const Text('Light'),
-                subtitle: const Text('Light theme'),
-                selected: settingsState.themeMode == ThemeMode.light,
-                onTap: () {
-                  ref.read(settingsProvider.notifier).setThemeMode(ThemeMode.light);
-                  Navigator.of(context).pop();
-                },
+        return Consumer(
+          builder: (context, ref, child) {
+            final settingsState = ref.watch(settingsProvider);
+            
+            return AlertDialog(
+              title: const Text('Choose Theme'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildThemeOption(
+                    context: context,
+                    ref: ref,
+                    themeMode: ThemeMode.light,
+                    title: 'Light',
+                    subtitle: 'Light theme',
+                    icon: Icons.light_mode,
+                    isSelected: settingsState.themeMode == ThemeMode.light,
+                  ),
+                  _buildThemeOption(
+                    context: context,
+                    ref: ref,
+                    themeMode: ThemeMode.dark,
+                    title: 'Dark',
+                    subtitle: 'Dark theme',
+                    icon: Icons.dark_mode,
+                    isSelected: settingsState.themeMode == ThemeMode.dark,
+                  ),
+                  _buildThemeOption(
+                    context: context,
+                    ref: ref,
+                    themeMode: ThemeMode.system,
+                    title: 'System',
+                    subtitle: 'Follow system setting',
+                    icon: Icons.settings_system_daydream,
+                    isSelected: settingsState.themeMode == ThemeMode.system,
+                  ),
+                ],
               ),
-              ListTile(
-                leading: Radio<ThemeMode>(
-                  value: ThemeMode.dark,
-                  toggleable: false,
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Cancel'),
                 ),
-                title: const Text('Dark'),
-                subtitle: const Text('Dark theme'),
-                selected: settingsState.themeMode == ThemeMode.dark,
-                onTap: () {
-                  ref.read(settingsProvider.notifier).setThemeMode(ThemeMode.dark);
-                  Navigator.of(context).pop();
-                },
-              ),
-              ListTile(
-                leading: Radio<ThemeMode>(
-                  value: ThemeMode.system,
-                  toggleable: false,
-                ),
-                title: const Text('System'),
-                subtitle: const Text('Follow system setting'),
-                selected: settingsState.themeMode == ThemeMode.system,
-                onTap: () {
-                  ref.read(settingsProvider.notifier).setThemeMode(ThemeMode.system);
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Cancel'),
-            ),
-          ],
+              ],
+            );
+          },
         );
       },
+    );
+  }
+
+  Widget _buildThemeOption({
+    required BuildContext context,
+    required WidgetRef ref,
+    required ThemeMode themeMode,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required bool isSelected,
+  }) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      margin: const EdgeInsets.symmetric(vertical: 2),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: isSelected 
+          ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3)
+          : Colors.transparent,
+      ),
+      child: ListTile(
+        leading: Icon(
+          icon,
+          color: isSelected 
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+        ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: Icon(
+                isSelected 
+                  ? Icons.radio_button_checked 
+                  : Icons.radio_button_unchecked,
+                key: ValueKey(isSelected),
+                color: isSelected 
+                  ? Theme.of(context).colorScheme.primary 
+                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+          ],
+        ),
+        onTap: () {
+          ref.read(settingsProvider.notifier).setThemeMode(themeMode);
+          // Add a small delay before closing to show the selection animation
+          Future.delayed(const Duration(milliseconds: 150), () {
+            if (context.mounted) {
+              Navigator.of(context).pop();
+            }
+          });
+        },
+      ),
     );
   }
 

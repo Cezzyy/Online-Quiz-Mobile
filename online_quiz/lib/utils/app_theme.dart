@@ -10,6 +10,10 @@ class AppTheme {
   static const Color errorColor = Color(0xFFE53935);
   static const Color successColor = Color(0xFF43A047);
 
+  // Cached theme data for performance
+  static ThemeData? _cachedLightTheme;
+  static ThemeData? _cachedDarkTheme;
+
   // Theme-aware color getters
   static Color getTextColor(BuildContext context) {
     return Theme.of(context).colorScheme.onSurface;
@@ -65,7 +69,7 @@ class AppTheme {
   }
 
   static ThemeData get lightTheme {
-    return ThemeData(
+    return _cachedLightTheme ??= ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryColor,
@@ -113,7 +117,7 @@ class AppTheme {
   }
 
   static ThemeData get darkTheme {
-    return ThemeData(
+    return _cachedDarkTheme ??= ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryColor,
