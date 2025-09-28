@@ -108,17 +108,21 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   // Logout method
   Future<void> logout() async {
-
     state = state.copyWith(isLoading: true, clearError: true);
     
     try {
       await Future.delayed(const Duration(milliseconds: 100));
       
-
-      state = const AuthState(isInitialized: true);
+      // Clear the auth state completely
+      state = const AuthState(
+        isInitialized: true,
+        isAuthenticated: false,
+        user: null,
+        isLoading: false,
+        error: null,
+      );
 
     } catch (e) {
-
       state = state.copyWith(
         isLoading: false,
         error: 'Logout failed: $e',

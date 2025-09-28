@@ -78,19 +78,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     
-    // Listen for auth state changes to handle navigation
-    ref.listen<AuthState>(authProvider, (previous, next) {
-      // This will trigger a rebuild when auth state changes
-    });
-
-    
-    // SIMPLIFIED APPROACH: Use MaterialApp.router with GoRouter for navigation
-    // Instead of trying to navigate from within the build method or using ref.listen,
-    // we'll directly return the appropriate screen based on auth state
-    
     // Show loading indicator while auth state is being determined
-    if (!authState.isInitialized) {
-
+    if (!authState.isInitialized || authState.isLoading) {
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(),
@@ -101,7 +90,6 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     // If authenticated, return the appropriate screen based on user role
     if (authState.isAuthenticated && authState.user != null) {
       final userRole = MockData.getUserRole(authState.user!.userId);
-      
       
       switch (userRole?.toLowerCase()) {
         case 'teacher':
@@ -115,8 +103,6 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     }
     
     // For unauthenticated users, show login screen directly
-    // This is a key change - we're bypassing the onboarding screen for simplicity
-    
     return const LoginScreen();
   }
 }
