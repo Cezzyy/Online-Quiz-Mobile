@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'screens/onboarding/onboarding_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home/main_screen.dart';
-import 'screens/home/teacher_home_screen.dart';
+import 'screens/home/teacher_main_screen.dart';
 import 'screens/home/admin_home_screen.dart';
 import 'utils/app_routes.dart';
 import 'utils/app_theme.dart';
@@ -48,7 +48,7 @@ class ACLCQuizApp extends ConsumerWidget {
         AppRoutes.onboarding: (context) => const OnboardingScreen(),
         AppRoutes.login: (context) => const LoginScreen(),
         AppRoutes.main: (context) => const MainScreen(),
-        AppRoutes.teacherHome: (context) => const TeacherHomeScreen(),
+        AppRoutes.teacherHome: (context) => const TeacherMainScreen(),
         AppRoutes.adminHome: (context) => const AdminHomeScreen(),
       },
     );
@@ -93,7 +93,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       
       switch (userRole?.toLowerCase()) {
         case 'teacher':
-          return const TeacherHomeScreen();
+          return const TeacherMainScreen();
         case 'admin':
           return const AdminHomeScreen();
         case 'student':
