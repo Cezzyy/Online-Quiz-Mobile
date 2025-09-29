@@ -48,7 +48,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true);
     
     try {
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 50));
       
       // For now, start with no authenticated user
       state = state.copyWith(
@@ -73,7 +73,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     
     try {
 
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(const Duration(milliseconds: 200));
       
       // Validate credentials (mock data for early development)
       final user = MockData.getUserByCredentials(username, password);

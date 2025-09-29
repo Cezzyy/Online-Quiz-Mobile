@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'screens/onboarding/onboarding_screen.dart';
+import 'screens/onboarding/splash_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home/main_screen.dart';
 import 'screens/home/teacher_main_screen.dart';
@@ -78,13 +79,9 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     
-    // Show loading indicator while auth state is being determined
-    if (!authState.isInitialized || authState.isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+    // Show splash screen only during initial app startup (not during login)
+    if (!authState.isInitialized) {
+      return const SplashScreen();
     }
     
     // If authenticated, return the appropriate screen based on user role
@@ -102,7 +99,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       }
     }
     
-    // For unauthenticated users, show login screen directly
+    // For unauthenticated users, show login screen
     return const LoginScreen();
   }
 }

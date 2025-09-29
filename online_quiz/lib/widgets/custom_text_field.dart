@@ -51,6 +51,11 @@ class CustomTextField extends StatelessWidget {
         hintStyle: TextStyle(
           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
         ),
+        errorStyle: const TextStyle(
+          color: Colors.red,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
         prefixIcon: prefixIcon != null ? Icon(
           prefixIcon,
           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -87,6 +92,8 @@ class CustomTextField extends StatelessWidget {
         ),
         filled: true,
         fillColor: enabled ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        errorMaxLines: 2,
       ),
     );
   }

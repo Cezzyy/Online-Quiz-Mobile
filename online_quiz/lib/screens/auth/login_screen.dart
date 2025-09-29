@@ -131,7 +131,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         child: Column(
           children: [
             _buildLoginForm(),
-            _buildErrorMessage(),
             const SizedBox(height: 32),
             _buildLoginButton(),
           ],
@@ -145,48 +144,76 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       key: _formKey,
       child: Column(
         children: [
-          CustomTextField(
-            controller: _emailController,
-            labelText: 'Email',
-            hintText: 'Enter your email address',
-            prefixIcon: Icons.email_outlined,
-            keyboardType: TextInputType.emailAddress,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your email';
-              }
-              if (!value.contains('@')) {
-                return 'Please enter a valid email address';
-              }
-              return null;
+          Consumer(
+            builder: (context, ref, child) {
+              final authState = ref.watch(authProvider);
+              return CustomTextField(
+                controller: _emailController,
+                labelText: 'Email',
+                hintText: 'Enter your email address',
+                prefixIcon: Icons.email_outlined,
+                keyboardType: TextInputType.emailAddress,
+                onChanged: (value) {
+                  // Clear authentication error when user starts typing
+                  if (authState.error != null) {
+                    ref.read(authProvider.notifier).clearError();
+                  }
+                },
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your email';
+                  }
+                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                    return 'Please enter a valid email address';
+                  }
+                  return null;
+                },
+              );
             },
           ),
           const SizedBox(height: 20),
-          CustomTextField(
-            controller: _passwordController,
-            labelText: 'Password',
-            hintText: 'Enter your password',
-            prefixIcon: Icons.lock_outline,
-            obscureText: !_isPasswordVisible,
-            suffixIcon: IconButton(
-              icon: Icon(
-                _isPasswordVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-              onPressed: () {
-                setState(() {
-                  _isPasswordVisible = !_isPasswordVisible;
-                });
-              },
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your password';
-              }
-              if (value.length < 6) {
-                return 'Password must be at least 6 characters';
-              }
-              return null;
+          Consumer(
+            builder: (context, ref, child) {
+              final authState = ref.watch(authProvider);
+              return CustomTextField(
+                 controller: _passwordController,
+                 labelText: 'Password',
+                 hintText: 'Enter your password',
+                 prefixIcon: Icons.lock_outline,
+                 obscureText: !_isPasswordVisible,
+                 onChanged: (value) {
+                   // Clear authentication error when user starts typing
+                   if (authState.error != null) {
+                     ref.read(authProvider.notifier).clearError();
+                   }
+                 },
+                 suffixIcon: IconButton(
+                   icon: Icon(
+                     _isPasswordVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                   ),
+                   onPressed: () {
+                     setState(() {
+                       _isPasswordVisible = !_isPasswordVisible;
+                     });
+                   },
+                 ),
+                 validator: (value) {
+                   // Check for authentication error first
+                   if (authState.error != null && !_isLoggingIn) {
+                     return authState.error;
+                   }
+                   
+                   // Then check for basic validation
+                   if (value == null || value.isEmpty) {
+                     return 'Please enter your password';
+                   }
+                   if (value.length < 6) {
+                     return 'Password must be at least 6 characters';
+                   }
+                   return null;
+                 },
+               );
             },
           ),
         ],
@@ -194,99 +221,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     );
   }
 
-  Widget _buildErrorMessage() {
-    return Consumer(
-      builder: (context, ref, child) {
-        final authState = ref.watch(authProvider);
-        
-        if (authState.error == null) {
-          return const SizedBox.shrink();
-        }
-        
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          margin: const EdgeInsets.only(top: 20),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFF5F5),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: const Color(0xFFFFE5E5),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.red.withValues(alpha: 0.08),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFE5E5),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Icon(
-                  Icons.info_outline,
-                  color: Color(0xFFDC2626),
-                  size: 16,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Authentication Error',
-                      style: TextStyle(
-                        color: Color(0xFFDC2626),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      authState.error!,
-                      style: const TextStyle(
-                        color: Color(0xFF7F1D1D),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                        height: 1.3,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              GestureDetector(
-                onTap: () {
-                  ref.read(authProvider.notifier).clearError();
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Icon(
-                    Icons.close,
-                    color: Color(0xFFDC2626),
-                    size: 14,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+
 
   Widget _buildLoginButton() {
     return Container(
@@ -381,61 +316,51 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     );
   }
 
-  void _handleLogin() async {
-    if (_formKey.currentState!.validate()) {
-      final email = _emailController.text.trim();
-      final password = _passwordController.text.trim();
-      
-      // Clear any previous errors
-      ref.read(authProvider.notifier).clearError();
-      
-      try {
-        // Set loading state to show progress indicator
+  Future<void> _handleLogin() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    // Clear any existing errors before starting login
+    ref.read(authProvider.notifier).clearError();
+
+    setState(() {
+      _isLoggingIn = true;
+    });
+
+    try {
+      final success = await ref.read(authProvider.notifier).login(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+
+      if (mounted) {
         setState(() {
-          _isLoggingIn = true;
+          _isLoggingIn = false;
+        });
+      }
+
+      if (!success) {
+        // Login failed - add a small delay to ensure the auth state error is propagated
+        await Future.delayed(const Duration(milliseconds: 100));
+        
+        // Trigger form validation to show the error below password field
+        if (mounted) {
+          _formKey.currentState!.validate();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoggingIn = false;
         });
         
-        // Attempt login
-        final success = await ref.read(authProvider.notifier).login(email, password);
+        // Add a small delay to ensure the auth state error is propagated
+        await Future.delayed(const Duration(milliseconds: 100));
         
-        // Always reset loading state first
+        // Trigger form validation to show the error below password field
         if (mounted) {
-          setState(() {
-            _isLoggingIn = false;
-          });
-        }
-        
-        if (success) {
-          // Login successful - AuthWrapper will handle navigation
-          // Add a small delay to ensure state propagation
-          await Future.delayed(const Duration(milliseconds: 100));
-        } else {
-          // Show error message if login failed
-          if (mounted) {
-            final errorMsg = ref.read(authProvider).error ?? 'Login failed';
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(errorMsg),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        }
-      } catch (e) {
-        // Reset loading state on error
-        if (mounted) {
-          setState(() {
-            _isLoggingIn = false;
-          });
-        }
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Login error: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          _formKey.currentState!.validate();
         }
       }
     }
