@@ -85,8 +85,8 @@ class TeacherHomeTab extends ConsumerWidget {
     }
     
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = Theme.of(context).colorScheme.primary;
-    final onPrimaryColor = Theme.of(context).colorScheme.onPrimary;
+    final primaryColor = AppTheme.secondaryColor;
+    final onPrimaryColor = Colors.white;
     
     return Container(
       width: double.infinity,
@@ -95,8 +95,8 @@ class TeacherHomeTab extends ConsumerWidget {
         gradient: LinearGradient(
           colors: isDark 
             ? [
-                primaryColor.withValues(alpha: 0.8),
-                primaryColor.withValues(alpha: 0.6),
+                primaryColor.withValues(alpha: 0.9),
+                primaryColor.withValues(alpha: 0.7),
               ]
             : [
                 primaryColor,
@@ -110,25 +110,6 @@ class TeacherHomeTab extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(
-                Icons.school,
-                color: onPrimaryColor.withValues(alpha: 0.9),
-                size: 24,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Teacher Dashboard',
-                style: TextStyle(
-                  color: onPrimaryColor.withValues(alpha: 0.9),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
           Text(
             '$greeting,',
             style: TextStyle(
@@ -138,7 +119,7 @@ class TeacherHomeTab extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Prof. ${user.fullName.split(' ')[0]}',
+            'Instructor ${user.fullName.split(' ')[0]}',
             style: TextStyle(
               color: onPrimaryColor,
               fontSize: 28,
