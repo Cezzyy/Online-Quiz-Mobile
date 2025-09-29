@@ -27,7 +27,7 @@ class _TeacherMainScreenState extends ConsumerState<TeacherMainScreen> {
 
   static const List<String> _tabTitles = [
     'Home',
-    'Classes',
+    'Courses',
     'Quizzes',
     'Results',
     'Profile',
@@ -86,7 +86,7 @@ class _TeacherMainScreenState extends ConsumerState<TeacherMainScreen> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.class_),
-            label: 'Classes',
+            label: 'Courses',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.quiz),
