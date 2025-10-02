@@ -1,17 +1,86 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/mock_data.dart';
 import '../../models/course.dart';
 import 'course_detail_screen.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../utils/app_theme.dart';
+import '../../providers/course_provider.dart';
+import '../../providers/auth_provider.dart';
 
-class CoursesTab extends StatelessWidget {
+class CoursesTab extends ConsumerStatefulWidget {
   const CoursesTab({super.key});
 
   @override
+  ConsumerState<CoursesTab> createState() => _CoursesTabState();
+}
+
+class _CoursesTabState extends ConsumerState<CoursesTab> {
+  @override
+  void initState() {
+    super.initState();
+    // Initialize courses when the tab is first loaded
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final currentUser = ref.read(currentUserProvider);
+      if (currentUser != null) {
+        ref.read(courseProvider.notifier).initializeCourses(currentUser.userId);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final user = MockData.users.firstWhere((u) => u.userId == 4); // Get first student for demo
-    final userCourses = _getUserCourses(user.userId);
+    final courseState = ref.watch(courseProvider);
+    final currentUser = ref.watch(currentUserProvider);
+    
+    // Show loading indicator while courses are being loaded
+    if (courseState.isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    
+    // Show error if there's an error
+    if (courseState.error != null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Error loading courses',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                courseState.error!,
+                style: Theme.of(context).textTheme.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  if (currentUser != null) {
+                    ref.read(courseProvider.notifier).refreshCourses(currentUser.userId);
+                  }
+                },
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    
+    final userCourses = courseState.userCourses;
     
     return Scaffold(
       body: Padding(
@@ -81,12 +150,10 @@ class CoursesTab extends StatelessWidget {
   }
   
   Widget _buildCourseCard(BuildContext context, Course course) {
-    final courseQuizzes = MockData.quizzes.where((q) => q.courseId == course.courseId).toList();
-    final completedAttempts = MockData.attempts.where((a) => 
-      courseQuizzes.any((q) => q.quizId == a.quizId) && a.submittedAt != null
-    ).length;
-    final totalQuizzes = courseQuizzes.length;
-    final progress = totalQuizzes > 0 ? completedAttempts / totalQuizzes : 0.0;
+    final courseState = ref.watch(courseProvider);
+    final progress = courseState.getCourseProgress(course.courseId);
+    final totalQuizzes = courseState.getCourseQuizCount(course.courseId);
+    // final completedQuizzes = courseState.getCompletedQuizCount(course.courseId); // TODO: Use when displaying completion stats
     final teacherUser = MockData.users.where((u) => u.userId == course.instructorUserId).firstOrNull;
     
     return GestureDetector(
@@ -226,12 +293,7 @@ class CoursesTab extends StatelessWidget {
     );
   }
   
-  List<Course> _getUserCourses(int userId) {
-    final enrollments = MockData.enrollments.where((e) => e.userId == userId).toList();
-    return enrollments.map((enrollment) => 
-      MockData.courses.firstWhere((c) => c.courseId == enrollment.courseId)
-    ).toList();
-  }
+
   
   Color _getCourseColor(String courseCode) {
     return AppTheme.getCourseColor(courseCode);

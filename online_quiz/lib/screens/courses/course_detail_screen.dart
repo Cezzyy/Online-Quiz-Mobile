@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/mock_data.dart';
 import '../../models/course.dart';
 import '../../models/quiz.dart';
@@ -6,20 +7,49 @@ import '../../models/teacher.dart';
 import '../../models/user.dart';
 import '../quizzes/quiz_detail_screen.dart';
 import '../../utils/app_theme.dart';
+import '../../providers/course_provider.dart';
+import '../../providers/quiz_provider.dart';
 
-class CourseDetailScreen extends StatelessWidget {
+
+class CourseDetailScreen extends ConsumerStatefulWidget {
   final Course course;
   
   const CourseDetailScreen({super.key, required this.course});
 
   @override
+  ConsumerState<CourseDetailScreen> createState() => _CourseDetailScreenState();
+}
+
+class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Load course details when screen is opened
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(courseProvider.notifier).loadCourseDetails(widget.course.courseId);
+      ref.read(quizProvider.notifier).initializeQuizzes(4); // Default student user ID
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final courseQuizzes = MockData.quizzes.where((q) => q.courseId == course.courseId).toList();
-    final completedQuizzes = courseQuizzes.where((quiz) => 
-      MockData.attempts.any((a) => a.quizId == quiz.quizId && a.submittedAt != null)
-    ).length;
-    final totalQuizzes = courseQuizzes.length;
-    final progress = totalQuizzes > 0 ? completedQuizzes / totalQuizzes : 0.0;
+    final courseState = ref.watch(courseProvider);
+    // final currentUser = ref.watch(currentUserProvider); // TODO: Use when implementing user-specific features
+    
+    // Use course data from provider if available, otherwise use the passed course
+    final course = courseState.selectedCourse ?? widget.course;
+    final courseQuizzes = courseState.selectedCourseQuizzes;
+    
+    // Calculate progress directly from MockData (same approach as quiz tab)
+    final allCourseQuizzes = MockData.getQuizzesByCourse(course.courseId);
+    final totalQuizzes = allCourseQuizzes.length;
+    final completedAttempts = MockData.getAttemptsByUser(4)
+        .where((attempt) => 
+            allCourseQuizzes.any((quiz) => quiz.quizId == attempt.quizId) && 
+            attempt.submittedAt != null)
+        .length;
+    final completedQuizzes = completedAttempts;
+    final progress = totalQuizzes > 0 ? completedAttempts / totalQuizzes : 0.0;
     
     return Scaffold(
       appBar: AppBar(
@@ -33,22 +63,64 @@ class CourseDetailScreen extends StatelessWidget {
         backgroundColor: _getCourseColor(course.code),
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          // Refresh button
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: () {
+              ref.read(courseProvider.notifier).loadCourseDetails(course.courseId);
+            },
+          ),
+        ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Course Header
-            _buildCourseHeader(progress, completedQuizzes, totalQuizzes),
-            
-            // Quizzes List
-            _buildQuizzesList(context, courseQuizzes),
-          ],
-        ),
-      ),
+      body: courseState.isLoadingCourseDetails
+          ? const Center(child: CircularProgressIndicator())
+          : courseState.error != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Error loading course details',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        courseState.error!,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () {
+                          ref.read(courseProvider.notifier).loadCourseDetails(course.courseId);
+                        },
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                )
+              : SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      // Course Header
+                      _buildCourseHeader(course, progress, completedQuizzes, totalQuizzes),
+                      
+                      // Quizzes List
+                      _buildQuizzesList(context, courseQuizzes, course),
+                    ],
+                  ),
+                ),
     );
   }
   
-  Widget _buildCourseHeader(double progress, int completedQuizzes, int totalQuizzes) {
+  Widget _buildCourseHeader(Course course, double progress, int completedQuizzes, int totalQuizzes) {
     final teacher = MockData.teachers.firstWhere(
       (t) => t.userId == course.instructorUserId,
       orElse: () => Teacher(
@@ -170,7 +242,7 @@ class CourseDetailScreen extends StatelessWidget {
     );
   }
   
-  Widget _buildQuizzesList(BuildContext context, List<Quiz> courseQuizzes) {
+  Widget _buildQuizzesList(BuildContext context, List<Quiz> courseQuizzes, Course course) {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -192,7 +264,7 @@ class CourseDetailScreen extends StatelessWidget {
             itemCount: courseQuizzes.length,
             itemBuilder: (context, index) {
               final quiz = courseQuizzes[index];
-              return _buildQuizCard(context, quiz);
+              return _buildQuizCard(context, quiz, course);
             },
           ),
         ],
@@ -200,14 +272,16 @@ class CourseDetailScreen extends StatelessWidget {
     );
   }
   
-  Widget _buildQuizCard(BuildContext context, Quiz quiz) {
-    final attempt = MockData.attempts.where((a) => a.quizId == quiz.quizId).firstOrNull;
-    final isCompleted = attempt?.submittedAt != null;
+  Widget _buildQuizCard(BuildContext context, Quiz quiz, Course course) {
+    // Use the same approach as quiz tab - directly check MockData for latest completion status
+    final attempts = MockData.getAttemptsByQuiz(quiz.quizId);
+    final completedAttempt = attempts.where((a) => a.userId == 4 && a.submittedAt != null).firstOrNull;
+    final isCompleted = completedAttempt != null;
     final quizQuestions = MockData.questions.where((q) => q.quizId == quiz.quizId).toList();
     final totalQuestions = quizQuestions.length;
     final totalPossiblePoints = quizQuestions.fold(0.0, (sum, question) => sum + question.points);
-    final score = attempt != null && attempt.submittedAt != null && totalPossiblePoints > 0
-        ? (attempt.score / totalPossiblePoints * 100)
+    final score = completedAttempt != null && totalPossiblePoints > 0
+        ? (completedAttempt.score / totalPossiblePoints * 100)
         : 0.0;
     
     return GestureDetector(
@@ -370,7 +444,7 @@ class CourseDetailScreen extends StatelessWidget {
             ),
           ],
           
-          if (isCompleted && attempt != null) ...[
+          if (isCompleted) ...[
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
@@ -382,7 +456,7 @@ class CourseDetailScreen extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'Completed on ${_formatDate(attempt.submittedAt!)}',
+                      'Completed on ${_formatDate(completedAttempt.submittedAt!)}',
                       style: TextStyle(
                         fontSize: 12,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -390,7 +464,7 @@ class CourseDetailScreen extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Time: ${attempt.timeSpentMinutes} min',
+                    'Time: ${completedAttempt.timeSpentMinutes} min',
                     style: TextStyle(
                       fontSize: 12,
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),

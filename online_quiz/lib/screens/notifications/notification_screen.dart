@@ -1,60 +1,103 @@
 import 'package:flutter/material.dart';
-import '../../data/mock_data.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/notification.dart' as model;
-import '../../widgets/empty_state_widget.dart';
+import '../../providers/notification_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../utils/app_theme.dart';
+import '../../widgets/empty_state_widget.dart';
 
-class NotificationScreen extends StatefulWidget {
+class NotificationScreen extends ConsumerStatefulWidget {
   const NotificationScreen({super.key});
 
   @override
-  State<NotificationScreen> createState() => _NotificationScreenState();
+  ConsumerState<NotificationScreen> createState() => _NotificationScreenState();
 }
 
-class _NotificationScreenState extends State<NotificationScreen> {
-  List<model.Notification> unreadNotifications = [];
-  List<model.Notification> readNotifications = [];
-  int currentPage = 0;
+class _NotificationScreenState extends ConsumerState<NotificationScreen> {
   final int itemsPerPage = 5;
-  final int currentUserId = 4; // Jan Rosalijos - student user
 
   @override
   void initState() {
     super.initState();
-    _loadNotifications();
-  }
-
-  void _loadNotifications() {
-    final allNotifications = MockData.getNotificationsByUser(currentUserId);
-    unreadNotifications = allNotifications.where((n) => !n.isRead).toList();
-    readNotifications = allNotifications.where((n) => n.isRead).toList();
+    // Load notifications when screen initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final currentUser = ref.read(currentUserProvider);
+      if (currentUser != null) {
+        ref.read(notificationNotifierProvider.notifier).loadNotifications(userId: currentUser.userId);
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final notificationState = ref.watch(notificationNotifierProvider);
+    final unreadNotifications = ref.watch(unreadNotificationsProvider);
+    final readNotifications = ref.watch(readNotificationsProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notifications'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
+        elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.mark_email_read),
-            onPressed: _markAllAsRead,
-            tooltip: 'Mark all as read',
-          ),
+          if (unreadNotifications.isNotEmpty)
+            TextButton(
+              onPressed: () => ref.read(notificationNotifierProvider.notifier).markAllAsRead(),
+              child: Text(
+                'Mark all read',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
         ],
       ),
-      body: (unreadNotifications.isEmpty && readNotifications.isEmpty)
-          ? _buildEmptyState()
-          : _buildNotificationsList(),
+      body: notificationState.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : notificationState.error != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Error loading notifications',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        notificationState.error!,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () {
+                          final currentUser = ref.read(currentUserProvider);
+                          if (currentUser != null) {
+                            ref.read(notificationNotifierProvider.notifier).loadNotifications(userId: currentUser.userId);
+                          }
+                        },
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                )
+              : unreadNotifications.isEmpty && readNotifications.isEmpty
+                  ? const EmptyStateWidget(
+                      icon: Icons.notifications_none,
+                      title: 'No notifications',
+                      message: 'You\'ll see notifications here when you have them.',
+                    )
+                  : _buildNotificationsList(unreadNotifications, readNotifications),
     );
-  }
-
-  Widget _buildEmptyState() {
-    return EmptyStatePresets.notifications();
   }
 
   Widget _buildNotificationCard(model.Notification notification) {
@@ -76,98 +119,108 @@ class _NotificationScreenState extends State<NotificationScreen> {
           ),
         ],
       ),
-      child: InkWell(
-        onTap: () => _markAsRead(notification),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildNotificationIcon(notification.type),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            notification.title,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: notification.isRead 
-                                  ? FontWeight.w500 
-                                  : FontWeight.bold,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildNotificationIcon(notification.type),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          notification.title,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: notification.isRead 
+                                ? FontWeight.w500 
+                                : FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
-                        if (!notification.isRead)
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                               color: Theme.of(context).colorScheme.primary,
-                               shape: BoxShape.circle,
-                             ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      notification.message,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        height: 1.3,
                       ),
+                      if (!notification.isRead)
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                             color: Theme.of(context).colorScheme.primary,
+                             shape: BoxShape.circle,
+                           ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    notification.message,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      height: 1.3,
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.access_time,
-                          size: 14,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time,
+                        size: 14,
+                        color: AppTheme.getSecondaryTextColor(context),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _formatTimestamp(notification.createdAt),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppTheme.getSecondaryTextColor(context),
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          _formatTimestamp(notification.createdAt),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.getSecondaryTextColor(context),
+                      ),
+                      if (notification.type != model.NotificationType.system) ...[
+                        const SizedBox(width: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getTypeColor(notification.type).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            _getTypeLabel(notification.type),
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              fontWeight: FontWeight.w500,
+                              color: _getTypeColor(notification.type),
+                            ),
                           ),
                         ),
-                        if (notification.type != model.NotificationType.system) ...[
-                          const SizedBox(width: 16),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _getTypeColor(notification.type).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              _getTypeLabel(notification.type),
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w500,
-                                color: _getTypeColor(notification.type),
-                              ),
+                      ],
+                      const Spacer(),
+                      if (!notification.isRead)
+                        TextButton(
+                          onPressed: () => ref.read(notificationNotifierProvider.notifier).markAsRead(notification),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Theme.of(context).colorScheme.primary,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Text(
+                            'Mark as Read',
+                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
+                        ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -251,33 +304,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  void _markAsRead(model.Notification notification) {
-    if (!notification.isRead) {
-      setState(() {
-        unreadNotifications.removeWhere((n) => n.notificationId == notification.notificationId);
-        readNotifications.insert(0, notification.copyWith(isRead: true));
-      });
-    }
-  }
-
-  void _markAllAsRead() {
-    setState(() {
-      for (var notification in unreadNotifications) {
-        readNotifications.insert(0, notification.copyWith(isRead: true));
-      }
-      unreadNotifications.clear();
-      currentPage = 0;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('All notifications marked as read'),
-        duration: Duration(seconds: 2),
-      ),
-    );
-  }
-
-  Widget _buildNotificationsList() {
+  Widget _buildNotificationsList(List<model.Notification> unreadNotifications, List<model.Notification> readNotifications) {
     return Column(
       children: [
         Expanded(
@@ -326,25 +353,27 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     ],
                   ),
                 ),
-                ..._getPaginatedReadNotifications().map((notification) => 
+                ..._getPaginatedReadNotifications(readNotifications).map((notification) => 
                   _buildNotificationCard(notification)),
               ],
             ],
           ),
         ),
         // Pagination controls for read notifications
-        if (readNotifications.length > itemsPerPage) _buildPaginationControls(),
+        if (readNotifications.length > itemsPerPage) _buildPaginationControls(readNotifications),
       ],
     );
   }
 
-  List<model.Notification> _getPaginatedReadNotifications() {
-    final startIndex = currentPage * itemsPerPage;
+  List<model.Notification> _getPaginatedReadNotifications(List<model.Notification> readNotifications) {
+    final notificationState = ref.read(notificationNotifierProvider);
+    final startIndex = notificationState.currentPage * itemsPerPage;
     final endIndex = (startIndex + itemsPerPage).clamp(0, readNotifications.length);
     return readNotifications.sublist(startIndex, endIndex);
   }
 
-  Widget _buildPaginationControls() {
+  Widget _buildPaginationControls(List<model.Notification> readNotifications) {
+    final notificationState = ref.watch(notificationNotifierProvider);
     final totalPages = (readNotifications.length / itemsPerPage).ceil();
     
     return Container(
@@ -353,10 +382,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           IconButton(
-            onPressed: currentPage > 0 ? () {
-              setState(() {
-                currentPage--;
-              });
+            onPressed: notificationState.currentPage > 0 ? () {
+              ref.read(notificationNotifierProvider.notifier).setPage(notificationState.currentPage - 1);
             } : null,
             icon: const Icon(Icons.chevron_left),
             iconSize: 20,
@@ -369,7 +396,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 12),
             child: Text(
-              '${currentPage + 1} / $totalPages',
+              '${notificationState.currentPage + 1} / $totalPages',
               style: TextStyle(
                 fontSize: 14,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -377,10 +404,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
             ),
           ),
           IconButton(
-            onPressed: currentPage < totalPages - 1 ? () {
-              setState(() {
-                currentPage++;
-              });
+            onPressed: notificationState.currentPage < totalPages - 1 ? () {
+              ref.read(notificationNotifierProvider.notifier).setPage(notificationState.currentPage + 1);
             } : null,
             icon: const Icon(Icons.chevron_right),
             iconSize: 20,

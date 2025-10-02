@@ -1,33 +1,34 @@
 import 'package:flutter/material.dart';
-import 'home_tab.dart';
-import '../quizzes/quiz_tab.dart';
-import '../results/results_tab.dart';
-import '../profile/profile_tab.dart';
-import '../courses/courses_tab.dart';
-import '../notifications/notification_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'teacher_home_tab.dart';
+import '../courses/teacher_courses_tab.dart';
+import '../quiz/teacher_quiz_tab.dart';
+import '../results/teacher_results_tab.dart';
+import '../profile/teacher_profile_tab.dart';
+import '../../providers/auth_provider.dart';
 
-class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+class TeacherMainScreen extends ConsumerStatefulWidget {
+  const TeacherMainScreen({super.key});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  ConsumerState<TeacherMainScreen> createState() => _TeacherMainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _TeacherMainScreenState extends ConsumerState<TeacherMainScreen> {
   int _currentIndex = 0;
 
-  static const List<Widget> _tabs = [
-    HomeTab(),
-    CoursesTab(),
-    QuizTab(),
-    ResultsTab(),
-    ProfileTab(),
+  static final List<Widget> _tabs = [
+    const TeacherHomeTab(),
+    const TeacherCoursesTab(),
+    const TeacherQuizTab(),
+    const TeacherResultsTab(),
+    const TeacherProfileTab(),
   ];
 
   static const List<String> _tabTitles = [
     'Home',
     'Courses',
-    'Quiz',
+    'Quizzes',
     'Results',
     'Profile',
   ];
@@ -57,14 +58,11 @@ class _MainScreenState extends State<MainScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const NotificationScreen(),
-                ),
-              );
+            icon: const Icon(Icons.logout),
+            tooltip: 'Sign Out',
+            onPressed: () async {
+              // Perform logout - AuthWrapper will handle navigation automatically
+              await ref.read(authProvider.notifier).logout();
             },
           ),
         ],
@@ -74,6 +72,7 @@ class _MainScreenState extends State<MainScreen> {
         children: _tabs,
       ),
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
         currentIndex: _currentIndex,
         onTap: (index) {
           setState(() {
@@ -86,12 +85,12 @@ class _MainScreenState extends State<MainScreen> {
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.school),
+            icon: Icon(Icons.class_),
             label: 'Courses',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.quiz),
-            label: 'Quiz',
+            label: 'Quizzes',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.analytics),

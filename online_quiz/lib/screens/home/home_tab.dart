@@ -1,19 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/course.dart';
 import '../../data/mock_data.dart';
 import '../../models/attempt.dart';
 import '../../models/user.dart';
 import '../../widgets/stat_card.dart';
 import '../../utils/app_theme.dart';
+import '../../providers/course_provider.dart';
+import '../../providers/quiz_provider.dart';
 
-class HomeTab extends StatelessWidget {
+class HomeTab extends ConsumerWidget {
   const HomeTab({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final user = MockData.users.firstWhere((u) => u.userId == 4); // Get first student for demo
-    // final student = MockData.students.where((s) => s.userId == user.userId).firstOrNull;
-    final userCourses = _getUserCourses(user.userId);
+    
+    // Watch providers for reactive updates
+    final courseState = ref.watch(courseProvider);
+    
+    // Initialize providers if not already loaded
+    if (!courseState.isLoading && courseState.userCourses.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(courseProvider.notifier).initializeCourses(user.userId);
+        ref.read(quizProvider.notifier).initializeQuizzes(user.userId);
+      });
+    }
+    
+    final userCourses = courseState.userCourses;
     final completedAttempts = _getCompletedAttempts(user.userId);
     final totalQuizzes = _getTotalQuizzes(userCourses);
     final averageScore = _calculateAverageScore(completedAttempts);
@@ -283,7 +297,11 @@ class HomeTab extends StatelessWidget {
           child: Column(
             children: recentAttempts.take(3).map((attempt) {
               final quiz = MockData.quizzes.firstWhere((q) => q.quizId == attempt.quizId);
-              final score = attempt.score;
+              
+              // Calculate percentage score
+              final questions = MockData.getQuestionsByQuiz(attempt.quizId);
+              final totalPoints = questions.fold<double>(0.0, (sum, q) => sum + q.points);
+              final scorePercentage = totalPoints > 0 ? (attempt.score / totalPoints) * 100 : 0.0;
               
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
@@ -315,7 +333,7 @@ class HomeTab extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            'Score: ${score.toStringAsFixed(1)}%',
+                            'Score: ${scorePercentage.toStringAsFixed(1)}%',
                             style: TextStyle(
                               fontSize: 14,
                               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -341,12 +359,7 @@ class HomeTab extends StatelessWidget {
     );
   }
   
-  List<Course> _getUserCourses(int userId) {
-    final enrollments = MockData.enrollments.where((e) => e.userId == userId).toList();
-    return enrollments.map((enrollment) => 
-      MockData.courses.firstWhere((c) => c.courseId == enrollment.courseId)
-    ).toList();
-  }
+
   
   List<Attempt> _getCompletedAttempts(int userId) {
     return MockData.attempts.where((a) => 
@@ -365,11 +378,17 @@ class HomeTab extends StatelessWidget {
   double _calculateAverageScore(List<Attempt> completedAttempts) {
     if (completedAttempts.isEmpty) return 0.0;
     
-    double totalScore = 0;
+    double totalPercentage = 0;
     for (var attempt in completedAttempts) {
-      totalScore += attempt.score;
+      // Get the questions for this quiz to calculate total points
+      final questions = MockData.getQuestionsByQuiz(attempt.quizId);
+      final totalPoints = questions.fold<double>(0.0, (sum, q) => sum + q.points);
+      
+      // Convert score to percentage
+      final percentage = totalPoints > 0 ? (attempt.score / totalPoints) * 100 : 0.0;
+      totalPercentage += percentage;
     }
-    return totalScore / completedAttempts.length;
+    return totalPercentage / completedAttempts.length;
   }
   
   String _formatDate(DateTime date) {

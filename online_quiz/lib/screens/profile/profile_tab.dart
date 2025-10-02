@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../data/mock_data.dart';
+import '../../utils/app_theme.dart';
 import 'edit_profile_screen.dart';
 import '../settings/settings_screen.dart';
 
@@ -116,7 +117,7 @@ class ProfileTab extends StatelessWidget {
                      icon: const Icon(Icons.edit_outlined),
                      label: const Text('Edit Profile'),
                      style: ElevatedButton.styleFrom(
-                       backgroundColor: Theme.of(context).colorScheme.primary,
+                       backgroundColor: AppTheme.primaryColor,
                        foregroundColor: Colors.white,
                        padding: const EdgeInsets.symmetric(vertical: 16),
                        shape: RoundedRectangleBorder(
@@ -139,8 +140,8 @@ class ProfileTab extends StatelessWidget {
                      icon: const Icon(Icons.settings_outlined),
                      label: const Text('Settings'),
                      style: OutlinedButton.styleFrom(
-                       foregroundColor: Theme.of(context).colorScheme.primary,
-                       side: BorderSide(color: Theme.of(context).colorScheme.primary),
+                       foregroundColor: AppTheme.primaryColor,
+                       side: BorderSide(color: AppTheme.primaryColor),
                        padding: const EdgeInsets.symmetric(vertical: 16),
                        shape: RoundedRectangleBorder(
                          borderRadius: BorderRadius.circular(12),

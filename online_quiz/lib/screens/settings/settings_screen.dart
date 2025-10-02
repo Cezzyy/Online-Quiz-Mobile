@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
-import '../../utils/app_routes.dart';
+import '../../providers/settings_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -11,12 +11,10 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  bool _notificationsEnabled = true;
-  bool _darkModeEnabled = false;
-  bool _autoSubmitEnabled = false;
-
   @override
   Widget build(BuildContext context) {
+    final settingsState = ref.watch(settingsProvider);
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -39,17 +37,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           // Profile Section
           _buildSectionHeader('Profile'),
           _buildSettingsTile(
-            icon: Icons.person,
-            title: 'Edit Profile',
-            subtitle: 'Update your personal information',
-            onTap: () {
-              // Navigate to edit profile screen
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Edit Profile feature coming soon')),
-              );
-            },
-          ),
-          _buildSettingsTile(
             icon: Icons.lock,
             title: 'Change Password',
             subtitle: 'Update your account password',
@@ -69,11 +56,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             icon: Icons.notifications,
             title: 'Push Notifications',
             subtitle: 'Receive quiz reminders and updates',
-            value: _notificationsEnabled,
+            value: settingsState.notificationsEnabled,
             onChanged: (value) {
-              setState(() {
-                _notificationsEnabled = value;
-              });
+              ref.read(settingsProvider.notifier).setNotificationsEnabled(value);
             },
           ),
 
@@ -82,26 +67,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           
           // App Preferences Section
           _buildSectionHeader('App Preferences'),
-          _buildSwitchTile(
-            icon: Icons.dark_mode,
-            title: 'Dark Mode',
-            subtitle: 'Switch to dark theme',
-            value: _darkModeEnabled,
-            onChanged: (value) {
-              setState(() {
-                _darkModeEnabled = value;
-              });
-            },
-          ),
-          _buildSwitchTile(
-            icon: Icons.timer,
-            title: 'Auto-Submit Quizzes',
-            subtitle: 'Automatically submit when time expires',
-            value: _autoSubmitEnabled,
-            onChanged: (value) {
-              setState(() {
-                _autoSubmitEnabled = value;
-              });
+          _buildSettingsTile(
+            icon: Icons.palette,
+            title: 'Theme Mode',
+            subtitle: _getThemeModeSubtitle(settingsState.themeMode),
+            onTap: () {
+              _showThemeModeDialog();
             },
           ),
 
@@ -152,6 +123,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onTap: () {
               _showAboutDialog();
             },
+          ),
+          _buildSettingsTile(
+            icon: Icons.restore,
+            title: 'Reset Settings',
+            subtitle: 'Reset all settings to default',
+            onTap: () {
+              _showResetSettingsDialog();
+            },
+            textColor: Colors.orange,
           ),
           
           const SizedBox(height: 24),
@@ -262,6 +242,180 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  String _getThemeModeSubtitle(ThemeMode themeMode) {
+    switch (themeMode) {
+      case ThemeMode.light:
+        return 'Light theme';
+      case ThemeMode.dark:
+        return 'Dark theme';
+      case ThemeMode.system:
+        return 'Follow system setting';
+    }
+  }
+
+  void _showThemeModeDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Consumer(
+          builder: (context, ref, child) {
+            final settingsState = ref.watch(settingsProvider);
+            
+            return AlertDialog(
+              title: const Text('Choose Theme'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildThemeOption(
+                    context: context,
+                    ref: ref,
+                    themeMode: ThemeMode.light,
+                    title: 'Light',
+                    subtitle: 'Light theme',
+                    icon: Icons.light_mode,
+                    isSelected: settingsState.themeMode == ThemeMode.light,
+                  ),
+                  _buildThemeOption(
+                    context: context,
+                    ref: ref,
+                    themeMode: ThemeMode.dark,
+                    title: 'Dark',
+                    subtitle: 'Dark theme',
+                    icon: Icons.dark_mode,
+                    isSelected: settingsState.themeMode == ThemeMode.dark,
+                  ),
+                  _buildThemeOption(
+                    context: context,
+                    ref: ref,
+                    themeMode: ThemeMode.system,
+                    title: 'System',
+                    subtitle: 'Follow system setting',
+                    icon: Icons.settings_system_daydream,
+                    isSelected: settingsState.themeMode == ThemeMode.system,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Cancel'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildThemeOption({
+    required BuildContext context,
+    required WidgetRef ref,
+    required ThemeMode themeMode,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required bool isSelected,
+  }) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      margin: const EdgeInsets.symmetric(vertical: 2),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: isSelected 
+          ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3)
+          : Colors.transparent,
+      ),
+      child: ListTile(
+        leading: Icon(
+          icon,
+          color: isSelected 
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+        ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: Icon(
+                isSelected 
+                  ? Icons.radio_button_checked 
+                  : Icons.radio_button_unchecked,
+                key: ValueKey(isSelected),
+                color: isSelected 
+                  ? Theme.of(context).colorScheme.primary 
+                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+          ],
+        ),
+        onTap: () {
+          ref.read(settingsProvider.notifier).setThemeMode(themeMode);
+          // Add a small delay before closing to show the selection animation
+          Future.delayed(const Duration(milliseconds: 150), () {
+            if (context.mounted) {
+              Navigator.of(context).pop();
+            }
+          });
+        },
+      ),
+    );
+  }
+
+  void _showResetSettingsDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Reset Settings'),
+          content: const Text('Are you sure you want to reset all settings to their default values? This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await ref.read(settingsProvider.notifier).resetSettings();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Settings have been reset to default'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              },
+              child: const Text(
+                'Reset',
+                style: TextStyle(color: Colors.orange),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showSignOutDialog() {
     showDialog(
       context: context,
@@ -278,16 +432,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             TextButton(
               onPressed: () async {
-                Navigator.of(context).pop();
+                final navigator = Navigator.of(context);
+                navigator.pop();
                 
-                // Perform logout and explicitly navigate to login screen
+                // Perform logout
                 await ref.read(authProvider.notifier).logout();
                 
-                // Force navigation to login screen
-                if (context.mounted) {
-                  Navigator.of(context).pushNamedAndRemoveUntil(
-                    AppRoutes.login,
-                    (route) => false, // Clear all routes
+                // Clear the entire navigation stack and go to root
+                // This ensures AuthWrapper can properly handle the auth state change
+                if (mounted) {
+                  navigator.pushNamedAndRemoveUntil(
+                    '/',
+                    (route) => false,
                   );
                 }
               },

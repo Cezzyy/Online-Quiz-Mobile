@@ -1,26 +1,87 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/quiz.dart';
 import '../../models/course.dart';
 import '../../models/attempt.dart';
 import '../../data/mock_data.dart';
+import '../../providers/quiz_provider.dart';
 import '../quizzes/quiz_result_screen.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/filter_tab_widget.dart';
 
-class ResultsTab extends StatefulWidget {
+class ResultsTab extends ConsumerStatefulWidget {
   const ResultsTab({super.key});
 
   @override
-  State<ResultsTab> createState() => _ResultsTabState();
+  ConsumerState<ResultsTab> createState() => _ResultsTabState();
 }
 
-class _ResultsTabState extends State<ResultsTab> {
+class _ResultsTabState extends ConsumerState<ResultsTab> {
   String _selectedFilter = 'All';
   int _currentPage = 0;
   final int _itemsPerPage = 10;
 
   @override
+  void initState() {
+    super.initState();
+    // Initialize quiz provider data when the screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(quizProvider.notifier).initializeQuizzes(4); // Default student user ID
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final quizState = ref.watch(quizProvider);
+    
+    // Show loading state while data is being fetched
+    if (quizState.isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    
+    // Show error state if there's an error
+    if (quizState.error != null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Error loading results',
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                quizState.error!,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  ref.read(quizProvider.notifier).initializeQuizzes(4);
+                },
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     final allQuizResults = _getAllQuizResults();
     final filteredResults = _getFilteredResults(allQuizResults);
     final totalPages = (filteredResults.length / _itemsPerPage).ceil();
@@ -425,44 +486,38 @@ class _ResultsTabState extends State<ResultsTab> {
   }
 
   List<QuizResultWithDetails> _getAllQuizResults() {
-    final List<QuizResultWithDetails> allResults = [];
-    const int currentUserId = 4; // Default student user
+    final quizState = ref.read(quizProvider);
+    final completedAttempts = quizState.userAttempts.where((attempt) => attempt.isCompleted).toList();
     
-    // Get all completed attempts for the current user
-    final completedAttempts = MockData.getAttemptsByUser(currentUserId)
-        .where((attempt) => attempt.submittedAt != null)
-        .toList();
-    
-    for (final attempt in completedAttempts) {
-      final quiz = MockData.getQuizById(attempt.quizId);
-      final course = quiz != null ? MockData.getCourseById(quiz.courseId) : null;
+    return completedAttempts.map((attempt) {
+      final quiz = quizState.allQuizzes.firstWhere(
+        (q) => q.quizId == attempt.quizId,
+        orElse: () => MockData.getQuizById(attempt.quizId)!,
+      );
+      final course = MockData.getCourseById(quiz.courseId);
       
-      if (quiz != null && course != null) {
-        // Calculate quiz results
-        final questions = MockData.getQuestionsByQuiz(quiz.quizId);
-        final totalQuestions = questions.length;
-        final totalPoints = questions.fold<double>(0.0, (sum, q) => sum + q.points);
-        final percentage = totalPoints > 0 ? (attempt.score / totalPoints) * 100 : 0.0;
-        
-        // Calculate correct answers
-        final attemptAnswers = MockData.getAnswersByAttempt(attempt.attemptId);
-        final correctAnswers = attemptAnswers.where((answer) => answer.isCorrect == true).length;
-        
-        allResults.add(QuizResultWithDetails(
-          attempt: attempt,
-          quiz: quiz,
-          course: course,
-          percentage: percentage,
-          correctAnswers: correctAnswers,
-          totalQuestions: totalQuestions,
-        ));
-      }
-    }
-    
-    // Sort by completion date (most recent first)
-    allResults.sort((a, b) => b.attempt.submittedAt!.compareTo(a.attempt.submittedAt!));
-    
-    return allResults;
+      // Skip if course is null
+      if (course == null) return null;
+      
+      // Calculate quiz results
+      final questions = MockData.getQuestionsByQuiz(quiz.quizId);
+      final totalQuestions = questions.length;
+      final totalPoints = questions.fold<double>(0.0, (sum, q) => sum + q.points);
+      final percentage = totalPoints > 0 ? (attempt.score / totalPoints) * 100 : 0.0;
+      
+      // Calculate correct answers
+      final attemptAnswers = MockData.getAnswersByAttempt(attempt.attemptId);
+      final correctAnswers = attemptAnswers.where((answer) => answer.isCorrect == true).length;
+      
+      return QuizResultWithDetails(
+        attempt: attempt,
+        quiz: quiz,
+        course: course,
+        percentage: percentage,
+        correctAnswers: correctAnswers,
+        totalQuestions: totalQuestions,
+      );
+    }).where((result) => result != null).cast<QuizResultWithDetails>().toList()..sort((a, b) => b.attempt.submittedAt!.compareTo(a.attempt.submittedAt!));
   }
 
   List<QuizResultWithDetails> _getFilteredResults(List<QuizResultWithDetails> allResults) {

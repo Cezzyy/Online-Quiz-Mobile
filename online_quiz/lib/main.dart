@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'screens/onboarding/onboarding_screen.dart';
+import 'screens/onboarding/splash_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home/main_screen.dart';
-import 'screens/home/teacher_home_screen.dart';
+import 'screens/home/teacher_main_screen.dart';
 import 'screens/home/admin_home_screen.dart';
 import 'utils/app_routes.dart';
 import 'utils/app_theme.dart';
 import 'providers/auth_provider.dart';
+import 'providers/settings_provider.dart';
 import 'data/mock_data.dart';
 
 extension ColorExtension on Color {
@@ -34,18 +36,20 @@ class ACLCQuizApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final settingsState = ref.watch(settingsProvider);
+    
     return MaterialApp(
       title: 'ACLC Online Quiz',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      themeMode: settingsState.themeMode,
       debugShowCheckedModeBanner: false,
       home: const AuthWrapper(),
       routes: {
         AppRoutes.onboarding: (context) => const OnboardingScreen(),
         AppRoutes.login: (context) => const LoginScreen(),
         AppRoutes.main: (context) => const MainScreen(),
-        AppRoutes.teacherHome: (context) => const TeacherHomeScreen(),
+        AppRoutes.teacherHome: (context) => const TeacherMainScreen(),
         AppRoutes.adminHome: (context) => const AdminHomeScreen(),
       },
     );
@@ -75,34 +79,18 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     
-    // Listen for auth state changes to handle navigation
-    ref.listen<AuthState>(authProvider, (previous, next) {
-      // This will trigger a rebuild when auth state changes
-    });
-
-    
-    // SIMPLIFIED APPROACH: Use MaterialApp.router with GoRouter for navigation
-    // Instead of trying to navigate from within the build method or using ref.listen,
-    // we'll directly return the appropriate screen based on auth state
-    
-    // Show loading indicator while auth state is being determined
+    // Show splash screen only during initial app startup (not during login)
     if (!authState.isInitialized) {
-
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const SplashScreen();
     }
     
     // If authenticated, return the appropriate screen based on user role
     if (authState.isAuthenticated && authState.user != null) {
       final userRole = MockData.getUserRole(authState.user!.userId);
       
-      
       switch (userRole?.toLowerCase()) {
         case 'teacher':
-          return const TeacherHomeScreen();
+          return const TeacherMainScreen();
         case 'admin':
           return const AdminHomeScreen();
         case 'student':
@@ -111,9 +99,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       }
     }
     
-    // For unauthenticated users, show login screen directly
-    // This is a key change - we're bypassing the onboarding screen for simplicity
-    
+    // For unauthenticated users, show login screen
     return const LoginScreen();
   }
 }

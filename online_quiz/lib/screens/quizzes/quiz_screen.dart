@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/quiz.dart';
 import '../../models/question.dart';
-import '../../models/attempt.dart';
-import '../../models/attempt_answer.dart';
 import '../../data/mock_data.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/dialog.dart';
+import '../../providers/quiz_provider.dart';
 import 'quiz_result_screen.dart';
 
-class QuizScreen extends StatefulWidget {
+class QuizScreen extends ConsumerStatefulWidget {
   final Quiz quiz;
   final int currentUserId;
 
@@ -20,10 +20,10 @@ class QuizScreen extends StatefulWidget {
   });
 
   @override
-  State<QuizScreen> createState() => _QuizScreenState();
+  ConsumerState<QuizScreen> createState() => _QuizScreenState();
 }
 
-class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
+class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStateMixin {
   late List<Question> questions;
   late PageController pageController;
   late AnimationController timerAnimationController;
@@ -40,6 +40,14 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
     questions = MockData.getQuestionsByQuiz(widget.quiz.quizId);
     pageController = PageController();
     startTime = DateTime.now();
+    
+    // Initialize quiz attempt through provider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(quizProvider.notifier).startQuizAttempt(
+        widget.quiz.quizId,
+        widget.currentUserId,
+      );
+    });
     
     // Initialize timer
     if (widget.quiz.timeLimitMinutes != null) {
@@ -687,7 +695,7 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
     );
   }
 
-  void _submitQuiz({bool autoSubmit = false}) {
+  void _submitQuiz({bool autoSubmit = false}) async {
     if (isSubmitting) return;
     
     setState(() {
@@ -718,13 +726,18 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
       ),
     );
 
-    // Calculate score and create attempt
-    Future.delayed(const Duration(seconds: 2), () {
+    try {
+      // Submit quiz through provider
+      final attempt = await ref.read(quizProvider.notifier).submitQuizAttempt(
+        widget.quiz.quizId,
+        widget.currentUserId,
+        answers,
+        startTime!,
+        autoSubmit,
+      );
+
       if (context.mounted) {
         navigator.pop(); // Close loading dialog
-        
-        // Calculate score and create attempt
-        final attempt = _calculateScoreAndCreateAttempt(autoSubmit);
         
         scaffoldMessenger.showSnackBar(
           SnackBar(
@@ -752,7 +765,26 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
           ),
         );
       }
-    });
+    } catch (e) {
+      if (context.mounted) {
+        navigator.pop(); // Close loading dialog
+        
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('Failed to submit quiz: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        );
+        
+        setState(() {
+          isSubmitting = false;
+        });
+      }
+    }
   }
 
   Future<bool> _showExitConfirmation() async {
@@ -867,125 +899,5 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
     }
   }
 
-  Attempt _calculateScoreAndCreateAttempt(bool autoSubmit) {
-    double totalScore = 0.0;
-    final endTime = DateTime.now();
-    final duration = endTime.difference(startTime!);
-    
-    // Generate unique attempt ID
-    final attemptId = DateTime.now().millisecondsSinceEpoch;
-    List<AttemptAnswer> attemptAnswers = [];
 
-    for (final question in questions) {
-      final userAnswer = answers[question.questionId];
-      double questionScore = 0.0;
-      bool isCorrect = false;
-
-      if (userAnswer != null) {
-        switch (question.type) {
-          case QuestionType.single:
-            final choices = MockData.getChoicesByQuestion(question.questionId);
-            final correctChoice = choices.firstWhere((c) => c.isCorrect);
-            isCorrect = userAnswer == correctChoice.choiceId;
-            if (isCorrect) {
-              questionScore = question.points;
-            }
-            
-            attemptAnswers.add(AttemptAnswer(
-              attemptAnswerId: MockData.attemptAnswers.length + attemptAnswers.length + 1,
-              attemptId: attemptId,
-              questionId: question.questionId,
-              choiceId: userAnswer as int,
-              freeText: null,
-              isCorrect: isCorrect,
-            ));
-            break;
-
-          case QuestionType.multiple:
-            final choices = MockData.getChoicesByQuestion(question.questionId);
-            final correctChoiceIds = choices.where((c) => c.isCorrect).map((c) => c.choiceId).toSet();
-            final selectedChoiceIds = (userAnswer as List<int>).toSet();
-            
-            if (correctChoiceIds.isNotEmpty && selectedChoiceIds.isNotEmpty) {
-              final correctSelected = correctChoiceIds.intersection(selectedChoiceIds).length;
-              final incorrectSelected = selectedChoiceIds.difference(correctChoiceIds).length;
-              final totalCorrect = correctChoiceIds.length;
-              
-              // Check if all correct answers are selected and no incorrect ones
-              isCorrect = correctSelected == totalCorrect && incorrectSelected == 0;
-              
-              if (isCorrect) {
-                questionScore = question.points;
-              } else {
-                // Partial scoring: (correct selections - incorrect selections) / total correct
-                final partialScore = (correctSelected - incorrectSelected) / totalCorrect;
-                questionScore = (partialScore.clamp(0.0, 1.0) * question.points);
-              }
-            }
-            
-            // For multiple choice, we'll create separate answers for each selected choice
-            for (final choiceId in userAnswer) {
-              final choice = choices.firstWhere((c) => c.choiceId == choiceId);
-              attemptAnswers.add(AttemptAnswer(
-                attemptAnswerId: MockData.attemptAnswers.length + attemptAnswers.length + 1,
-                attemptId: attemptId,
-                questionId: question.questionId,
-                choiceId: choiceId,
-                freeText: null,
-                isCorrect: choice.isCorrect,
-              ));
-            }
-            break;
-
-          case QuestionType.text:
-            // For text questions, we'll give full points if there's an answer
-            // In a real app, this would need manual grading or AI evaluation
-            final textAnswer = userAnswer as String;
-            isCorrect = textAnswer.trim().isNotEmpty;
-            if (isCorrect) {
-              questionScore = question.points;
-            }
-            
-            attemptAnswers.add(AttemptAnswer(
-              attemptAnswerId: MockData.attemptAnswers.length + attemptAnswers.length + 1,
-              attemptId: attemptId,
-              questionId: question.questionId,
-              choiceId: null,
-              freeText: textAnswer,
-              isCorrect: isCorrect,
-            ));
-            break;
-        }
-      } else {
-        // No answer provided
-        attemptAnswers.add(AttemptAnswer(
-          attemptAnswerId: MockData.attemptAnswers.length + attemptAnswers.length + 1,
-          attemptId: attemptId,
-          questionId: question.questionId,
-          choiceId: null,
-          freeText: null,
-          isCorrect: false,
-        ));
-      }
-
-      totalScore += questionScore;
-    }
-
-    // Create the attempt
-    final attempt = Attempt(
-      attemptId: attemptId,
-      quizId: widget.quiz.quizId,
-      userId: widget.currentUserId,
-      startedAt: startTime!,
-      submittedAt: endTime,
-      score: totalScore,
-      timeSpentSeconds: duration.inSeconds,
-    );
-
-    // Add to mock data
-    MockData.attempts.add(attempt);
-    MockData.attemptAnswers.addAll(attemptAnswers);
-
-    return attempt;
-  }
 }
