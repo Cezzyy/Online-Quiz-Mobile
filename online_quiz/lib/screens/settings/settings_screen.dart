@@ -50,21 +50,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           
           const SizedBox(height: 24),
           
-          // Notifications Section
-          _buildSectionHeader('Notifications'),
-          _buildSwitchTile(
-            icon: Icons.notifications,
-            title: 'Push Notifications',
-            subtitle: 'Receive quiz reminders and updates',
-            value: settingsState.notificationsEnabled,
-            onChanged: (value) {
-              ref.read(settingsProvider.notifier).setNotificationsEnabled(value);
-            },
-          ),
-
-          
-          const SizedBox(height: 24),
-          
           // App Preferences Section
           _buildSectionHeader('App Preferences'),
           _buildSettingsTile(
@@ -73,42 +58,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             subtitle: _getThemeModeSubtitle(settingsState.themeMode),
             onTap: () {
               _showThemeModeDialog();
-            },
-          ),
-
-          
-          const SizedBox(height: 24),
-          
-          // Academic Section
-          _buildSectionHeader('Academic'),
-          _buildSettingsTile(
-            icon: Icons.school,
-            title: 'Study Progress',
-            subtitle: 'View your learning analytics',
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Study Progress feature coming soon')),
-              );
-            },
-          ),
-          _buildSettingsTile(
-            icon: Icons.bookmark,
-            title: 'Saved Questions',
-            subtitle: 'Review your bookmarked questions',
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Saved Questions feature coming soon')),
-              );
-            },
-          ),
-          _buildSettingsTile(
-            icon: Icons.history,
-            title: 'Quiz History',
-            subtitle: 'View your past quiz attempts',
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Quiz History feature coming soon')),
-              );
             },
           ),
           
@@ -194,33 +143,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildSwitchTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8.0),
-      child: SwitchListTile(
-        secondary: Icon(
-          icon,
-          color: Colors.blue,
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        subtitle: Text(subtitle),
-        value: value,
-        onChanged: onChanged,
-        activeTrackColor: Colors.blue,
-      ),
-    );
-  }
+
 
 
 
