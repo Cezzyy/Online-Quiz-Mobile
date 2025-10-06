@@ -7,6 +7,7 @@ import '../../widgets/empty_state_widget.dart';
 import '../../widgets/stat_card.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/course_provider.dart';
+import 'create_quiz_screen.dart';
 
 class TeacherQuizTab extends ConsumerStatefulWidget {
   const TeacherQuizTab({super.key});
@@ -19,6 +20,21 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
   Course? selectedCourse;
   List<Quiz> courseQuizzes = [];
   bool isLoading = false;
+  bool isRefreshing = false;
+  
+  // Pagination variables
+  int currentPage = 0;
+  final int itemsPerPage = 10;
+  
+  List<Quiz> get paginatedQuizzes {
+    final startIndex = currentPage * itemsPerPage;
+    final endIndex = (startIndex + itemsPerPage).clamp(0, courseQuizzes.length);
+    return courseQuizzes.sublist(startIndex, endIndex);
+  }
+  
+  int get totalPages => (courseQuizzes.length / itemsPerPage).ceil();
+  bool get hasNextPage => currentPage < totalPages - 1;
+  bool get hasPreviousPage => currentPage > 0;
 
   @override
   void initState() {
@@ -35,6 +51,23 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
     setState(() {
       selectedCourse = course;
       courseQuizzes = MockData.getQuizzesByCourse(course.courseId);
+      currentPage = 0; // Reset to first page when loading new course
+    });
+  }
+
+  Future<void> _refreshQuizzes() async {
+    if (selectedCourse == null) return;
+    
+    setState(() {
+      isRefreshing = true;
+    });
+    
+    await Future.delayed(const Duration(milliseconds: 800));
+    
+    setState(() {
+      courseQuizzes = MockData.getQuizzesByCourse(selectedCourse!.courseId);
+      currentPage = 0; // Reset to first page after refresh
+      isRefreshing = false;
     });
   }
 
@@ -51,6 +84,9 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
       builder: (context) => _CreateQuizDialog(
         course: selectedCourse!,
         onQuizCreated: () {
+          setState(() {
+            currentPage = 0; // Reset to first page
+          });
           _loadQuizzesForCourse(selectedCourse!);
         },
       ),
@@ -64,6 +100,9 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
         quiz: quiz,
         course: selectedCourse!,
         onQuizUpdated: () {
+          setState(() {
+            currentPage = 0; // Reset to first page
+          });
           _loadQuizzesForCourse(selectedCourse!);
         },
       ),
@@ -95,6 +134,9 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
               MockData.choices.removeWhere((c) => questionIds.contains(c.questionId));
               
               Navigator.pop(context);
+              setState(() {
+                currentPage = 0; // Reset to first page
+              });
               _loadQuizzesForCourse(selectedCourse!);
               
               ScaffoldMessenger.of(context).showSnackBar(
@@ -107,6 +149,21 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
         ],
       ),
     );
+  }
+
+  void _continueDraft(Quiz quiz) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CreateQuizScreen(
+          course: selectedCourse!,
+          quiz: quiz,
+        ),
+      ),
+    ).then((_) {
+      // Refresh the quiz list when returning from creation screen
+      _loadQuizzesForCourse(selectedCourse!);
+    });
   }
 
   @override
@@ -222,11 +279,15 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
                   ),
                   const SizedBox(width: 12),
                   OutlinedButton.icon(
-                    onPressed: () {
-                      _loadQuizzesForCourse(selectedCourse!);
-                    },
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Refresh'),
+                    onPressed: isRefreshing ? null : _refreshQuizzes,
+                    icon: isRefreshing 
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.refresh),
+                    label: Text(isRefreshing ? 'Refreshing...' : 'Refresh'),
                   ),
                 ],
               ),
@@ -252,96 +313,224 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
                             label: const Text('Create Quiz'),
                           ),
                         )
-                      : ListView.builder(
-                          itemCount: courseQuizzes.length,
-                          itemBuilder: (context, index) {
-                            final quiz = courseQuizzes[index];
-                            final questions = MockData.getQuestionsByQuiz(quiz.quizId);
-                            
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.all(16),
-                                leading: CircleAvatar(
-                                  backgroundColor: quiz.isPublished 
-                                      ? Colors.green.withValues(alpha: 0.1)
-                                      : Colors.orange.withValues(alpha: 0.1),
-                                  child: Icon(
-                                   quiz.isPublished ? Icons.publish : Icons.edit_document,
-                                   color: quiz.isPublished ? Colors.green : Colors.orange,
-                                 ),
-                                ),
-                                title: Text(
-                                  quiz.title,
-                                  style: const TextStyle(fontWeight: FontWeight.w600),
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const SizedBox(height: 4),
-                                    Text('${questions.length} questions'),
-                                    if (quiz.dueAt != null)
-                                      Text(
-                                        'Due: ${_formatDate(quiz.dueAt!)}',
-                                        style: TextStyle(
-                                          color: quiz.isOverdue ? Colors.red : null,
-                                        ),
-                                      ),
-                                    if (quiz.timeLimitMinutes != null)
-                                      Text('Time limit: ${quiz.timeLimitMinutes} minutes'),
-                                  ],
-                                ),
-                                trailing: PopupMenuButton<String>(
-                                  onSelected: (value) {
-                                    switch (value) {
-                                      case 'edit':
-                                        _showEditQuizDialog(quiz);
-                                        break;
-                                      case 'toggle_publish':
-                                        _togglePublishStatus(quiz);
-                                        break;
-                                      case 'delete':
-                                        _deleteQuiz(quiz);
-                                        break;
-                                    }
-                                  },
-                                  itemBuilder: (context) => [
-                                    const PopupMenuItem(
-                                      value: 'edit',
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.edit),
-                                          SizedBox(width: 8),
-                                          Text('Edit'),
-                                        ],
-                                      ),
-                                    ),
-                                    PopupMenuItem(
-                                      value: 'toggle_publish',
-                                      child: Row(
-                                        children: [
-                                          Icon(quiz.isPublished ? Icons.unpublished : Icons.publish),
-                                          const SizedBox(width: 8),
-                                          Text(quiz.isPublished ? 'Unpublish' : 'Publish'),
-                                        ],
-                                      ),
-                                    ),
-                                    const PopupMenuItem(
-                                      value: 'delete',
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.delete, color: Colors.red),
-                                          SizedBox(width: 8),
-                                          Text('Delete', style: TextStyle(color: Colors.red)),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                      : isRefreshing
+                          ? const Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  CircularProgressIndicator(),
+                                  SizedBox(height: 16),
+                                  Text('Refreshing quizzes...'),
+                                ],
                               ),
-                            );
-                          },
-                        ),
+                            )
+                          : Column(
+                              children: [
+                                // Pagination info
+                                if (courseQuizzes.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 16),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Showing ${currentPage * itemsPerPage + 1}-${((currentPage + 1) * itemsPerPage).clamp(0, courseQuizzes.length)} of ${courseQuizzes.length} quizzes',
+                                          style: Theme.of(context).textTheme.bodySmall,
+                                        ),
+                                        if (totalPages > 1)
+                                          Text(
+                                            'Page ${currentPage + 1} of $totalPages',
+                                            style: Theme.of(context).textTheme.bodySmall,
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                
+                                // Quiz list
+                                Expanded(
+                                  child: ListView.builder(
+                                    itemCount: paginatedQuizzes.length,
+                                    itemBuilder: (context, index) {
+                                      final quiz = paginatedQuizzes[index];
+                                      final questions = MockData.getQuestionsByQuiz(quiz.quizId);
+                                      
+                                      return Card(
+                                        margin: const EdgeInsets.only(bottom: 12),
+                                        child: ListTile(
+                                          contentPadding: const EdgeInsets.all(16),
+                                          leading: CircleAvatar(
+                                            backgroundColor: quiz.isPublished 
+                                                ? Colors.green.withValues(alpha: 0.1)
+                                                : Colors.orange.withValues(alpha: 0.1),
+                                            child: Icon(
+                                             quiz.isPublished ? Icons.publish : Icons.edit_document,
+                                             color: quiz.isPublished ? Colors.green : Colors.orange,
+                                           ),
+                                          ),
+                                          title: Text(
+                                            quiz.title,
+                                            style: const TextStyle(fontWeight: FontWeight.w600),
+                                          ),
+                                          subtitle: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              const SizedBox(height: 4),
+                                              Text('${questions.length} questions'),
+                                              if (quiz.dueAt != null)
+                                                Text(
+                                                  'Due: ${_formatDate(quiz.dueAt!)}',
+                                                  style: TextStyle(
+                                                    color: quiz.isOverdue ? Colors.red : null,
+                                                  ),
+                                                ),
+                                              if (quiz.timeLimitMinutes != null)
+                                                Text('Time limit: ${quiz.timeLimitMinutes} minutes'),
+                                            ],
+                                          ),
+                                          trailing: PopupMenuButton<String>(
+                                            onSelected: (value) {
+                                              switch (value) {
+                                                case 'continue_draft':
+                                                  _continueDraft(quiz);
+                                                  break;
+                                                case 'edit':
+                                                  _showEditQuizDialog(quiz);
+                                                  break;
+                                                case 'toggle_publish':
+                                                  _togglePublishStatus(quiz);
+                                                  break;
+                                                case 'delete':
+                                                  _deleteQuiz(quiz);
+                                                  break;
+                                              }
+                                            },
+                                            itemBuilder: (context) => [
+                                              if (!quiz.isPublished)
+                                                const PopupMenuItem(
+                                                  value: 'continue_draft',
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(Icons.edit_note, color: Colors.blue),
+                                                      SizedBox(width: 8),
+                                                      Text('Continue Draft', style: TextStyle(color: Colors.blue)),
+                                                    ],
+                                                  ),
+                                                ),
+                                              const PopupMenuItem(
+                                                value: 'edit',
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.edit),
+                                                    SizedBox(width: 8),
+                                                    Text('Edit'),
+                                                  ],
+                                                ),
+                                              ),
+                                              PopupMenuItem(
+                                                value: 'toggle_publish',
+                                                child: Row(
+                                                  children: [
+                                                    Icon(quiz.isPublished ? Icons.unpublished : Icons.publish),
+                                                    const SizedBox(width: 8),
+                                                    Text(quiz.isPublished ? 'Unpublish' : 'Publish'),
+                                                  ],
+                                                ),
+                                              ),
+                                              const PopupMenuItem(
+                                                value: 'delete',
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.delete, color: Colors.red),
+                                                    SizedBox(width: 8),
+                                                    Text('Delete', style: TextStyle(color: Colors.red)),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                
+                                // Pagination controls
+                                if (totalPages > 1)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        IconButton(
+                                          onPressed: hasPreviousPage
+                                              ? () {
+                                                  setState(() {
+                                                    currentPage--;
+                                                  });
+                                                }
+                                              : null,
+                                          icon: const Icon(Icons.chevron_left),
+                                          tooltip: 'Previous page',
+                                        ),
+                                        const SizedBox(width: 8),
+                                        ...List.generate(totalPages, (index) {
+                                          return Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                                            child: InkWell(
+                                              onTap: () {
+                                                setState(() {
+                                                  currentPage = index;
+                                                });
+                                              },
+                                              borderRadius: BorderRadius.circular(8),
+                                              child: Container(
+                                                width: 40,
+                                                height: 40,
+                                                decoration: BoxDecoration(
+                                                  color: currentPage == index
+                                                      ? Theme.of(context).primaryColor
+                                                      : Colors.transparent,
+                                                  borderRadius: BorderRadius.circular(8),
+                                                  border: Border.all(
+                                                    color: currentPage == index
+                                                        ? Theme.of(context).primaryColor
+                                                        : Colors.grey.withValues(alpha: 0.3),
+                                                  ),
+                                                ),
+                                                child: Center(
+                                                  child: Text(
+                                                    '${index + 1}',
+                                                    style: TextStyle(
+                                                      color: currentPage == index
+                                                          ? Colors.white
+                                                          : Theme.of(context).textTheme.bodyMedium?.color,
+                                                      fontWeight: currentPage == index
+                                                          ? FontWeight.bold
+                                                          : FontWeight.normal,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        }),
+                                        const SizedBox(width: 8),
+                                        IconButton(
+                                          onPressed: hasNextPage
+                                              ? () {
+                                                  setState(() {
+                                                    currentPage++;
+                                                  });
+                                                }
+                                              : null,
+                                          icon: const Icon(Icons.chevron_right),
+                                          tooltip: 'Next page',
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
             ),
           ],
         ),
@@ -359,6 +548,9 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
     final index = MockData.quizzes.indexWhere((q) => q.quizId == quiz.quizId);
     if (index != -1) {
       MockData.quizzes[index] = updatedQuiz;
+      setState(() {
+        currentPage = 0; // Reset to first page
+      });
       _loadQuizzesForCourse(selectedCourse!);
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -394,12 +586,11 @@ class _CreateQuizDialogState extends State<_CreateQuizDialog> {
   final _titleController = TextEditingController();
   int? _selectedTimeLimit;
   DateTime? _dueDate;
-  bool _isPublished = false;
 
   final List<Map<String, dynamic>> _timeLimitOptions = [
-    {'label': '30 minutes', 'value': 30},
+    {'label': '30 min', 'value': 30},
     {'label': '1 hour', 'value': 60},
-    {'label': '1 hour 30 minutes', 'value': 90},
+    {'label': '1.5 hours', 'value': 90},
     {'label': '2 hours', 'value': 120},
     {'label': '3 hours', 'value': 180},
   ];
@@ -430,7 +621,7 @@ class _CreateQuizDialogState extends State<_CreateQuizDialog> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<int>(
-                value: _selectedTimeLimit,
+                initialValue: _selectedTimeLimit,
                 decoration: const InputDecoration(
                   labelText: 'Time Limit',
                   border: OutlineInputBorder(),
@@ -482,16 +673,6 @@ class _CreateQuizDialogState extends State<_CreateQuizDialog> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              SwitchListTile(
-                title: const Text('Publish immediately'),
-                value: _isPublished,
-                onChanged: (value) {
-                  setState(() {
-                    _isPublished = value;
-                  });
-                },
-              ),
             ],
           ),
         ),
@@ -523,18 +704,30 @@ class _CreateQuizDialogState extends State<_CreateQuizDialog> {
         title: _titleController.text.trim(),
         dueAt: _dueDate!,
         timeLimitMinutes: _selectedTimeLimit!,
-        isPublished: _isPublished,
+        isPublished: false, // Always start as draft
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
 
+      // Add the quiz to mock data as a draft
       MockData.quizzes.add(newQuiz);
-      widget.onQuizCreated();
+      
+      // Close the dialog
       Navigator.pop(context);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Quiz "${newQuiz.title}" created successfully')),
-      );
+      // Navigate to the quiz creation screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => CreateQuizScreen(
+            course: widget.course,
+            quiz: newQuiz,
+          ),
+        ),
+      ).then((_) {
+        // Refresh the quiz list when returning from creation screen
+        widget.onQuizCreated();
+      });
     }
   }
 
@@ -568,9 +761,9 @@ class _EditQuizDialogState extends State<_EditQuizDialog> {
   late bool _isPublished;
 
   final List<Map<String, dynamic>> _timeLimitOptions = [
-    {'label': '30 minutes', 'value': 30},
+    {'label': '30 min', 'value': 30},
     {'label': '1 hour', 'value': 60},
-    {'label': '1 hour 30 minutes', 'value': 90},
+    {'label': '1.5 hours', 'value': 90},
     {'label': '2 hours', 'value': 120},
     {'label': '3 hours', 'value': 180},
   ];
@@ -610,7 +803,7 @@ class _EditQuizDialogState extends State<_EditQuizDialog> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<int>(
-                value: _selectedTimeLimit,
+                initialValue: _selectedTimeLimit,
                 decoration: const InputDecoration(
                   labelText: 'Time Limit',
                   border: OutlineInputBorder(),
