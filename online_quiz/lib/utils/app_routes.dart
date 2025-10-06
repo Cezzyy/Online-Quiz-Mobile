@@ -7,6 +7,7 @@ class AppRoutes {
   static const String teacherHome = '/teacher-home';
   static const String adminHome = '/admin-home';
   static const String quiz = '/quiz';
+  static const String createQuiz = '/create-quiz';
   static const String results = '/results';
   static const String profile = '/profile';
   static const String settings = '/settings';

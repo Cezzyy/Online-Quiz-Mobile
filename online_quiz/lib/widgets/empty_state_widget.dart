@@ -27,10 +27,10 @@ class EmptyStateWidget extends StatelessWidget {
     this.iconColor,
     this.titleColor,
     this.messageColor,
-    this.iconSize = 80.0,
-    this.titleFontSize = 24.0,
-    this.messageFontSize = 16.0,
-    this.padding = const EdgeInsets.all(32.0),
+    this.iconSize = 48.0,
+    this.titleFontSize = 18.0,
+    this.messageFontSize = 14.0,
+    this.padding = const EdgeInsets.all(16.0),
     this.showInfoCard = false,
     this.infoCardText,
     this.infoCardColor,
@@ -48,13 +48,14 @@ class EmptyStateWidget extends StatelessWidget {
         padding: padding,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
               size: iconSize,
               color: defaultIconColor,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             Text(
               title,
               style: TextStyle(
@@ -64,7 +65,7 @@ class EmptyStateWidget extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             Text(
               message,
               style: TextStyle(
@@ -85,7 +86,7 @@ class EmptyStateWidget extends StatelessWidget {
               ),
             ],
             if (showInfoCard && infoCardText != null) ...[
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -118,7 +119,7 @@ class EmptyStateWidget extends StatelessWidget {
               ),
             ],
             if (action != null) ...[
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
               action!,
             ],
           ],

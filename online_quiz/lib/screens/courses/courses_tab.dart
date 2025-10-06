@@ -179,7 +179,7 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -233,7 +233,7 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               
               // Course Info
               Row(
@@ -277,7 +277,7 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               
               // Progress Bar
               LinearProgressIndicator(
