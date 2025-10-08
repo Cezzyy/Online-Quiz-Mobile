@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/mock_data.dart';
 import '../../models/course.dart';
-import '../../models/user.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/stat_card.dart';
 import '../../utils/app_theme.dart';
 import '../../providers/course_provider.dart';
 import '../../providers/auth_provider.dart';
+import 'view_students_screen.dart';
+// import 'manage_course_screen.dart';
 
 class TeacherCoursesTab extends ConsumerStatefulWidget {
   const TeacherCoursesTab({super.key});
@@ -118,7 +119,7 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-           'My Classes',
+           'My Courses',
            style: TextStyle(
              fontSize: 28,
              fontWeight: FontWeight.bold,
@@ -297,18 +298,18 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _manageQuizzes(context, course),
-                    icon: const Icon(Icons.quiz, size: 18),
-                    label: const Text('Manage Quizzes'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _getCourseColor(course.code),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
+                // Expanded(
+                //   child: ElevatedButton.icon(
+                //     onPressed: () => _manageCourse(context, course),
+                //     icon: const Icon(Icons.settings, size: 18),
+                //     label: const Text('Manage Course'),
+                //     style: ElevatedButton.styleFrom(
+                //       backgroundColor: _getCourseColor(course.code),
+                //       foregroundColor: Colors.white,
+                //       padding: const EdgeInsets.symmetric(vertical: 12),
+                //     ),
+                //   ),
+                // ),
               ],
             ),
           ],
@@ -425,119 +426,22 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
   }
   
   void _viewStudents(BuildContext context, Course course) {
-    final enrollments = MockData.getEnrollmentsByCourse(course.courseId);
-    final students = enrollments.map((enrollment) {
-      return MockData.getUserById(enrollment.userId);
-    }).where((user) => user != null).cast<User>().toList();
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Students in ${course.name}'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: students.isEmpty
-              ? const Text('No students enrolled in this course.')
-              : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: students.length,
-                  itemBuilder: (context, index) {
-                    final student = students[index];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
-                        child: Icon(
-                          Icons.person,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                      title: Text(
-                        student.fullName,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      subtitle: Text(
-                        student.email,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-        ],
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ViewStudentsScreen(course: course),
       ),
     );
   }
   
-  void _manageQuizzes(BuildContext context, Course course) {
-    final quizzes = MockData.getQuizzesByCourse(course.courseId);
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Quizzes in ${course.name}'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: quizzes.isEmpty
-              ? const Text('No quizzes created for this course yet.')
-              : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: quizzes.length,
-                  itemBuilder: (context, index) {
-                    final quiz = quizzes[index];
-                    final attempts = MockData.getAttemptsByQuiz(quiz.quizId)
-                        .where((attempt) => attempt.submittedAt != null)
-                        .length;
-                    
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: AppTheme.getQuizTypeColor('quiz').withValues(alpha: 0.1),
-                        child: Icon(
-                          Icons.quiz,
-                          color: AppTheme.getQuizTypeColor('quiz'),
-                        ),
-                      ),
-                      title: Text(
-                        quiz.title,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      subtitle: Text(
-                        '$attempts submissions • ${quiz.timeLimitMinutes} min',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                      ),
-                      trailing: Icon(
-                         quiz.isPublished ? Icons.visibility : Icons.visibility_off,
-                         color: quiz.isPublished ? Colors.green : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                       ),
-                    );
-                  },
-                ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
+  // void _manageCourse(BuildContext context, Course course) {
+  //   Navigator.push(
+  //     context,
+  //     MaterialPageRoute(
+  //       builder: (context) => ManageCourseScreen(course: course),
+  //     ),
+  //   );
+  // }
   
   Color _getCourseColor(String courseCode) {
     return AppTheme.getCourseColor(courseCode);

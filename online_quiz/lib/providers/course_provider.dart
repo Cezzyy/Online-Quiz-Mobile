@@ -237,6 +237,27 @@ class CourseNotifier extends StateNotifier<CourseState> {
         .toList();
   }
 
+  // Get enrolled students with their details for a course
+  List<Map<String, dynamic>> getEnrolledStudentsWithDetails(int courseId) {
+    final enrollments = MockData.enrollments.where((e) => e.courseId == courseId).toList();
+    final students = <Map<String, dynamic>>[];
+
+    for (final enrollment in enrollments) {
+      final user = MockData.getUserById(enrollment.userId);
+      final student = MockData.getStudentByUserId(enrollment.userId);
+      
+      if (user != null) {
+        students.add({
+          'user': user,
+          'student': student,
+          'enrollment': enrollment,
+        });
+      }
+    }
+
+    return students;
+  }
+
   // Teacher method: Get all students not enrolled in a specific course
   List<User> getAvailableStudents(int courseId) {
     final enrolledUserIds = MockData.enrollments
