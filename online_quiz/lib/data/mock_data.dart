@@ -46,6 +46,50 @@ class MockData {
       contactNumber: '+63 912 345 6789',
       emergencyContactNumber: '+63 987 654 3210',
     ),
+    User(
+      userId: 5,
+      email: 'maria.santos@student.edu',
+      passwordHash: 'hashed_password_maria',
+      fullName: 'Maria Santos',
+      status: 'Active',
+      createdAt: DateTime(2024, 1, 5),
+      updatedAt: DateTime(2024, 1, 5),
+      contactNumber: '+63 912 345 6790',
+      emergencyContactNumber: '+63 987 654 3211',
+    ),
+    User(
+      userId: 6,
+      email: 'john.dela.cruz@student.edu',
+      passwordHash: 'hashed_password_john',
+      fullName: 'John Dela Cruz',
+      status: 'Active',
+      createdAt: DateTime(2024, 1, 6),
+      updatedAt: DateTime(2024, 1, 6),
+      contactNumber: '+63 912 345 6791',
+      emergencyContactNumber: '+63 987 654 3212',
+    ),
+    User(
+      userId: 7,
+      email: 'anna.garcia@student.edu',
+      passwordHash: 'hashed_password_anna',
+      fullName: 'Anna Garcia',
+      status: 'Active',
+      createdAt: DateTime(2024, 1, 7),
+      updatedAt: DateTime(2024, 1, 7),
+      contactNumber: '+63 912 345 6792',
+      emergencyContactNumber: '+63 987 654 3213',
+    ),
+    User(
+      userId: 8,
+      email: 'michael.reyes@student.edu',
+      passwordHash: 'hashed_password_michael',
+      fullName: 'Michael Reyes',
+      status: 'Active',
+      createdAt: DateTime(2024, 1, 8),
+      updatedAt: DateTime(2024, 1, 8),
+      contactNumber: '+63 912 345 6793',
+      emergencyContactNumber: '+63 987 654 3214',
+    ),
   ];
 
   // Roles
@@ -59,8 +103,11 @@ class MockData {
   static final List<UserRole> userRoles = [
     UserRole(userId: 1, roleId: 1), // Admin
     UserRole(userId: 2, roleId: 2), // Teacher
-
     UserRole(userId: 4, roleId: 3), // Student
+    UserRole(userId: 5, roleId: 3), // Student
+    UserRole(userId: 6, roleId: 3), // Student
+    UserRole(userId: 7, roleId: 3), // Student
+    UserRole(userId: 8, roleId: 3), // Student
   ];
 
   // Teachers
@@ -70,7 +117,11 @@ class MockData {
 
   // Students
   static final List<Student> students = [
-    Student(userId: 4, studentId: 'C23-01-7557-MAN121', yearLevel: 2, section: 'A', course: 'Computer Science'),
+    Student(userId: 4, studentId: 'C23-01-7557-MAN121', yearLevel: 2, section: 'CS31A', course: 'Computer Science'),
+    Student(userId: 5, studentId: 'C23-02-7558-MAN122', yearLevel: 1, section: 'IT11B', course: 'Information Technology'),
+    Student(userId: 6, studentId: 'C23-03-7559-MAN123', yearLevel: 3, section: 'CS31A', course: 'Computer Science'),
+    Student(userId: 7, studentId: 'C23-04-7560-MAN124', yearLevel: 1, section: 'CS11C', course: 'Computer Science'),
+    Student(userId: 8, studentId: 'C23-05-7561-MAN125', yearLevel: 2, section: 'IT21A', course: 'Information Technology'),
   ];
 
   // Courses
@@ -97,6 +148,7 @@ class MockData {
 
   // Enrollments
   static final List<Enrollment> enrollments = [
+    // Jan Rosalijos (userId: 4) - enrolled in CS101 and MATH201
     Enrollment(
       enrollmentId: 1,
       userId: 4,
@@ -109,7 +161,62 @@ class MockData {
       courseId: 2,
       enrolledAt: DateTime(2024, 1, 10),
     ),
-
+    
+    // Maria Santos (userId: 5) - enrolled in CS101 and CS201
+    Enrollment(
+      enrollmentId: 3,
+      userId: 5,
+      courseId: 1,
+      enrolledAt: DateTime(2024, 1, 11),
+    ),
+    Enrollment(
+      enrollmentId: 4,
+      userId: 5,
+      courseId: 3,
+      enrolledAt: DateTime(2024, 1, 11),
+    ),
+    
+    // John Dela Cruz (userId: 6) - enrolled in all three courses
+    Enrollment(
+      enrollmentId: 5,
+      userId: 6,
+      courseId: 1,
+      enrolledAt: DateTime(2024, 1, 12),
+    ),
+    Enrollment(
+      enrollmentId: 6,
+      userId: 6,
+      courseId: 2,
+      enrolledAt: DateTime(2024, 1, 12),
+    ),
+    Enrollment(
+      enrollmentId: 7,
+      userId: 6,
+      courseId: 3,
+      enrolledAt: DateTime(2024, 1, 12),
+    ),
+    
+    // Anna Garcia (userId: 7) - enrolled in MATH201 only
+    Enrollment(
+      enrollmentId: 8,
+      userId: 7,
+      courseId: 2,
+      enrolledAt: DateTime(2024, 1, 13),
+    ),
+    
+    // Michael Reyes (userId: 8) - enrolled in CS101 and CS201
+    Enrollment(
+      enrollmentId: 9,
+      userId: 8,
+      courseId: 1,
+      enrolledAt: DateTime(2024, 1, 14),
+    ),
+    Enrollment(
+      enrollmentId: 10,
+      userId: 8,
+      courseId: 3,
+      enrolledAt: DateTime(2024, 1, 14),
+    ),
   ];
 
   // Quizzes
@@ -475,6 +582,15 @@ class MockData {
       final userRole = userRoles.firstWhere((ur) => ur.userId == userId);
       final role = roles.firstWhere((r) => r.roleId == userRole.roleId);
       return role.name;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Get student by user ID
+  static Student? getStudentByUserId(int userId) {
+    try {
+      return students.firstWhere((student) => student.userId == userId);
     } catch (e) {
       return null;
     }
