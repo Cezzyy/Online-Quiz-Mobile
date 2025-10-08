@@ -207,20 +207,22 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
     _loadData();
 
     // Show result message
-    if (failCount == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$successCount student(s) assigned to ${widget.course.name}'),
-          backgroundColor: AppTheme.successColor,
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$successCount assigned, $failCount failed'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+    if (mounted) {
+      if (failCount == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$successCount student(s) assigned to ${widget.course.name}'),
+            backgroundColor: AppTheme.successColor,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$successCount assigned, $failCount failed'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
     }
   }
 
@@ -237,15 +239,19 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
           ),
           TextButton(
             onPressed: () async {
-              Navigator.of(context).pop();
+              final navigator = Navigator.of(context);
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
+              navigator.pop();
               
               final courseNotifier = ref.read(courseProvider.notifier);
               final currentUser = ref.read(authProvider).user;
               
               if (currentUser == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Authentication error')),
-                );
+                if (mounted) {
+                  scaffoldMessenger.showSnackBar(
+                    const SnackBar(content: Text('Authentication error')),
+                  );
+                }
                 return;
               }
 
@@ -256,21 +262,23 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
                 currentUser.userId
               );
               
-              if (success) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Student removed from course'),
-                    backgroundColor: AppTheme.successColor,
-                  ),
-                );
-              } else {
-                final error = ref.read(courseProvider).error;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(error ?? 'Failed to remove student'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+              if (mounted) {
+                if (success) {
+                  scaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: const Text('Student removed from course'),
+                      backgroundColor: AppTheme.successColor,
+                    ),
+                  );
+                } else {
+                  final error = ref.read(courseProvider).error;
+                  scaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: Text(error ?? 'Failed to remove student'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               }
               
               _loadData();
