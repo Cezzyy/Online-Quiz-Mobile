@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/course.dart';
 import '../../models/quiz.dart';
+
 import '../../data/mock_data.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/course_provider.dart';
 import '../../providers/quiz_provider.dart';
 import '../../widgets/empty_state_widget.dart';
-import '../quizzes/quiz_result_screen.dart';
+import 'quiz_student_results_screen.dart';
 
 class TeacherResultsTab extends ConsumerStatefulWidget {
   const TeacherResultsTab({super.key});
@@ -350,18 +351,16 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
           ],
         ),
         onTap: () {
-          // Navigate to detailed quiz results
-          if (attempts.isNotEmpty) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => QuizResultScreen(
-                  quiz: quiz,
-                  attempt: attempts.last,
-                ),
+          // Navigate to quiz student results screen
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => QuizStudentResultsScreen(
+                quiz: quiz,
+                course: _selectedCourse!,
               ),
-            );
-          }
+            ),
+          );
         },
       ),
     );
