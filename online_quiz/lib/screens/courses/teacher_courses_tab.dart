@@ -8,7 +8,7 @@ import '../../utils/app_theme.dart';
 import '../../providers/course_provider.dart';
 import '../../providers/auth_provider.dart';
 import 'view_students_screen.dart';
-// import 'manage_course_screen.dart';
+import 'manage_course_screen.dart';
 
 class TeacherCoursesTab extends ConsumerStatefulWidget {
   const TeacherCoursesTab({super.key});
@@ -298,18 +298,18 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Expanded(
-                //   child: ElevatedButton.icon(
-                //     onPressed: () => _manageCourse(context, course),
-                //     icon: const Icon(Icons.settings, size: 18),
-                //     label: const Text('Manage Course'),
-                //     style: ElevatedButton.styleFrom(
-                //       backgroundColor: _getCourseColor(course.code),
-                //       foregroundColor: Colors.white,
-                //       padding: const EdgeInsets.symmetric(vertical: 12),
-                //     ),
-                //   ),
-                // ),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _manageCourse(context, course),
+                    icon: const Icon(Icons.settings, size: 18),
+                    label: const Text('Manage Course'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _getCourseColor(course.code),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
               ],
             ),
           ],
@@ -434,14 +434,14 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
     );
   }
   
-  // void _manageCourse(BuildContext context, Course course) {
-  //   Navigator.push(
-  //     context,
-  //     MaterialPageRoute(
-  //       builder: (context) => ManageCourseScreen(course: course),
-  //     ),
-  //   );
-  // }
+  void _manageCourse(BuildContext context, Course course) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ManageCourseScreen(course: course),
+      ),
+    );
+  }
   
   Color _getCourseColor(String courseCode) {
     return AppTheme.getCourseColor(courseCode);
