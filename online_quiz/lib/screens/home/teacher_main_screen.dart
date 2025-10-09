@@ -5,7 +5,8 @@ import '../courses/teacher_courses_tab.dart';
 import '../quiz/teacher_quiz_tab.dart';
 import '../results/teacher_results_tab.dart';
 import '../profile/teacher_profile_tab.dart';
-import '../../providers/auth_provider.dart';
+import '../notifications/notification_screen.dart';
+import '../../providers/notification_provider.dart';
 
 class TeacherMainScreen extends ConsumerStatefulWidget {
   const TeacherMainScreen({super.key});
@@ -17,12 +18,12 @@ class TeacherMainScreen extends ConsumerStatefulWidget {
 class _TeacherMainScreenState extends ConsumerState<TeacherMainScreen> {
   int _currentIndex = 0;
 
-  static final List<Widget> _tabs = [
+  List<Widget> get _tabs => [
     const TeacherHomeTab(),
     const TeacherCoursesTab(),
     const TeacherQuizTab(),
     const TeacherResultsTab(),
-    const TeacherProfileTab(),
+    TeacherProfileTab(onNavigateToTab: _navigateToTab),
   ];
 
   static const List<String> _tabTitles = [
@@ -32,6 +33,12 @@ class _TeacherMainScreenState extends ConsumerState<TeacherMainScreen> {
     'Results',
     'Profile',
   ];
+
+  void _navigateToTab(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,13 +64,54 @@ class _TeacherMainScreenState extends ConsumerState<TeacherMainScreen> {
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Sign Out',
-            onPressed: () async {
-              // Perform logout - AuthWrapper will handle navigation automatically
-              await ref.read(authProvider.notifier).logout();
-            },
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications_outlined),
+                tooltip: 'Notifications',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NotificationScreen(),
+                    ),
+                  );
+                },
+              ),
+              // Show badge for unread notifications
+              Consumer(
+                builder: (context, ref, child) {
+                  final unreadCount = ref.watch(unreadNotificationsProvider).length;
+                  if (unreadCount > 0) {
+                    return Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          unreadCount > 99 ? '99+' : unreadCount.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+            ],
           ),
         ],
       ),
