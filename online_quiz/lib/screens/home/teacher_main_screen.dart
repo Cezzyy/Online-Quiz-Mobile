@@ -5,7 +5,7 @@ import '../courses/teacher_courses_tab.dart';
 import '../quiz/teacher_quiz_tab.dart';
 import '../results/teacher_results_tab.dart';
 import '../profile/teacher_profile_tab.dart';
-import '../notifications/notification_screen.dart';
+import '../notifications/teacher_notification_screen.dart';
 import '../../providers/notification_provider.dart';
 
 class TeacherMainScreen extends ConsumerStatefulWidget {
@@ -73,7 +73,7 @@ class _TeacherMainScreenState extends ConsumerState<TeacherMainScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const NotificationScreen(),
+                      builder: (context) => const TeacherNotificationScreen(),
                     ),
                   );
                 },

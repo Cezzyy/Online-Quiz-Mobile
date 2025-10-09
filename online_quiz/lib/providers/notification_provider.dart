@@ -15,6 +15,7 @@ class NotificationState {
   final int itemsPerPage;
   final int unreadCount;
   final Map<int, bool> notificationReadStatus; // notificationId -> isRead
+  final int? currentUserId; // Track the current user ID
 
   const NotificationState({
     this.allNotifications = const [],
@@ -28,6 +29,7 @@ class NotificationState {
     this.itemsPerPage = 10,
     this.unreadCount = 0,
     this.notificationReadStatus = const {},
+    this.currentUserId,
   });
 
   NotificationState copyWith({
@@ -42,6 +44,7 @@ class NotificationState {
     int? itemsPerPage,
     int? unreadCount,
     Map<int, bool>? notificationReadStatus,
+    int? currentUserId,
     bool clearError = false,
   }) {
     return NotificationState(
@@ -56,6 +59,7 @@ class NotificationState {
       itemsPerPage: itemsPerPage ?? this.itemsPerPage,
       unreadCount: unreadCount ?? this.unreadCount,
       notificationReadStatus: notificationReadStatus ?? this.notificationReadStatus,
+      currentUserId: currentUserId ?? this.currentUserId,
     );
   }
 
@@ -83,8 +87,8 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
     state = state.copyWith(isLoading: true, clearError: true);
     
     try {
-      // Use current user ID (4 for Jan Rosalijos - student user)
-      final currentUserId = userId ?? 4;
+      // Use provided userId or current userId from state, or default to 4 for backward compatibility
+      final currentUserId = userId ?? state.currentUserId ?? 4;
       
       // Get all notifications for the user
       final allNotifications = MockData.getNotificationsByUser(currentUserId);
@@ -114,6 +118,7 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
         notificationReadStatus: readStatusMap,
         isLoading: false,
         currentPage: 0, // Reset to first page when loading
+        currentUserId: currentUserId, // Track the current user ID
       );
     } catch (e) {
       state = state.copyWith(
@@ -144,10 +149,14 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
   // Mark all notifications as read
   Future<void> markAllAsRead() async {
     try {
+      // Use the current user ID from state
+      final currentUserId = state.currentUserId;
+      if (currentUserId == null) return;
+      
       // Update all unread notifications for the current user
       for (int i = 0; i < MockData.notifications.length; i++) {
         final notification = MockData.notifications[i];
-        if (notification.userId == 4 && !notification.isRead) {
+        if (notification.userId == currentUserId && !notification.isRead) {
           MockData.notifications[i] = notification.markAsRead();
         }
       }
@@ -177,12 +186,15 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
       case 'Read':
         return notifications.where((n) => n.isRead).toList();
       case 'Quiz':
+      case 'Quiz Submissions':
         return notifications.where((n) => n.type == model.NotificationType.quiz).toList();
       case 'Course':
+      case 'Course Updates':
         return notifications.where((n) => n.type == model.NotificationType.course).toList();
       case 'System':
         return notifications.where((n) => n.type == model.NotificationType.system).toList();
       case 'Reminder':
+      case 'Reminders':
         return notifications.where((n) => n.type == model.NotificationType.reminder).toList();
       case 'All':
       default:
