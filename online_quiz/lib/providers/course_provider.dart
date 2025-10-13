@@ -219,7 +219,15 @@ class CourseNotifier extends StateNotifier<CourseState> {
   User? getCourseInstructor(int courseId) {
     final course = state.allCourses.firstWhere(
       (c) => c.courseId == courseId,
-      orElse: () => Course(courseId: 0, code: '', name: '', instructorUserId: 0),
+      orElse: () => Course(
+        courseId: 0, 
+        code: '', 
+        name: '', 
+        instructorUserId: 0,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        createdBy: 0,
+      ),
     );
     
     if (course.courseId == 0) return null;

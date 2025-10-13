@@ -131,18 +131,55 @@ class MockData {
       code: 'CS101',
       name: 'Introduction to Programming',
       instructorUserId: 2,
+      status: 'Active',
+      category: 'Computer Science',
+      createdAt: DateTime(2024, 1, 15),
+      updatedAt: DateTime(2024, 1, 15),
+      createdBy: 1, // Admin
     ),
     Course(
       courseId: 2,
       code: 'MATH201',
       name: 'Calculus I',
       instructorUserId: 2,
+      status: 'Active',
+      category: 'Mathematics',
+      createdAt: DateTime(2024, 1, 16),
+      updatedAt: DateTime(2024, 1, 16),
+      createdBy: 1, // Admin
     ),
     Course(
       courseId: 3,
       code: 'CS201',
       name: 'Data Structures',
       instructorUserId: 2,
+      status: 'Active',
+      category: 'Computer Science',
+      createdAt: DateTime(2024, 1, 17),
+      updatedAt: DateTime(2024, 1, 17),
+      createdBy: 1, // Admin
+    ),
+    Course(
+      courseId: 4,
+      code: 'IT301',
+      name: 'Database Management',
+      instructorUserId: 2,
+      status: 'Active',
+      category: 'Information Technology',
+      createdAt: DateTime(2024, 1, 18),
+      updatedAt: DateTime(2024, 1, 18),
+      createdBy: 1, // Admin
+    ),
+    Course(
+      courseId: 5,
+      code: 'CS301',
+      name: 'Software Engineering',
+      instructorUserId: 2,
+      status: 'Inactive',
+      category: 'Computer Science',
+      createdAt: DateTime(2024, 1, 19),
+      updatedAt: DateTime(2024, 1, 19),
+      createdBy: 1, // Admin
     ),
   ];
 
