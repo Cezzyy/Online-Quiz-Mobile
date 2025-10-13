@@ -128,6 +128,49 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
     }
   }
 
+  // Load all notifications (for admin view)
+  Future<void> loadAllNotifications() async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    
+    try {
+      // Get all notifications from mock data
+      final allNotifications = List<model.Notification>.from(MockData.notifications);
+      
+      // Sort notifications by creation date (newest first)
+      allNotifications.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      
+      // Separate read and unread notifications
+      final unreadNotifications = allNotifications.where((n) => !n.isRead).toList();
+      final readNotifications = allNotifications.where((n) => n.isRead).toList();
+      
+      // Create read status map
+      final readStatusMap = <int, bool>{};
+      for (final notification in allNotifications) {
+        readStatusMap[notification.notificationId] = notification.isRead;
+      }
+      
+      // Apply current filter
+      final filteredNotifications = _applyFilter(allNotifications, state.selectedFilter);
+      
+      state = state.copyWith(
+        allNotifications: allNotifications,
+        unreadNotifications: unreadNotifications,
+        readNotifications: readNotifications,
+        filteredNotifications: filteredNotifications,
+        unreadCount: unreadNotifications.length,
+        notificationReadStatus: readStatusMap,
+        isLoading: false,
+        currentPage: 0, // Reset to first page when loading
+        currentUserId: null, // Admin view - no specific user
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to load notifications: ${e.toString()}',
+      );
+    }
+  }
+
   // Mark a notification as read
   Future<void> markAsRead(model.Notification notification) async {
     if (notification.isRead) return; // Already read
@@ -140,7 +183,14 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
       }
       
       // Reload notifications to reflect changes
-      await loadNotifications();
+      // Use appropriate loading method based on current view
+      if (state.currentUserId == null) {
+        // Admin view - load all notifications
+        await loadAllNotifications();
+      } else {
+        // User view - load user-specific notifications
+        await loadNotifications();
+      }
     } catch (e) {
       state = state.copyWith(error: 'Failed to mark notification as read: ${e.toString()}');
     }
@@ -149,20 +199,31 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
   // Mark all notifications as read
   Future<void> markAllAsRead() async {
     try {
-      // Use the current user ID from state
-      final currentUserId = state.currentUserId;
-      if (currentUserId == null) return;
-      
-      // Update all unread notifications for the current user
-      for (int i = 0; i < MockData.notifications.length; i++) {
-        final notification = MockData.notifications[i];
-        if (notification.userId == currentUserId && !notification.isRead) {
-          MockData.notifications[i] = notification.markAsRead();
+      if (state.currentUserId == null) {
+        // Admin view - mark all notifications as read
+        for (int i = 0; i < MockData.notifications.length; i++) {
+          final notification = MockData.notifications[i];
+          if (!notification.isRead) {
+            MockData.notifications[i] = notification.markAsRead();
+          }
         }
+        // Reload all notifications
+        await loadAllNotifications();
+      } else {
+        // User view - mark only user-specific notifications as read
+        final currentUserId = state.currentUserId;
+        
+        // Update all unread notifications for the current user
+        for (int i = 0; i < MockData.notifications.length; i++) {
+          final notification = MockData.notifications[i];
+          if (notification.userId == currentUserId && !notification.isRead) {
+            MockData.notifications[i] = notification.markAsRead();
+          }
+        }
+        
+        // Reload user-specific notifications
+        await loadNotifications();
       }
-      
-      // Reload notifications to reflect changes
-      await loadNotifications();
     } catch (e) {
       state = state.copyWith(error: 'Failed to mark all notifications as read: ${e.toString()}');
     }

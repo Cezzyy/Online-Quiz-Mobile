@@ -3,12 +3,14 @@ class Enrollment {
   final int userId;
   final int courseId;
   final DateTime enrolledAt;
+  final String? section;
 
   const Enrollment({
     required this.enrollmentId,
     required this.userId,
     required this.courseId,
     required this.enrolledAt,
+    this.section,
   });
 
   factory Enrollment.fromJson(Map<String, dynamic> json) {
@@ -17,6 +19,7 @@ class Enrollment {
       userId: json['UserId'] as int,
       courseId: json['CourseId'] as int,
       enrolledAt: DateTime.parse(json['EnrolledAt'] as String),
+      section: json['Section'] as String?,
     );
   }
 
@@ -26,6 +29,7 @@ class Enrollment {
       'UserId': userId,
       'CourseId': courseId,
       'EnrolledAt': enrolledAt.toIso8601String(),
+      'Section': section,
     };
   }
 
@@ -34,12 +38,14 @@ class Enrollment {
     int? userId,
     int? courseId,
     DateTime? enrolledAt,
+    String? section,
   }) {
     return Enrollment(
       enrollmentId: enrollmentId ?? this.enrollmentId,
       userId: userId ?? this.userId,
       courseId: courseId ?? this.courseId,
       enrolledAt: enrolledAt ?? this.enrolledAt,
+      section: section ?? this.section,
     );
   }
 

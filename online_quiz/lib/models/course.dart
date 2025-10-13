@@ -5,6 +5,7 @@ class Course {
   final int instructorUserId;
   final String status;
   final String? category;
+  final String? section;
   final DateTime createdAt;
   final DateTime updatedAt;
   final int createdBy;
@@ -16,6 +17,7 @@ class Course {
     required this.instructorUserId,
     this.status = 'Active',
     this.category,
+    this.section,
     required this.createdAt,
     required this.updatedAt,
     required this.createdBy,
@@ -29,6 +31,7 @@ class Course {
       instructorUserId: json['Instructor_UserId'] as int,
       status: json['Status'] as String? ?? 'Active',
       category: json['Category'] as String?,
+      section: json['Section'] as String?,
       createdAt: DateTime.parse(json['CreatedAt'] as String),
       updatedAt: DateTime.parse(json['UpdatedAt'] as String),
       createdBy: json['CreatedBy'] as int,
@@ -43,6 +46,7 @@ class Course {
       'Instructor_UserId': instructorUserId,
       'Status': status,
       'Category': category,
+      'Section': section,
       'CreatedAt': createdAt.toIso8601String(),
       'UpdatedAt': updatedAt.toIso8601String(),
       'CreatedBy': createdBy,
@@ -56,6 +60,7 @@ class Course {
     int? instructorUserId,
     String? status,
     String? category,
+    String? section,
     DateTime? createdAt,
     DateTime? updatedAt,
     int? createdBy,
@@ -67,6 +72,7 @@ class Course {
       instructorUserId: instructorUserId ?? this.instructorUserId,
       status: status ?? this.status,
       category: category ?? this.category,
+      section: section ?? this.section,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       createdBy: createdBy ?? this.createdBy,
@@ -89,6 +95,6 @@ class Course {
 
   @override
   String toString() {
-    return 'Course(courseId: $courseId, code: $code, name: $name, instructorUserId: $instructorUserId, status: $status, category: $category, createdAt: $createdAt, updatedAt: $updatedAt, createdBy: $createdBy)';
+    return 'Course(courseId: $courseId, code: $code, name: $name, instructorUserId: $instructorUserId, status: $status, category: $category, section: $section, createdAt: $createdAt, updatedAt: $updatedAt, createdBy: $createdBy)';
   }
 }

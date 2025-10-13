@@ -90,6 +90,52 @@ class MockData {
       contactNumber: '+63 912 345 6793',
       emergencyContactNumber: '+63 987 654 3214',
     ),
+    
+    // Additional Teachers
+    User(
+      userId: 9,
+      email: 'prof.smith@university.edu',
+      passwordHash: 'hashed_password_smith',
+      fullName: 'Prof. Sarah Smith',
+      status: 'Active',
+      createdAt: DateTime(2024, 1, 9),
+      updatedAt: DateTime(2024, 1, 9),
+      contactNumber: '+63 912 345 6794',
+      emergencyContactNumber: '+63 987 654 3215',
+    ),
+    User(
+      userId: 10,
+      email: 'dr.johnson@university.edu',
+      passwordHash: 'hashed_password_johnson',
+      fullName: 'Dr. Mark Johnson',
+      status: 'Active',
+      createdAt: DateTime(2024, 1, 10),
+      updatedAt: DateTime(2024, 1, 10),
+      contactNumber: '+63 912 345 6795',
+      emergencyContactNumber: '+63 987 654 3216',
+    ),
+    User(
+      userId: 11,
+      email: 'ms.garcia@university.edu',
+      passwordHash: 'hashed_password_garcia',
+      fullName: 'Ms. Maria Garcia',
+      status: 'Active',
+      createdAt: DateTime(2024, 1, 11),
+      updatedAt: DateTime(2024, 1, 11),
+      contactNumber: '+63 912 345 6796',
+      emergencyContactNumber: '+63 987 654 3217',
+    ),
+    User(
+      userId: 12,
+      email: 'mr.brown@university.edu',
+      passwordHash: 'hashed_password_brown',
+      fullName: 'Mr. David Brown',
+      status: 'Active',
+      createdAt: DateTime(2024, 1, 12),
+      updatedAt: DateTime(2024, 1, 12),
+      contactNumber: '+63 912 345 6797',
+      emergencyContactNumber: '+63 987 654 3218',
+    ),
   ];
 
   // Roles
@@ -103,6 +149,10 @@ class MockData {
   static final List<UserRole> userRoles = [
     UserRole(userId: 1, roleId: 1), // Admin
     UserRole(userId: 2, roleId: 2), // Teacher
+    UserRole(userId: 9, roleId: 2), // Teacher
+    UserRole(userId: 10, roleId: 2), // Teacher
+    UserRole(userId: 11, roleId: 2), // Teacher
+    UserRole(userId: 12, roleId: 2), // Teacher
     UserRole(userId: 4, roleId: 3), // Student
     UserRole(userId: 5, roleId: 3), // Student
     UserRole(userId: 6, roleId: 3), // Student
@@ -112,7 +162,11 @@ class MockData {
 
   // Teachers
   static final List<Teacher> teachers = [
-    Teacher(userId: 2, department: 'Computer Science'),
+    Teacher(userId: 2, department: 'Computer Science'), // Donald Francisco
+    Teacher(userId: 9, department: 'Computer Science'), // Prof. Sarah Smith
+    Teacher(userId: 10, department: 'Mathematics'), // Dr. Mark Johnson
+    Teacher(userId: 11, department: 'Information Technology'), // Ms. Maria Garcia
+    Teacher(userId: 12, department: 'Computer Science'), // Mr. David Brown
   ];
 
   // Students
@@ -126,133 +180,279 @@ class MockData {
 
   // Courses
   static final List<Course> courses = [
+    // CS101 - Introduction to Programming (Multiple Sections matching student sections)
     Course(
       courseId: 1,
       code: 'CS101',
       name: 'Introduction to Programming',
-      instructorUserId: 2,
+      instructorUserId: 2, // Donald Francisco
       status: 'Active',
       category: 'Computer Science',
+      section: 'CS31A',
       createdAt: DateTime(2024, 1, 15),
       updatedAt: DateTime(2024, 1, 15),
       createdBy: 1, // Admin
     ),
     Course(
+      courseId: 6,
+      code: 'CS101',
+      name: 'Introduction to Programming',
+      instructorUserId: 9, // Prof. Sarah Smith
+      status: 'Active',
+      category: 'Computer Science',
+      section: 'CS11C',
+      createdAt: DateTime(2024, 1, 15),
+      updatedAt: DateTime(2024, 1, 15),
+      createdBy: 1, // Admin
+    ),
+    
+    // MATH201 - Calculus I (Multiple Sections)
+    Course(
       courseId: 2,
       code: 'MATH201',
       name: 'Calculus I',
-      instructorUserId: 2,
+      instructorUserId: 10, // Dr. Mark Johnson
       status: 'Active',
       category: 'Mathematics',
+      section: 'CS31A',
       createdAt: DateTime(2024, 1, 16),
       updatedAt: DateTime(2024, 1, 16),
       createdBy: 1, // Admin
     ),
     Course(
+      courseId: 7,
+      code: 'MATH201',
+      name: 'Calculus I',
+      instructorUserId: 10, // Dr. Mark Johnson
+      status: 'Active',
+      category: 'Mathematics',
+      section: 'IT21A',
+      createdAt: DateTime(2024, 1, 16),
+      updatedAt: DateTime(2024, 1, 16),
+      createdBy: 1, // Admin
+    ),
+    
+    // CS201 - Data Structures
+    Course(
       courseId: 3,
       code: 'CS201',
       name: 'Data Structures',
-      instructorUserId: 2,
+      instructorUserId: 12, // Mr. David Brown
       status: 'Active',
       category: 'Computer Science',
+      section: 'CS31A',
       createdAt: DateTime(2024, 1, 17),
       updatedAt: DateTime(2024, 1, 17),
       createdBy: 1, // Admin
     ),
+    
+    // IT301 - Database Management
     Course(
       courseId: 4,
       code: 'IT301',
       name: 'Database Management',
-      instructorUserId: 2,
+      instructorUserId: 11, // Ms. Maria Garcia
       status: 'Active',
       category: 'Information Technology',
+      section: 'IT11B',
       createdAt: DateTime(2024, 1, 18),
       updatedAt: DateTime(2024, 1, 18),
       createdBy: 1, // Admin
     ),
     Course(
+      courseId: 8,
+      code: 'IT301',
+      name: 'Database Management',
+      instructorUserId: 11, // Ms. Maria Garcia
+      status: 'Active',
+      category: 'Information Technology',
+      section: 'IT21A',
+      createdAt: DateTime(2024, 1, 18),
+      updatedAt: DateTime(2024, 1, 18),
+      createdBy: 1, // Admin
+    ),
+    
+    // CS301 - Software Engineering
+    Course(
       courseId: 5,
       code: 'CS301',
       name: 'Software Engineering',
-      instructorUserId: 2,
+      instructorUserId: 9, // Prof. Sarah Smith
       status: 'Inactive',
       category: 'Computer Science',
+      section: 'CS31A',
       createdAt: DateTime(2024, 1, 19),
       updatedAt: DateTime(2024, 1, 19),
+      createdBy: 1, // Admin
+    ),
+    
+    // Additional courses for different sections
+    Course(
+      courseId: 9,
+      code: 'CS102',
+      name: 'Object-Oriented Programming',
+      instructorUserId: 2, // Donald Francisco
+      status: 'Active',
+      category: 'Computer Science',
+      section: 'CS31A',
+      createdAt: DateTime(2024, 1, 20),
+      updatedAt: DateTime(2024, 1, 20),
+      createdBy: 1, // Admin
+    ),
+    Course(
+      courseId: 10,
+      code: 'CS102',
+      name: 'Object-Oriented Programming',
+      instructorUserId: 12, // Mr. David Brown
+      status: 'Active',
+      category: 'Computer Science',
+      section: 'CS11C',
+      createdAt: DateTime(2024, 1, 20),
+      updatedAt: DateTime(2024, 1, 20),
+      createdBy: 1, // Admin
+    ),
+    
+    Course(
+      courseId: 11,
+      code: 'IT101',
+      name: 'Introduction to Information Technology',
+      instructorUserId: 11, // Ms. Maria Garcia
+      status: 'Active',
+      category: 'Information Technology',
+      section: 'IT11B',
+      createdAt: DateTime(2024, 1, 21),
+      updatedAt: DateTime(2024, 1, 21),
+      createdBy: 1, // Admin
+    ),
+    Course(
+      courseId: 12,
+      code: 'IT101',
+      name: 'Introduction to Information Technology',
+      instructorUserId: 11, // Ms. Maria Garcia
+      status: 'Active',
+      category: 'Information Technology',
+      section: 'IT21A',
+      createdAt: DateTime(2024, 1, 21),
+      updatedAt: DateTime(2024, 1, 21),
       createdBy: 1, // Admin
     ),
   ];
 
   // Enrollments
   static final List<Enrollment> enrollments = [
-    // Jan Rosalijos (userId: 4) - enrolled in CS101 and MATH201
+    // Jan Rosalijos (userId: 4) - CS31A section
     Enrollment(
       enrollmentId: 1,
       userId: 4,
-      courseId: 1,
+      courseId: 1, // CS101-CS31A
       enrolledAt: DateTime(2024, 1, 10),
+      section: 'CS31A',
     ),
     Enrollment(
       enrollmentId: 2,
       userId: 4,
-      courseId: 2,
+      courseId: 2, // MATH201-CS31A
       enrolledAt: DateTime(2024, 1, 10),
+      section: 'CS31A',
+    ),
+    Enrollment(
+      enrollmentId: 9,
+      userId: 4,
+      courseId: 3, // CS201-CS31A
+      enrolledAt: DateTime(2024, 1, 10),
+      section: 'CS31A',
+    ),
+    Enrollment(
+      enrollmentId: 10,
+      userId: 4,
+      courseId: 9, // CS102-CS31A
+      enrolledAt: DateTime(2024, 1, 10),
+      section: 'CS31A',
     ),
     
-    // Maria Santos (userId: 5) - enrolled in CS101 and CS201
+    // Maria Santos (userId: 5) - IT11B section
     Enrollment(
       enrollmentId: 3,
       userId: 5,
-      courseId: 1,
+      courseId: 4, // IT301-IT11B
       enrolledAt: DateTime(2024, 1, 11),
+      section: 'IT11B',
     ),
     Enrollment(
-      enrollmentId: 4,
+      enrollmentId: 11,
       userId: 5,
-      courseId: 3,
+      courseId: 11, // IT101-IT11B
       enrolledAt: DateTime(2024, 1, 11),
+      section: 'IT11B',
     ),
     
-    // John Dela Cruz (userId: 6) - enrolled in all three courses
+    // John Dela Cruz (userId: 6) - CS31A section
     Enrollment(
       enrollmentId: 5,
       userId: 6,
-      courseId: 1,
+      courseId: 1, // CS101-CS31A
       enrolledAt: DateTime(2024, 1, 12),
+      section: 'CS31A',
     ),
     Enrollment(
       enrollmentId: 6,
       userId: 6,
-      courseId: 2,
+      courseId: 2, // MATH201-CS31A
       enrolledAt: DateTime(2024, 1, 12),
+      section: 'CS31A',
     ),
     Enrollment(
       enrollmentId: 7,
       userId: 6,
-      courseId: 3,
+      courseId: 3, // CS201-CS31A
       enrolledAt: DateTime(2024, 1, 12),
+      section: 'CS31A',
+    ),
+    Enrollment(
+      enrollmentId: 12,
+      userId: 6,
+      courseId: 9, // CS102-CS31A
+      enrolledAt: DateTime(2024, 1, 12),
+      section: 'CS31A',
     ),
     
-    // Anna Garcia (userId: 7) - enrolled in MATH201 only
+    // Jane Smith (userId: 7) - CS11C section
     Enrollment(
       enrollmentId: 8,
       userId: 7,
-      courseId: 2,
+      courseId: 6, // CS101-CS11C
       enrolledAt: DateTime(2024, 1, 13),
+      section: 'CS11C',
+    ),
+    Enrollment(
+      enrollmentId: 13,
+      userId: 7,
+      courseId: 10, // CS102-CS11C
+      enrolledAt: DateTime(2024, 1, 13),
+      section: 'CS11C',
     ),
     
-    // Michael Reyes (userId: 8) - enrolled in CS101 and CS201
+    // Michael Reyes (userId: 8) - IT21A section
     Enrollment(
-      enrollmentId: 9,
+      enrollmentId: 14,
       userId: 8,
-      courseId: 1,
+      courseId: 7, // MATH201-IT21A
       enrolledAt: DateTime(2024, 1, 14),
+      section: 'IT21A',
     ),
     Enrollment(
-      enrollmentId: 10,
+      enrollmentId: 15,
       userId: 8,
-      courseId: 3,
+      courseId: 8, // IT301-IT21A
       enrolledAt: DateTime(2024, 1, 14),
+      section: 'IT21A',
+    ),
+    Enrollment(
+      enrollmentId: 16,
+      userId: 8,
+      courseId: 12, // IT101-IT21A
+      enrolledAt: DateTime(2024, 1, 14),
+      section: 'IT21A',
     ),
   ];
 

@@ -18,6 +18,14 @@ class CourseState {
   final Map<int, double> courseProgress; // courseId -> progress percentage
   final Map<int, int> courseQuizCounts; // courseId -> quiz count
   final Map<int, int> completedQuizCounts; // courseId -> completed quiz count
+  
+  // Admin course management state
+  final String searchQuery;
+  final String? selectedStatus;
+  final String? selectedCategory;
+  final int? selectedInstructorId;
+  final int currentPage;
+  final int itemsPerPage;
 
   const CourseState({
     this.allCourses = const [],
@@ -31,6 +39,12 @@ class CourseState {
     this.courseProgress = const {},
     this.courseQuizCounts = const {},
     this.completedQuizCounts = const {},
+    this.searchQuery = '',
+    this.selectedStatus,
+    this.selectedCategory,
+    this.selectedInstructorId,
+    this.currentPage = 1,
+    this.itemsPerPage = 20,
   });
 
   CourseState copyWith({
@@ -45,6 +59,12 @@ class CourseState {
     Map<int, double>? courseProgress,
     Map<int, int>? courseQuizCounts,
     Map<int, int>? completedQuizCounts,
+    String? searchQuery,
+    String? selectedStatus,
+    String? selectedCategory,
+    int? selectedInstructorId,
+    int? currentPage,
+    int? itemsPerPage,
     bool clearError = false,
     bool clearSelectedCourse = false,
   }) {
@@ -60,6 +80,12 @@ class CourseState {
       courseProgress: courseProgress ?? this.courseProgress,
       courseQuizCounts: courseQuizCounts ?? this.courseQuizCounts,
       completedQuizCounts: completedQuizCounts ?? this.completedQuizCounts,
+      searchQuery: searchQuery ?? this.searchQuery,
+      selectedStatus: selectedStatus ?? this.selectedStatus,
+      selectedCategory: selectedCategory ?? this.selectedCategory,
+      selectedInstructorId: selectedInstructorId ?? this.selectedInstructorId,
+      currentPage: currentPage ?? this.currentPage,
+      itemsPerPage: itemsPerPage ?? this.itemsPerPage,
     );
   }
 
@@ -350,6 +376,371 @@ class CourseNotifier extends StateNotifier<CourseState> {
     } catch (e) {
       state = state.copyWith(error: 'Failed to remove student: $e');
       return false;
+    }
+  }
+
+  // Admin method: Create a new course
+  Future<bool> createCourse({
+    required String code,
+    required String name,
+    required int instructorUserId,
+    String? category,
+    String? section,
+    String status = 'Active',
+    required int createdBy,
+  }) async {
+    try {
+      // Check if course code already exists
+      final existingCourse = MockData.courses.any((c) => c.code.toLowerCase() == code.toLowerCase());
+      if (existingCourse) {
+        state = state.copyWith(error: 'Course code already exists');
+        return false;
+      }
+
+      // Generate new course ID
+      final newCourseId = MockData.courses.isNotEmpty
+          ? MockData.courses.map((c) => c.courseId).reduce((a, b) => a > b ? a : b) + 1
+          : 1;
+
+      // Create new course
+      final newCourse = Course(
+        courseId: newCourseId,
+        code: code,
+        name: name,
+        instructorUserId: instructorUserId,
+        status: status,
+        category: category,
+        section: section,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        createdBy: createdBy,
+      );
+
+      MockData.courses.add(newCourse);
+      
+      // Update state
+      state = state.copyWith(
+        allCourses: List.from(MockData.courses),
+        clearError: true,
+      );
+      
+      return true;
+
+    } catch (e) {
+      state = state.copyWith(error: 'Failed to create course: $e');
+      return false;
+    }
+  }
+
+  // Admin method: Update an existing course
+  Future<bool> updateCourse(Course course, {
+    String? code,
+    String? name,
+    int? instructorUserId,
+    String? category,
+    String? section,
+    String? status,
+  }) async {
+    try {
+      // Check if new code conflicts with existing courses (if code is being changed)
+      if (code != null && code != course.code) {
+        final existingCourse = MockData.courses.any((c) => 
+            c.courseId != course.courseId && c.code.toLowerCase() == code.toLowerCase());
+        if (existingCourse) {
+          state = state.copyWith(error: 'Course code already exists');
+          return false;
+        }
+      }
+
+      // Find course index
+      final courseIndex = MockData.courses.indexWhere((c) => c.courseId == course.courseId);
+      if (courseIndex == -1) {
+        state = state.copyWith(error: 'Course not found');
+        return false;
+      }
+
+      // Update course
+      MockData.courses[courseIndex] = course.copyWith(
+        code: code ?? course.code,
+        name: name ?? course.name,
+        instructorUserId: instructorUserId ?? course.instructorUserId,
+        category: category ?? course.category,
+        section: section ?? course.section,
+        status: status ?? course.status,
+        updatedAt: DateTime.now(),
+      );
+
+      // Update state
+      state = state.copyWith(
+        allCourses: List.from(MockData.courses),
+        clearError: true,
+      );
+      
+      return true;
+
+    } catch (e) {
+      state = state.copyWith(error: 'Failed to update course: $e');
+      return false;
+    }
+  }
+
+  // Admin method: Delete a course
+  Future<bool> deleteCourse(Course course) async {
+    try {
+      // Check if course has enrollments
+      final hasEnrollments = MockData.enrollments.any((e) => e.courseId == course.courseId);
+      if (hasEnrollments) {
+        state = state.copyWith(error: 'Cannot delete course with enrolled students');
+        return false;
+      }
+
+      // Check if course has quizzes
+      final hasQuizzes = MockData.quizzes.any((q) => q.courseId == course.courseId);
+      if (hasQuizzes) {
+        state = state.copyWith(error: 'Cannot delete course with existing quizzes');
+        return false;
+      }
+
+      // Remove course
+      MockData.courses.removeWhere((c) => c.courseId == course.courseId);
+
+      // Update state
+      state = state.copyWith(
+        allCourses: List.from(MockData.courses),
+        clearError: true,
+      );
+      
+      return true;
+
+    } catch (e) {
+      state = state.copyWith(error: 'Failed to delete course: $e');
+      return false;
+    }
+  }
+
+  // Admin method: Get all teachers (for course assignment)
+  List<User> getAllTeachers() {
+    final teacherRoles = MockData.userRoles.where((ur) => 
+        MockData.roles.any((role) => role.roleId == ur.roleId && role.name == 'Teacher')
+    ).toList();
+    
+    return teacherRoles
+        .map((ur) => MockData.getUserById(ur.userId))
+        .where((user) => user != null)
+        .cast<User>()
+        .toList();
+  }
+
+  // Admin method: Get courses by status
+  List<Course> getCoursesByStatus(String status) {
+    return state.allCourses.where((course) => course.status.toLowerCase() == status.toLowerCase()).toList();
+  }
+
+  // Admin method: Search courses with filters
+  List<Course> searchCoursesWithFilters({
+    String query = '',
+    String? status,
+    String? category,
+    int? instructorId,
+  }) {
+    List<Course> filteredCourses = state.allCourses;
+
+    // Filter by search query
+    if (query.isNotEmpty) {
+      final lowercaseQuery = query.toLowerCase();
+      filteredCourses = filteredCourses.where((course) =>
+          course.name.toLowerCase().contains(lowercaseQuery) ||
+          course.code.toLowerCase().contains(lowercaseQuery) ||
+          (course.category?.toLowerCase().contains(lowercaseQuery) ?? false)
+      ).toList();
+    }
+
+    // Filter by status
+    if (status != null && status.isNotEmpty) {
+      filteredCourses = filteredCourses.where((course) => 
+          course.status.toLowerCase() == status.toLowerCase()).toList();
+    }
+
+    // Filter by category
+    if (category != null && category.isNotEmpty) {
+      filteredCourses = filteredCourses.where((course) => 
+          course.category?.toLowerCase() == category.toLowerCase()).toList();
+    }
+
+    // Filter by instructor
+    if (instructorId != null) {
+      filteredCourses = filteredCourses.where((course) => 
+          course.instructorUserId == instructorId).toList();
+    }
+
+    return filteredCourses;
+  }
+
+  // Helper method: Get grouped courses (grouped by course code)
+  List<Map<String, dynamic>> getGroupedCourses() {
+    final Map<String, List<Course>> groupedCourses = {};
+    
+    // Group courses by their base code
+    for (final course in state.allCourses) {
+      if (!groupedCourses.containsKey(course.code)) {
+        groupedCourses[course.code] = [];
+      }
+      groupedCourses[course.code]!.add(course);
+    }
+    
+    // Convert to list of maps with aggregated data
+    final List<Map<String, dynamic>> groupedList = [];
+    
+    groupedCourses.forEach((courseCode, courses) {
+      final firstCourse = courses.first;
+      final totalEnrollments = courses.fold<int>(0, (sum, course) => 
+          sum + MockData.getEnrollmentsByCourse(course.courseId).length);
+      
+      // Get all instructors for this course
+      final instructors = courses.map((course) => MockData.getUserById(course.instructorUserId)?.fullName ?? 'Unknown').toSet().toList();
+      
+      // Get all sections for this course
+      final sections = courses.map((course) => course.section ?? 'A').toSet().toList()..sort();
+      
+      groupedList.add({
+        'courseCode': courseCode,
+        'courseName': firstCourse.name,
+        'category': firstCourse.category,
+        'status': firstCourse.status,
+        'sections': sections,
+        'instructors': instructors,
+        'totalEnrollments': totalEnrollments,
+        'courses': courses, // Keep reference to individual courses
+        'primaryCourse': firstCourse, // Use first course as primary for actions
+      });
+    });
+    
+    return groupedList;
+  }
+
+  // Helper method: Get paginated grouped courses
+  List<Map<String, dynamic>> getPaginatedGroupedCourses() {
+    final groupedCourses = getGroupedCourses();
+    final startIndex = (state.currentPage - 1) * state.itemsPerPage;
+    final endIndex = (startIndex + state.itemsPerPage).clamp(0, groupedCourses.length);
+    return groupedCourses.sublist(startIndex, endIndex);
+  }
+
+  // Helper method: Get total pages for grouped courses
+  int getTotalGroupedPages() {
+    final groupedCourses = getGroupedCourses();
+    return (groupedCourses.length / state.itemsPerPage).ceil();
+  }
+
+  // Helper method: Get courses by base code (all sections)
+  List<Course> getCoursesByBaseCode(String baseCode) {
+    return state.allCourses.where((course) => course.code == baseCode).toList();
+  }
+
+  // Helper method: Get unique course codes (base codes without sections)
+  List<String> getUniqueCourseCodes() {
+    return state.allCourses.map((course) => course.code).toSet().toList();
+  }
+
+  // Helper method: Get sections for a specific course code
+  List<String> getSectionsForCourse(String courseCode) {
+    return state.allCourses
+        .where((course) => course.code == courseCode)
+        .map((course) => course.section ?? 'A')
+        .toSet()
+        .toList()
+        ..sort();
+  }
+
+  // Helper method: Get instructors for a specific course code
+  List<User> getInstructorsForCourse(String courseCode) {
+    final courseIds = state.allCourses
+        .where((course) => course.code == courseCode)
+        .map((course) => course.instructorUserId)
+        .toSet();
+    
+    return courseIds
+        .map((instructorId) => MockData.getUserById(instructorId))
+        .where((user) => user != null)
+        .cast<User>()
+        .toList();
+  }
+
+  // Admin pagination methods
+  void updateSearchQuery(String query) {
+    state = state.copyWith(searchQuery: query, currentPage: 1);
+  }
+
+  void updateSelectedStatus(String? status) {
+    state = state.copyWith(selectedStatus: status, currentPage: 1);
+  }
+
+  void updateSelectedCategory(String? category) {
+    state = state.copyWith(selectedCategory: category, currentPage: 1);
+  }
+
+  void updateSelectedInstructor(int? instructorId) {
+    state = state.copyWith(selectedInstructorId: instructorId, currentPage: 1);
+  }
+
+  void goToPage(int page) {
+    state = state.copyWith(currentPage: page);
+  }
+
+  void nextPage() {
+    final totalPages = getTotalPages();
+    if (state.currentPage < totalPages) {
+      state = state.copyWith(currentPage: state.currentPage + 1);
+    }
+  }
+
+  void previousPage() {
+    if (state.currentPage > 1) {
+      state = state.copyWith(currentPage: state.currentPage - 1);
+    }
+  }
+
+  int getTotalPages() {
+    final filteredCourses = getFilteredCourses();
+    return (filteredCourses.length / state.itemsPerPage).ceil();
+  }
+
+  List<Course> getPaginatedCourses() {
+    final filteredCourses = getFilteredCourses();
+    final startIndex = (state.currentPage - 1) * state.itemsPerPage;
+    final endIndex = (startIndex + state.itemsPerPage).clamp(0, filteredCourses.length);
+    return filteredCourses.sublist(startIndex, endIndex);
+  }
+
+  List<Course> getFilteredCourses() {
+    return searchCoursesWithFilters(
+      query: state.searchQuery,
+      status: state.selectedStatus,
+      category: state.selectedCategory,
+      instructorId: state.selectedInstructorId,
+    );
+  }
+
+  // Admin method: Initialize admin course management
+  Future<void> initializeAdminCourses() async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    
+    try {
+      await Future.delayed(const Duration(milliseconds: 500)); // Simulate API call
+      
+      // Load all courses
+      final allCourses = List<Course>.from(MockData.courses);
+      
+      state = state.copyWith(
+        allCourses: allCourses,
+        isLoading: false,
+      );
+      
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to load courses: $e',
+      );
     }
   }
 }
