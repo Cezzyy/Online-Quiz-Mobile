@@ -3,12 +3,22 @@ class Course {
   final String code;
   final String name;
   final int instructorUserId;
+  final String status;
+  final String? category;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final int createdBy;
 
   const Course({
     required this.courseId,
     required this.code,
     required this.name,
     required this.instructorUserId,
+    this.status = 'Active',
+    this.category,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.createdBy,
   });
 
   factory Course.fromJson(Map<String, dynamic> json) {
@@ -17,6 +27,11 @@ class Course {
       code: json['Code'] as String,
       name: json['Name'] as String,
       instructorUserId: json['Instructor_UserId'] as int,
+      status: json['Status'] as String? ?? 'Active',
+      category: json['Category'] as String?,
+      createdAt: DateTime.parse(json['CreatedAt'] as String),
+      updatedAt: DateTime.parse(json['UpdatedAt'] as String),
+      createdBy: json['CreatedBy'] as int,
     );
   }
 
@@ -26,6 +41,11 @@ class Course {
       'Code': code,
       'Name': name,
       'Instructor_UserId': instructorUserId,
+      'Status': status,
+      'Category': category,
+      'CreatedAt': createdAt.toIso8601String(),
+      'UpdatedAt': updatedAt.toIso8601String(),
+      'CreatedBy': createdBy,
     };
   }
 
@@ -34,14 +54,29 @@ class Course {
     String? code,
     String? name,
     int? instructorUserId,
+    String? status,
+    String? category,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    int? createdBy,
   }) {
     return Course(
       courseId: courseId ?? this.courseId,
       code: code ?? this.code,
       name: name ?? this.name,
       instructorUserId: instructorUserId ?? this.instructorUserId,
+      status: status ?? this.status,
+      category: category ?? this.category,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      createdBy: createdBy ?? this.createdBy,
     );
   }
+
+  // Helper methods
+  bool get isActive => status.toLowerCase() == 'active';
+  bool get isInactive => status.toLowerCase() == 'inactive';
+  bool get isArchived => status.toLowerCase() == 'archived';
 
   @override
   bool operator ==(Object other) {
@@ -54,6 +89,6 @@ class Course {
 
   @override
   String toString() {
-    return 'Course(courseId: $courseId, code: $code, name: $name, instructorUserId: $instructorUserId)';
+    return 'Course(courseId: $courseId, code: $code, name: $name, instructorUserId: $instructorUserId, status: $status, category: $category, createdAt: $createdAt, updatedAt: $updatedAt, createdBy: $createdBy)';
   }
 }

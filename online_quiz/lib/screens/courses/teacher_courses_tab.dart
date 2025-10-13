@@ -234,6 +234,43 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
                            fontWeight: FontWeight.w500,
                          ),
                       ),
+                      if (course.category != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'Category: ${course.category}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Text(
+                            'Status: ',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: _getStatusColor(course.status).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              course.status,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: _getStatusColor(course.status),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -445,5 +482,18 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
   
   Color _getCourseColor(String courseCode) {
     return AppTheme.getCourseColor(courseCode);
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'active':
+        return Colors.green;
+      case 'inactive':
+        return Colors.orange;
+      case 'archived':
+        return Colors.grey;
+      default:
+        return Colors.blue;
+    }
   }
 }

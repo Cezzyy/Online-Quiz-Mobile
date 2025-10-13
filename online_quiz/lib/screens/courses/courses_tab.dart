@@ -137,7 +137,7 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
     return GridView.builder(
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 1,
-        childAspectRatio: 2.5,
+        childAspectRatio: 2.2, // Reduced from 2.5 to give more height
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
       ),
@@ -179,7 +179,7 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(12), // Reduced padding from 14 to 12
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -233,7 +233,7 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4), // Reduced from 6 to 4
               
               // Course Info
               Row(
@@ -249,7 +249,7 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
                             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 1), // Reduced from 2 to 1
                         Text(
                           '$totalQuizzes Quizzes',
                           style: TextStyle(
@@ -257,27 +257,57 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
                             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
+                        if (course.category != null) ...[
+                          const SizedBox(height: 1), // Reduced from 2 to 1
+                          Text(
+                            'Category: ${course.category}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _getProgressColor(progress).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '${(progress * 100).toInt()}% Complete',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: _getProgressColor(progress),
+                  Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _getStatusColor(course.status).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          course.status,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: _getStatusColor(course.status),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 2), // Reduced from 4 to 2
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _getProgressColor(progress).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '${(progress * 100).toInt()}% Complete',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: _getProgressColor(progress),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4), // Reduced from 6 to 4
               
               // Progress Bar
               LinearProgressIndicator(
@@ -303,5 +333,18 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
     if (progress >= 0.8) return AppTheme.getScoreColor(85);
     if (progress >= 0.5) return AppTheme.getScoreColor(65);
     return AppTheme.getScoreColor(45);
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'active':
+        return Colors.green;
+      case 'inactive':
+        return Colors.orange;
+      case 'archived':
+        return Colors.grey;
+      default:
+        return Colors.blue;
+    }
   }
 }

@@ -185,6 +185,43 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                 fontSize: 16,
               ),
             ),
+            if (course.category != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Category: ${course.category}',
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Text(
+                  'Status: ',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 16,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(course.status).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    course.status,
+                    style: TextStyle(
+                      color: _getStatusColor(course.status),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 20),
             
             // Progress Section
@@ -532,5 +569,18 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   
   Color _getScoreColor(double score) {
     return AppTheme.getScoreColor(score);
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'active':
+        return Colors.green;
+      case 'inactive':
+        return Colors.orange;
+      case 'archived':
+        return Colors.grey;
+      default:
+        return Colors.blue;
+    }
   }
 }
