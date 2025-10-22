@@ -36,7 +36,8 @@ class SettingsState {
 // Settings provider notifier
 class SettingsNotifier extends StateNotifier<SettingsState> {
   SettingsNotifier() : super(const SettingsState()) {
-    _loadSettings();
+    // Load settings asynchronously to avoid blocking initialization
+    _loadSettingsAsync();
   }
 
   static const String _themeModeKey = 'theme_mode';
@@ -46,10 +47,15 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   Timer? _saveTimer;
   static const Duration _saveDebounceDuration = Duration(milliseconds: 500);
 
+  // Load settings asynchronously without blocking UI
+  void _loadSettingsAsync() {
+    // Start with default settings immediately for instant UI
+    // Then load saved settings in background
+    _loadSettings();
+  }
+
   // Load settings from SharedPreferences
   Future<void> _loadSettings() async {
-    state = state.copyWith(isLoading: true);
-    
     try {
       final prefs = await SharedPreferences.getInstance();
       
@@ -60,13 +66,16 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       // Load other settings
       final notificationsEnabled = prefs.getBool(_notificationsKey) ?? true;
       
-      state = SettingsState(
-        themeMode: themeMode,
-        notificationsEnabled: notificationsEnabled,
-        isLoading: false,
-      );
+      // Only update if values actually changed to avoid unnecessary rebuilds
+      if (state.themeMode != themeMode || state.notificationsEnabled != notificationsEnabled) {
+        state = SettingsState(
+          themeMode: themeMode,
+          notificationsEnabled: notificationsEnabled,
+          isLoading: false,
+        );
+      }
     } catch (e) {
-      // If loading fails, use default settings
+      // If loading fails, keep current settings
       state = state.copyWith(isLoading: false);
     }
   }
@@ -90,11 +99,15 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     }
   }
 
-  // Update theme mode with optimized performance
+  // Update theme mode with maximum performance for instant switching
   void setThemeMode(ThemeMode themeMode) {
-    // Update state immediately for instant UI response
+    // Skip if already set to avoid unnecessary rebuilds
+    if (state.themeMode == themeMode) return;
+    
+    // Update state immediately - themes are pre-built so this is instant
     state = state.copyWith(themeMode: themeMode);
-    // Save to disk with debouncing to avoid blocking UI
+    
+    // Save to disk asynchronously to avoid any UI blocking
     _debouncedSaveSettings();
   }
 

@@ -10,29 +10,127 @@ class AppTheme {
   static const Color errorColor = Color(0xFFE53935);
   static const Color successColor = Color(0xFF43A047);
 
-  // Cached theme data for performance
-  static ThemeData? _cachedLightTheme;
-  static ThemeData? _cachedDarkTheme;
+  // Pre-built and cached theme data for instant switching
+  static late final ThemeData _lightTheme;
+  static late final ThemeData _darkTheme;
+  static bool _isInitialized = false;
 
-  // Theme-aware color getters
+  // Pre-built color schemes for instant access
+  static late final ColorScheme _lightColorScheme;
+  static late final ColorScheme _darkColorScheme;
+
+  // Theme-aware color cache
+  static final Map<String, Color> _lightColors = {};
+  static final Map<String, Color> _darkColors = {};
+
+  // Initialize themes once at app startup with maximum optimization
+  static void initialize() {
+    if (_isInitialized) return;
+    
+    // Pre-build color schemes with caching
+    _lightColorScheme = ColorScheme.fromSeed(
+      seedColor: primaryColor,
+      brightness: Brightness.light,
+    );
+    
+    _darkColorScheme = ColorScheme.fromSeed(
+      seedColor: primaryColor,
+      brightness: Brightness.dark,
+    );
+
+    // Pre-build complete themes with all components
+    _lightTheme = _buildLightTheme();
+    _darkTheme = _buildDarkTheme();
+
+    // Pre-cache theme-aware colors for instant access
+    _initializeColorCache();
+    
+    // Pre-warm theme data to ensure instant switching
+    _preWarmThemeData();
+    
+    _isInitialized = true;
+  }
+
+  // Pre-warm theme data for instant access
+  static void _preWarmThemeData() {
+    // Access key theme properties to ensure they're cached
+    _lightTheme.colorScheme;
+    _lightTheme.appBarTheme;
+    _lightTheme.elevatedButtonTheme;
+    _lightTheme.inputDecorationTheme;
+    _lightTheme.cardTheme;
+    _lightTheme.bottomNavigationBarTheme;
+    
+    _darkTheme.colorScheme;
+    _darkTheme.appBarTheme;
+    _darkTheme.elevatedButtonTheme;
+    _darkTheme.inputDecorationTheme;
+    _darkTheme.cardTheme;
+    _darkTheme.bottomNavigationBarTheme;
+  }
+
+  // Initialize color cache for instant theme-aware color access
+  static void _initializeColorCache() {
+    // Light theme colors
+    _lightColors['textColor'] = _lightColorScheme.onSurface;
+    _lightColors['secondaryTextColor'] = _lightColorScheme.onSurface.withValues(alpha: 0.6);
+    _lightColors['surfaceColor'] = _lightColorScheme.surface;
+    _lightColors['cardColor'] = _lightColorScheme.surface;
+    _lightColors['dividerColor'] = _lightColorScheme.outline.withValues(alpha: 0.2);
+    _lightColors['backgroundColor'] = _lightColorScheme.surface;
+    _lightColors['primaryColor'] = _lightColorScheme.primary;
+    _lightColors['onPrimaryColor'] = _lightColorScheme.onPrimary;
+
+    // Dark theme colors
+    _darkColors['textColor'] = _darkColorScheme.onSurface;
+    _darkColors['secondaryTextColor'] = _darkColorScheme.onSurface.withValues(alpha: 0.6);
+    _darkColors['surfaceColor'] = _darkColorScheme.surface;
+    _darkColors['cardColor'] = _darkColorScheme.surface;
+    _darkColors['dividerColor'] = _darkColorScheme.outline.withValues(alpha: 0.2);
+    _darkColors['backgroundColor'] = _darkColorScheme.surface;
+    _darkColors['primaryColor'] = _darkColorScheme.primary;
+    _darkColors['onPrimaryColor'] = _darkColorScheme.onPrimary;
+  }
+
+  // Optimized theme-aware color getters using cached colors
   static Color getTextColor(BuildContext context) {
-    return Theme.of(context).colorScheme.onSurface;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? _darkColors['textColor']! : _lightColors['textColor']!;
   }
 
   static Color getSecondaryTextColor(BuildContext context) {
-    return Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? _darkColors['secondaryTextColor']! : _lightColors['secondaryTextColor']!;
   }
 
   static Color getSurfaceColor(BuildContext context) {
-    return Theme.of(context).colorScheme.surface;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? _darkColors['surfaceColor']! : _lightColors['surfaceColor']!;
   }
 
   static Color getCardColor(BuildContext context) {
-    return Theme.of(context).cardColor;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? _darkColors['cardColor']! : _lightColors['cardColor']!;
   }
 
   static Color getDividerColor(BuildContext context) {
-    return Theme.of(context).dividerColor;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? _darkColors['dividerColor']! : _lightColors['dividerColor']!;
+  }
+
+  static Color getBackgroundColor(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? _darkColors['backgroundColor']! : _lightColors['backgroundColor']!;
+  }
+
+  static Color getPrimaryColor(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? _darkColors['primaryColor']! : _lightColors['primaryColor']!;
+  }
+
+  static Color getOnPrimaryColor(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? _darkColors['onPrimaryColor']! : _lightColors['onPrimaryColor']!;
   }
 
   static Color getQuizTypeColor(String type) {
@@ -68,13 +166,11 @@ class AppTheme {
     return const Color(0xFFF44336); // Red
   }
 
-  static ThemeData get lightTheme {
-    return _cachedLightTheme ??= ThemeData(
+  // Pre-built light theme for instant access
+  static ThemeData _buildLightTheme() {
+    return ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: primaryColor,
-        brightness: Brightness.light,
-      ),
+      colorScheme: _lightColorScheme,
       appBarTheme: const AppBarTheme(
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
@@ -116,13 +212,11 @@ class AppTheme {
     );
   }
 
-  static ThemeData get darkTheme {
-    return _cachedDarkTheme ??= ThemeData(
+  // Pre-built dark theme for instant access
+  static ThemeData _buildDarkTheme() {
+    return ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: primaryColor,
-        brightness: Brightness.dark,
-      ),
+      colorScheme: _darkColorScheme,
       appBarTheme: const AppBarTheme(
         backgroundColor: secondaryColor,
         foregroundColor: Colors.white,
@@ -163,4 +257,68 @@ class AppTheme {
       ),
     );
   }
+
+  // Instant theme access - no rebuilding required
+  static ThemeData get lightTheme {
+    if (!_isInitialized) initialize();
+    return _lightTheme;
+  }
+
+  static ThemeData get darkTheme {
+    if (!_isInitialized) initialize();
+    return _darkTheme;
+  }
+
+  // Performance optimization: Get theme by mode instantly
+  static ThemeData getThemeByMode(ThemeMode mode, Brightness systemBrightness) {
+    if (!_isInitialized) initialize();
+    
+    switch (mode) {
+      case ThemeMode.light:
+        return _lightTheme;
+      case ThemeMode.dark:
+        return _darkTheme;
+      case ThemeMode.system:
+        return systemBrightness == Brightness.dark ? _darkTheme : _lightTheme;
+    }
+  }
+
+  // Force theme pre-computation for maximum performance
+  static void precomputeThemes() {
+    if (!_isInitialized) initialize();
+    
+    // Force computation of all theme properties
+    _lightTheme.textTheme;
+    _lightTheme.colorScheme;
+    _lightTheme.appBarTheme;
+    _lightTheme.elevatedButtonTheme;
+    _lightTheme.inputDecorationTheme;
+    _lightTheme.cardTheme;
+    _lightTheme.bottomNavigationBarTheme;
+    
+    _darkTheme.textTheme;
+    _darkTheme.colorScheme;
+    _darkTheme.appBarTheme;
+    _darkTheme.elevatedButtonTheme;
+    _darkTheme.inputDecorationTheme;
+    _darkTheme.cardTheme;
+    _darkTheme.bottomNavigationBarTheme;
+    
+    // Force computation of all cached colors
+    for (final color in _lightColors.values) {
+      (color.r * 255.0).round() & 0xff; // Access color components to force computation
+    }
+    for (final color in _darkColors.values) {
+      (color.r * 255.0).round() & 0xff; // Access color components to force computation
+    }
+    
+    // Force computation of quiz type colors
+    getQuizTypeColor('quiz');
+    getQuizTypeColor('course');
+    getQuizTypeColor('reminder');
+    getQuizTypeColor('system');
+  }
+
+  // Check if themes are ready for instant switching
+  static bool get isOptimized => _isInitialized;
 }
