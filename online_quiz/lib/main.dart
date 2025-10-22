@@ -24,6 +24,10 @@ extension ColorExtension on Color {
 }
 
 void main() {
+  // Initialize and precompute themes at app startup for instant switching
+  AppTheme.initialize();
+  AppTheme.precomputeThemes();
+  
   runApp(
     const ProviderScope(
       child: ACLCQuizApp(),
@@ -44,6 +48,9 @@ class ACLCQuizApp extends ConsumerWidget {
       darkTheme: AppTheme.darkTheme,
       themeMode: settingsState.themeMode,
       debugShowCheckedModeBanner: false,
+      // Minimize theme transition duration for near-instant switching
+      themeAnimationDuration: const Duration(milliseconds: 50),
+      themeAnimationCurve: Curves.linear,
       home: const AuthWrapper(),
       routes: {
         AppRoutes.onboarding: (context) => const OnboardingScreen(),
