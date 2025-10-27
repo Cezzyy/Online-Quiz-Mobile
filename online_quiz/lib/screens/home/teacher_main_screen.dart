@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'teacher_home_tab.dart';
 import '../courses/teacher_courses_tab.dart';
-import '../quiz/teacher_quiz_tab.dart';
+import '../quizzes/teacher_quiz_tab.dart';
 import '../results/teacher_results_tab.dart';
 import '../profile/teacher_profile_tab.dart';
 import '../notifications/teacher_notification_screen.dart';
