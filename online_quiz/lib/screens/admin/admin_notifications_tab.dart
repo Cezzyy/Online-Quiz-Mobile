@@ -919,7 +919,6 @@ class _AdminNotificationsTabState extends ConsumerState<AdminNotificationsTab> {
           onPressed: () async {
             Navigator.of(context).pop();
             await notifier.markAllAsRead();
-            await notifier.loadAllNotifications();
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(

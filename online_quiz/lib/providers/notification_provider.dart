@@ -79,7 +79,8 @@ class NotificationState {
 // Notification notifier class
 class NotificationNotifier extends StateNotifier<NotificationState> {
   NotificationNotifier() : super(const NotificationState()) {
-    loadNotifications();
+    // Don't auto-load notifications - let each screen load appropriate notifications
+    // This prevents interference between admin view (all notifications) and user view (user-specific)
   }
 
   // Load notifications for the current user
@@ -182,15 +183,34 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
         MockData.notifications[index] = notification.markAsRead();
       }
       
-      // Reload notifications to reflect changes
-      // Use appropriate loading method based on current view
-      if (state.currentUserId == null) {
-        // Admin view - load all notifications
-        await loadAllNotifications();
-      } else {
-        // User view - load user-specific notifications
-        await loadNotifications();
-      }
+      // Update the state efficiently without full reload
+      final updatedNotification = notification.markAsRead();
+      
+      // Update all notification lists
+      final updatedAllNotifications = state.allNotifications.map((n) => 
+        n.notificationId == notification.notificationId ? updatedNotification : n
+      ).toList();
+      
+      // Separate read and unread notifications
+      final unreadNotifications = updatedAllNotifications.where((n) => !n.isRead).toList();
+      final readNotifications = updatedAllNotifications.where((n) => n.isRead).toList();
+      
+      // Update read status map
+      final updatedReadStatusMap = Map<int, bool>.from(state.notificationReadStatus);
+      updatedReadStatusMap[notification.notificationId] = true;
+      
+      // Apply current filter to updated notifications
+      final filteredNotifications = _applyFilter(updatedAllNotifications, state.selectedFilter);
+      
+      // Update state with preserved filter and pagination
+      state = state.copyWith(
+        allNotifications: updatedAllNotifications,
+        unreadNotifications: unreadNotifications,
+        readNotifications: readNotifications,
+        filteredNotifications: filteredNotifications,
+        unreadCount: unreadNotifications.length,
+        notificationReadStatus: updatedReadStatusMap,
+      );
     } catch (e) {
       state = state.copyWith(error: 'Failed to mark notification as read: ${e.toString()}');
     }
@@ -207,7 +227,12 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
             MockData.notifications[i] = notification.markAsRead();
           }
         }
-        // Reload all notifications
+        
+        // Reset filter to 'All' to show all notifications after marking as read
+        // This prevents the admin view from showing empty list when filter was 'Unread'
+        state = state.copyWith(selectedFilter: 'All');
+        
+        // Reload all notifications from updated MockData to ensure state consistency
         await loadAllNotifications();
       } else {
         // User view - mark only user-specific notifications as read
@@ -221,8 +246,8 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
           }
         }
         
-        // Reload user-specific notifications
-        await loadNotifications();
+        // Reload notifications for the current user to ensure state consistency
+        await loadNotifications(userId: currentUserId);
       }
     } catch (e) {
       state = state.copyWith(error: 'Failed to mark all notifications as read: ${e.toString()}');
