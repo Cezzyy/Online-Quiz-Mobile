@@ -6,11 +6,29 @@ import '../../providers/quiz_provider.dart';
 import '../../data/mock_data.dart';
 import '../../utils/app_theme.dart';
 
-class AdminHomeTab extends ConsumerWidget {
+class AdminHomeTab extends ConsumerStatefulWidget {
   const AdminHomeTab({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AdminHomeTab> createState() => _AdminHomeTabState();
+}
+
+class _AdminHomeTabState extends ConsumerState<AdminHomeTab> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = ref.read(currentUserProvider);
+      if (user != null) {
+        ref.read(courseProvider.notifier).loadAllCourses();
+        ref.read(quizProvider.notifier).initializeQuizzes(user.userId);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ref = this.ref;
     final user = ref.watch(currentUserProvider);
     
     if (user == null) {
@@ -24,14 +42,6 @@ class AdminHomeTab extends ConsumerWidget {
     // Watch providers for reactive updates
     final courseState = ref.watch(courseProvider);
     final quizState = ref.watch(quizProvider);
-    
-    // Initialize providers if not already loaded
-    if (!courseState.isLoading && courseState.allCourses.isEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(courseProvider.notifier).initializeCourses(user.userId);
-        ref.read(quizProvider.notifier).initializeQuizzes(user.userId);
-      });
-    }
     
     // Calculate admin statistics
     final adminStats = _calculateAdminStats(courseState, quizState);

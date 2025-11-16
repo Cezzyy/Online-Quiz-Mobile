@@ -395,4 +395,257 @@ class CourseService {
       throw Exception('Failed to fetch enrolled students: $e');
     }
   }
+
+  /// Create a new course (Admin only)
+  /// Multiple courses with same code can exist if assigned to different teachers/sections
+  Future<Course> createCourse({
+    required String code,
+    required String name,
+    required int instructorUserId,
+    String? category,
+    String? section,
+    required String status,
+    required int createdBy,
+  }) async {
+    try {
+      final response = await _supabase
+          .from('Course')
+          .insert({
+            'Code': code,
+            'Name': name,
+            'Instructor_UserId': instructorUserId,
+            'Status': status,
+            'Category': category,
+            'Section': section,
+            'CreatedBy': createdBy,
+          })
+          .select()
+          .single();
+
+      return Course(
+        courseId: response['CourseId'],
+        code: response['Code'],
+        name: response['Name'],
+        instructorUserId: response['Instructor_UserId'],
+        status: response['Status'],
+        category: response['Category'],
+        section: response['Section'],
+        createdAt: DateTime.parse(response['CreatedAt']),
+        updatedAt: DateTime.parse(response['UpdatedAt']),
+        createdBy: response['CreatedBy'],
+      );
+    } on PostgrestException catch (e) {
+      throw Exception('Failed to create course: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to create course: $e');
+    }
+  }
+
+  /// Update an existing course (Admin only)
+  Future<void> updateCourse({
+    required int courseId,
+    required String code,
+    required String name,
+    required int instructorUserId,
+    String? category,
+    String? section,
+    required String status,
+  }) async {
+    try {
+      await _supabase
+          .from('Course')
+          .update({
+            'Code': code,
+            'Name': name,
+            'Instructor_UserId': instructorUserId,
+            'Status': status,
+            'Category': category,
+            'Section': section,
+            'UpdatedAt': DateTime.now().toIso8601String(),
+          })
+          .eq('CourseId', courseId);
+    } on PostgrestException catch (e) {
+      throw Exception('Failed to update course: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to update course: $e');
+    }
+  }
+
+  /// Delete a course (Admin only)
+  /// Note: This will cascade delete all enrollments and quizzes
+  Future<void> deleteCourse(int courseId) async {
+    try {
+      await _supabase
+          .from('Course')
+          .delete()
+          .eq('CourseId', courseId);
+    } on PostgrestException catch (e) {
+      throw Exception('Failed to delete course: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to delete course: $e');
+    }
+  }
+
+  /// Get all teachers (users with Teacher role) for course assignment
+  Future<List<app_user.User>> getAllTeachers() async {
+    try {
+      final response = await _supabase
+          .from('Teacher')
+          .select('''
+            *,
+            User!inner(*)
+          ''')
+          .order('UserId', ascending: false);
+
+      final List<app_user.User> teachers = [];
+      for (final teacherData in response) {
+        if (teacherData['User'] != null) {
+          teachers.add(app_user.User.fromJson(teacherData['User']));
+        }
+      }
+
+      return teachers;
+    } on PostgrestException catch (e) {
+      throw Exception('Failed to fetch teachers: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to fetch teachers: $e');
+    }
+  }
+
+  /// Get available students not enrolled in a specific course
+  Future<List<Map<String, dynamic>>> getAvailableStudents(int courseId) async {
+    try {
+      // Get all students
+      final allStudentsResponse = await _supabase
+          .from('Student')
+          .select('''
+            *,
+            User!inner(*)
+          ''')
+          .order('UserId', ascending: false);
+
+      // Get enrolled students in this course
+      final enrolledResponse = await _supabase
+          .from('Enrollment')
+          .select('UserId')
+          .eq('CourseId', courseId);
+
+      final enrolledUserIds = enrolledResponse.map((e) => e['UserId'] as int).toSet();
+
+      final List<Map<String, dynamic>> availableStudents = [];
+      for (final studentData in allStudentsResponse) {
+        final userId = studentData['UserId'] as int;
+        if (!enrolledUserIds.contains(userId) && studentData['User'] != null) {
+          availableStudents.add({
+            'user': app_user.User.fromJson(studentData['User']),
+            'studentId': studentData['StudentId'],
+            'yearLevel': studentData['Year_Level'],
+            'section': studentData['Section'],
+            'course': studentData['Course'],
+          });
+        }
+      }
+
+      return availableStudents;
+    } on PostgrestException catch (e) {
+      throw Exception('Failed to fetch available students: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to fetch available students: $e');
+    }
+  }
+
+  /// Enroll a student in a course (Admin or Teacher)
+  Future<Enrollment> enrollStudent({
+    required int userId,
+    required int courseId,
+    String? section,
+    required int enrolledBy,
+  }) async {
+    try {
+      final response = await _supabase
+          .from('Enrollment')
+          .insert({
+            'UserId': userId,
+            'CourseId': courseId,
+            'Section': section,
+            'EnrolledBy': enrolledBy,
+          })
+          .select()
+          .single();
+
+      return Enrollment(
+        enrollmentId: response['EnrollmentId'],
+        userId: response['UserId'],
+        courseId: response['CourseId'],
+        section: response['Section'],
+        enrolledAt: DateTime.parse(response['EnrolledAt']),
+        enrolledBy: response['EnrolledBy'],
+      );
+    } on PostgrestException catch (e) {
+      if (e.code == '23505') {
+        throw Exception('Student is already enrolled in this course');
+      }
+      throw Exception('Failed to enroll student: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to enroll student: $e');
+    }
+  }
+
+  /// Remove a student from a course (Admin or Teacher)
+  Future<void> removeEnrollment(int enrollmentId) async {
+    try {
+      await _supabase
+          .from('Enrollment')
+          .delete()
+          .eq('EnrollmentId', enrollmentId);
+    } on PostgrestException catch (e) {
+      throw Exception('Failed to remove enrollment: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to remove enrollment: $e');
+    }
+  }
+
+  /// Get all courses grouped by code (for admin view showing multiple sections)
+  Future<Map<String, List<Course>>> getAllCoursesGrouped() async {
+    try {
+      final courses = await getAllCourses();
+      
+      final Map<String, List<Course>> groupedCourses = {};
+      for (final course in courses) {
+        if (!groupedCourses.containsKey(course.code)) {
+          groupedCourses[course.code] = [];
+        }
+        groupedCourses[course.code]!.add(course);
+      }
+
+      return groupedCourses;
+    } catch (e) {
+      throw Exception('Failed to fetch grouped courses: $e');
+    }
+  }
+
+  /// Get all available sections from the Student table
+  Future<List<String>> getAvailableSections() async {
+    try {
+      final response = await _supabase
+          .from('Student')
+          .select('Section')
+          .not('Section', 'is', null);
+
+      final sections = <String>{};
+      for (final row in response) {
+        final section = row['Section'] as String?;
+        if (section != null && section.isNotEmpty) {
+          sections.add(section);
+        }
+      }
+
+      final sortedSections = sections.toList()..sort();
+      return sortedSections;
+    } on PostgrestException catch (e) {
+      throw Exception('Failed to fetch available sections: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to fetch available sections: $e');
+    }
+  }
 }

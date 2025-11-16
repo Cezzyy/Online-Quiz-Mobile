@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../utils/app_theme.dart';
 import '../../data/mock_data.dart';
 import '../../models/course.dart';
+import '../../models/user.dart';
 import '../../providers/course_provider.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/dialog.dart';
@@ -16,13 +17,51 @@ class AdminCoursesTab extends ConsumerStatefulWidget {
 }
 
 class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
+  List<User> _teachers = [];
+  List<String> _availableSections = [];
+
   @override
   void initState() {
     super.initState();
     // Initialize courses when the tab is first loaded
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(courseProvider.notifier).initializeAdminCourses();
+      final existing = ref.read(courseProvider);
+      if (!existing.isLoading && existing.allCourses.isEmpty) {
+        ref.read(courseProvider.notifier).loadAllCourses();
+      }
+      if (_teachers.isEmpty) {
+        _loadTeachers();
+      }
+      if (_availableSections.isEmpty) {
+        _loadAvailableSections();
+      }
     });
+  }
+
+  Future<void> _loadTeachers() async {
+    try {
+      final teachers = await ref.read(courseProvider.notifier).getAllTeachers();
+      if (mounted) {
+        setState(() {
+          _teachers = teachers;
+        });
+      }
+    } catch (e) {
+      // Error loading teachers
+    }
+  }
+
+  Future<void> _loadAvailableSections() async {
+    try {
+      final sections = await ref.read(courseProvider.notifier).getAvailableSections();
+      if (mounted) {
+        setState(() {
+          _availableSections = sections;
+        });
+      }
+    } catch (e) {
+      // Error loading sections
+    }
   }
 
   @override
@@ -72,41 +111,23 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
       ),
       child: Column(
         children: [
-          // Title and Stats
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // Quick Stats
+          Row(
             children: [
-            Text(
-              'Course Management',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.getTextColor(context),
+              Expanded(
+                child: _buildQuickStat(context, 'Total', state.allCourses.length.toString(), Icons.book),
               ),
-            ),
-              const SizedBox(height: 8),
-            Text(
-                'Manage courses and assign instructors',
-              style: TextStyle(
-                fontSize: 16,
-                color: AppTheme.getSecondaryTextColor(context),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQuickStat(context, 'Active', state.allCourses.where((c) => c.isActive).length.toString(), Icons.check_circle),
               ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQuickStat(context, 'Inactive', state.allCourses.where((c) => c.isInactive).length.toString(), Icons.pause_circle),
               ),
-              const SizedBox(height: 16),
-              // Quick Stats
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _buildQuickStat(context, 'Total', state.allCourses.length.toString(), Icons.book),
-                    const SizedBox(width: 12),
-                    _buildQuickStat(context, 'Active', state.allCourses.where((c) => c.isActive).length.toString(), Icons.check_circle),
-                    const SizedBox(width: 12),
-                    _buildQuickStat(context, 'Inactive', state.allCourses.where((c) => c.isInactive).length.toString(), Icons.pause_circle),
-                    const SizedBox(width: 12),
-                    _buildQuickStat(context, 'Archived', state.allCourses.where((c) => c.isArchived).length.toString(), Icons.archive),
-                  ],
-                ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQuickStat(context, 'Archived', state.allCourses.where((c) => c.isArchived).length.toString(), Icons.archive),
               ),
             ],
           ),
@@ -279,7 +300,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            ...notifier.getAllTeachers().map((teacher) => 
+                            ..._teachers.map((teacher) => 
                                 DropdownMenuItem(
                                   value: teacher.userId, 
                                   child: Text(
@@ -305,27 +326,36 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
 
   Widget _buildQuickStat(BuildContext context, String label, String value, IconData icon) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
         color: AppTheme.primaryColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
+        children: [
+          Icon(
             icon,
-            size: 14,
+            size: 16,
             color: AppTheme.primaryColor,
           ),
-          const SizedBox(width: 6),
+          const SizedBox(height: 4),
           Text(
-            '$value $label',
+            value,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.primaryColor,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
               fontWeight: FontWeight.w600,
               color: AppTheme.primaryColor,
             ),
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -351,150 +381,125 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
       );
     }
 
-    return Column(
-      children: [
-        // Table
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SingleChildScrollView(
-              child: DataTable(
-                headingRowColor: WidgetStateProperty.all(
-                  AppTheme.getDividerColor(context).withValues(alpha: 0.1),
-                ),
-                dataRowColor: WidgetStateProperty.all(
-                  AppTheme.getCardColor(context),
-                ),
-                columns: const [
-                  DataColumn(label: Text('Course')),
-                  DataColumn(label: Text('Code')),
-                  DataColumn(label: Text('Sections')),
-                  DataColumn(label: Text('Instructors')),
-                  DataColumn(label: Text('Category')),
-                  DataColumn(label: Text('Status')),
-                  DataColumn(label: Text('Students')),
-                  DataColumn(label: Text('Actions')),
-                ],
-                rows: groupedCourses.map((groupedCourse) {
-                  final courseCode = groupedCourse['courseCode'] as String;
-                  final courseName = groupedCourse['courseName'] as String;
-                  final sections = groupedCourse['sections'] as List<String>;
-                  final instructors = groupedCourse['instructors'] as List<String>;
-                  final category = groupedCourse['category'] as String?;
-                  final status = groupedCourse['status'] as String;
-                  final totalEnrollments = groupedCourse['totalEnrollments'] as int;
-                  
-                  return DataRow(
-                    cells: [
-                      DataCell(
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            CircleAvatar(
-                              radius: 16,
-                              backgroundColor: _getCourseColor(courseCode).withValues(alpha: 0.1),
-                              child: Icon(
-                                Icons.book,
-                                size: 16,
-                                color: _getCourseColor(courseCode),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                courseName,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.getTextColor(context),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          courseCode,
-                          style: TextStyle(
-              color: AppTheme.getSecondaryTextColor(context),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          sections.join(', '),
-                          style: TextStyle(
-                            color: AppTheme.getSecondaryTextColor(context),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          instructors.join(', '),
-                          style: TextStyle(
-                            color: AppTheme.getSecondaryTextColor(context),
-                          ),
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          category ?? 'Not specified',
-                          style: TextStyle(
-                            color: AppTheme.getSecondaryTextColor(context),
-                          ),
-                        ),
-                      ),
-                      DataCell(
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: _getStatusColor(status).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            status,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: _getStatusColor(status),
-                            ),
-                          ),
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          totalEnrollments.toString(),
-                          style: TextStyle(
-                            color: AppTheme.getSecondaryTextColor(context),
-                          ),
-                        ),
-                      ),
-                      DataCell(
-                        PopupMenuButton<String>(
-                          onSelected: (value) => _handleGroupedCourseAction(context, value, groupedCourse, notifier),
-                          itemBuilder: (context) => [
-                            const PopupMenuItem(value: 'view', child: Text('View Details')),
-                            const PopupMenuItem(value: 'sections', child: Text('Manage Sections')),
-                            const PopupMenuItem(value: 'add_section', child: Text('Add Section')),
-                          ],
-                          child: Icon(
-                            Icons.more_vert,
-                            color: AppTheme.getSecondaryTextColor(context),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                }).toList(),
+  return Column(
+    children: [
+      // Table
+      Expanded(
+        child: SingleChildScrollView(
+          child: SizedBox(
+            width: double.infinity,
+            child: DataTable(
+              headingRowColor: WidgetStateProperty.all(
+                AppTheme.getDividerColor(context).withValues(alpha: 0.1),
               ),
+              dataRowColor: WidgetStateProperty.all(
+                AppTheme.getCardColor(context),
+              ),
+              columnSpacing: 24,
+              columns: const [
+                DataColumn(
+                  label: Expanded(
+                    child: Text(
+                      'Course',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Code',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Actions',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+              rows: groupedCourses.map((groupedCourse) {
+                final courseCode = groupedCourse['courseCode'] as String;
+                final courseName = groupedCourse['courseName'] as String;
+                
+                return DataRow(
+                  cells: [
+                    DataCell(
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 18,
+                            backgroundColor: _getCourseColor(courseCode).withValues(alpha: 0.1),
+                            child: Icon(
+                              Icons.book,
+                              size: 18,
+                              color: _getCourseColor(courseCode),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  courseName,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                    color: AppTheme.getTextColor(context),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  courseCode,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppTheme.getSecondaryTextColor(context),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    DataCell(
+                      Text(
+                        courseCode,
+                        style: TextStyle(
+                          color: AppTheme.getSecondaryTextColor(context),
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    DataCell(
+                      PopupMenuButton<String>(
+                        onSelected: (value) => _handleGroupedCourseAction(context, value, groupedCourse, notifier),
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(value: 'view', child: Text('View Details')),
+                          const PopupMenuItem(value: 'sections', child: Text('Manage Sections')),
+                          const PopupMenuItem(value: 'add_section', child: Text('Add Section')),
+                        ],
+                        child: Icon(
+                          Icons.more_vert,
+                          color: AppTheme.getSecondaryTextColor(context),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
             ),
           ),
         ),
+      ),
         
-        // Pagination Controls
-        if (totalPages > 1) _buildPaginationControls(context, state, notifier, totalPages),
+      // Pagination Controls
+      if (totalPages > 1) _buildPaginationControls(context, state, notifier, totalPages),
       ],
     );
   }
@@ -717,9 +722,9 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                   
                   const SizedBox(height: 20),
                   
-                  // Instructor Selection
+                  // Instructor Assignment
                   Text(
-                    'Instructor Assignment',
+                    'Instructor & Section Assignment',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -733,7 +738,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                       labelText: 'Select Instructor',
                       border: OutlineInputBorder(),
                     ),
-                    items: notifier.getAllTeachers().map((teacher) => 
+                    items: _teachers.map((teacher) => 
                         DropdownMenuItem(
                           value: teacher.userId,
                           child: Text(
@@ -754,6 +759,50 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                       return null;
                     },
                   ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  _availableSections.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            SizedBox(width: 12),
+                            Text('Loading available sections...'),
+                          ],
+                        ),
+                      )
+                    : DropdownButtonFormField<String>(
+                        decoration: const InputDecoration(
+                          labelText: 'Section',
+                          border: OutlineInputBorder(),
+                          helperText: 'Sections from Student records',
+                        ),
+                        items: _availableSections.map((section) => DropdownMenuItem(
+                          value: section,
+                          child: Text(
+                            section,
+                            style: const TextStyle(fontSize: 12),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        )).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            sectionController.text = value ?? '';
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Section is required';
+                          }
+                          return null;
+                        },
+                      ),
                   
                   const SizedBox(height: 20),
                   
@@ -819,18 +868,45 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
             if (formKey.currentState!.validate()) {
               Navigator.of(context).pop();
               
+              // Show loading dialog
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => const Center(
+                  child: Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(20.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text('Creating course...'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+              
               final success = await notifier.createCourse(
                 code: codeController.text,
                 name: nameController.text,
                 instructorUserId: selectedInstructorId!,
                 category: categoryController.text.isNotEmpty ? categoryController.text : null,
-                section: sectionController.text.isNotEmpty ? sectionController.text : null,
+                section: sectionController.text.trim(),
                 status: selectedStatus,
                 createdBy: 1, // Admin user ID
               );
               
               if (context.mounted) {
+                // Close loading dialog
+                Navigator.of(context).pop();
+                
                 if (success) {
+                  // Reload courses
+                  await notifier.loadAllCourses();
+                  
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Course created successfully!'),
@@ -938,7 +1014,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                       labelText: 'Select Instructor',
                       border: OutlineInputBorder(),
                     ),
-                    items: notifier.getAllTeachers().map((teacher) => 
+                    items: _teachers.map((teacher) => 
                         DropdownMenuItem(
                           value: teacher.userId,
                           child: Text(
@@ -1022,33 +1098,78 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
         DialogAction.save(
           onPressed: () async {
             if (formKey.currentState!.validate()) {
+              // Close the edit dialog first
               Navigator.of(context).pop();
               
+              // Show loading dialog
+              if (context.mounted) {
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => const Center(
+                    child: Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(20.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: 16),
+                            Text('Updating course...'),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }
+              
               final success = await notifier.updateCourse(
-                course,
+                courseId: course.courseId,
                 code: codeController.text,
                 name: nameController.text,
                 instructorUserId: selectedInstructorId ?? course.instructorUserId,
                 category: categoryController.text.isNotEmpty ? categoryController.text : null,
+                section: course.section,
                 status: selectedStatus,
               );
               
               if (context.mounted) {
+                // Close loading dialog
+                Navigator.of(context).pop();
+                
                 if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Course updated successfully!'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
+                  // Close any remaining dialogs (like manage sections dialog)
+                  if (context.mounted && Navigator.of(context).canPop()) {
+                    // Keep popping until we're back to the main screen
+                    while (Navigator.of(context).canPop()) {
+                      Navigator.of(context).pop();
+                      await Future.delayed(const Duration(milliseconds: 50));
+                      if (!context.mounted) break;
+                    }
+                  }
+                  
+                  // Reload courses
+                  await notifier.loadAllCourses();
+                  
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Course updated successfully!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
                 } else {
                   final courseState = ref.read(courseProvider);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(courseState.error ?? 'Failed to update course'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(courseState.error ?? 'Failed to update course'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 }
               }
             }
@@ -1350,18 +1471,53 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
             ),
             const SizedBox(height: 20),
             
-            CustomTextField(
-              controller: sectionController,
-              labelText: 'Section',
-              hintText: 'e.g., CS31B, IT21C',
-              prefixIcon: Icons.group,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Section is required';
-                }
-                return null;
-              },
-            ),
+            _availableSections.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      SizedBox(width: 12),
+                      Text('Loading available sections...'),
+                    ],
+                  ),
+                )
+              : DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    labelText: 'Section',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    filled: true,
+                    fillColor: AppTheme.getCardColor(context),
+                    prefixIcon: const Icon(Icons.group),
+                    helperText: 'Sections from Student records',
+                  ),
+                  items: _availableSections.map((section) => DropdownMenuItem(
+                    value: section,
+                    child: Text(
+                      section,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.getTextColor(context),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  )).toList(),
+                  onChanged: (value) {
+                    sectionController.text = value ?? '';
+                  },
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Section is required';
+                    }
+                    return null;
+                  },
+                ),
             
             const SizedBox(height: 16),
             
@@ -1386,7 +1542,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                 filled: true,
                 fillColor: AppTheme.getCardColor(context),
               ),
-              items: notifier.getAllTeachers().map((teacher) {
+              items: _teachers.map((teacher) {
                 return DropdownMenuItem<int>(
                   value: teacher.userId,
                   child: Text(
@@ -1418,6 +1574,29 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
           text: 'Add Section',
           onPressed: () async {
             if (formKey.currentState!.validate() && selectedInstructorId != null) {
+              Navigator.of(context).pop();
+              
+              // Show loading dialog
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => const Center(
+                  child: Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(20.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text('Adding section...'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+              
               final success = await notifier.createCourse(
                 code: courseCode,
                 name: primaryCourse.name,
@@ -1428,15 +1607,30 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                 createdBy: 1, // Admin user ID
               );
               
-              if (success && context.mounted) {
+              if (context.mounted) {
+                // Close loading dialog
                 Navigator.of(context).pop();
-                AppDialog.show(
-                  context: context,
-                  title: 'Success',
-                  type: DialogType.success,
-                  content: Text('Section ${sectionController.text} added successfully!'),
-                  actions: [DialogAction.ok()],
-                );
+                
+                if (success) {
+                  // Reload courses
+                  await notifier.loadAllCourses();
+                  
+                  AppDialog.show(
+                    context: context,
+                    title: 'Success',
+                    type: DialogType.success,
+                    content: Text('Section ${sectionController.text} added successfully!'),
+                    actions: [DialogAction.ok()],
+                  );
+                } else {
+                  final courseState = ref.read(courseProvider);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(courseState.error ?? 'Failed to add section'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               }
             }
           },
@@ -1493,25 +1687,66 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
       cancelText: 'Cancel',
       isDestructive: true,
     ).then((confirmed) async {
-      if (confirmed == true) {
-        final success = await notifier.deleteCourse(course);
+      if (confirmed == true && context.mounted) {
+        // Show loading dialog
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: Card(
+              child: Padding(
+                padding: EdgeInsets.all(20.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Deleting course...'),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        
+        final success = await notifier.deleteCourse(course.courseId);
         
         if (context.mounted) {
+          // Close loading dialog
+          Navigator.of(context).pop();
+          
           if (success) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('${course.name} has been deleted'),
-                backgroundColor: Colors.red,
-              ),
-            );
+            // Close any remaining dialogs (like manage sections dialog)
+            if (context.mounted && Navigator.of(context).canPop()) {
+              // Keep popping until we're back to the main screen
+              while (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+                await Future.delayed(const Duration(milliseconds: 50));
+                if (!context.mounted) break;
+              }
+            }
+            
+            // Reload courses
+            await notifier.loadAllCourses();
+            
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${course.name} has been deleted'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
           } else {
             final courseState = ref.read(courseProvider);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(courseState.error ?? 'Failed to delete course'),
-                backgroundColor: Colors.red,
-              ),
-            );
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(courseState.error ?? 'Failed to delete course'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
           }
         }
       }

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/course.dart';
 import '../models/enrollment.dart';
 import '../models/user.dart' as app_user;
@@ -218,36 +219,135 @@ class CourseNotifier extends StateNotifier<CourseState> {
     }
   }
 
-  // Admin methods - stubs for now (TODO: implement with backend)
+  // Admin methods
   Future<void> initializeAdminCourses() async {
-    // For now, just load all courses - implement proper admin logic later
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      // TODO: Load all courses from database for admin view
-      state = state.copyWith(isLoading: false);
+      final courses = await _courseService.getAllCourses();
+      state = state.copyWith(
+        allCourses: courses,
+        isLoading: false,
+      );
     } catch (e) {
       state = state.copyWith(isLoading: false, error: 'Failed to load admin courses: $e');
     }
   }
 
   List<Map<String, dynamic>> getPaginatedGroupedCourses() {
-    // TODO: Implement grouped courses by code
-    return [];
+    final filtered = getFilteredCourses();
+    
+    // Group courses by code
+    final Map<String, List<Course>> grouped = {};
+    for (final course in filtered) {
+      if (!grouped.containsKey(course.code)) {
+        grouped[course.code] = [];
+      }
+      grouped[course.code]!.add(course);
+    }
+
+    // Convert to list of maps with metadata
+    final List<Map<String, dynamic>> groupedList = [];
+    for (final entry in grouped.entries) {
+      final courses = entry.value;
+      final primaryCourse = courses.first;
+      
+      groupedList.add({
+        'courseCode': entry.key,
+        'courseName': primaryCourse.name,
+        'courses': courses,
+        'primaryCourse': primaryCourse,
+        'sections': courses.map((c) => c.section ?? 'N/A').toSet().toList(),
+        'instructors': courses.map((c) => c.instructorUserId).toSet().toList()
+            .map((id) => 'Instructor $id') // Will be replaced with actual names in UI
+            .toList(),
+        'category': primaryCourse.category,
+        'status': primaryCourse.status,
+        'totalEnrollments': 0, // Will be calculated if needed
+      });
+    }
+
+    // Apply pagination
+    final startIndex = (state.currentPage - 1) * state.itemsPerPage;
+    final endIndex = (startIndex + state.itemsPerPage).clamp(0, groupedList.length);
+    
+    if (startIndex >= groupedList.length) {
+      return [];
+    }
+    
+    return groupedList.sublist(startIndex, endIndex);
   }
 
   int getTotalGroupedPages() {
-    // TODO: Implement pagination
-    return 1;
+    final filtered = getFilteredCourses();
+    
+    // Group courses by code to get unique course codes
+    final uniqueCodes = filtered.map((c) => c.code).toSet().length;
+    
+    return (uniqueCodes / state.itemsPerPage).ceil().clamp(1, double.infinity).toInt();
   }
 
   List<Course> getFilteredCourses() {
-    // TODO: Implement filtering
-    return state.allCourses;
+    var filtered = state.allCourses;
+
+    // Filter by search query
+    if (state.searchQuery.isNotEmpty) {
+      final query = state.searchQuery.toLowerCase();
+      filtered = filtered.where((course) {
+        return course.name.toLowerCase().contains(query) ||
+               course.code.toLowerCase().contains(query) ||
+               (course.section?.toLowerCase().contains(query) ?? false);
+      }).toList();
+    }
+
+    // Filter by status
+    if (state.selectedStatus != null) {
+      filtered = filtered.where((course) => course.status == state.selectedStatus).toList();
+    }
+
+    // Filter by category
+    if (state.selectedCategory != null) {
+      filtered = filtered.where((course) => course.category == state.selectedCategory).toList();
+    }
+
+    // Filter by instructor
+    if (state.selectedInstructorId != null) {
+      filtered = filtered.where((course) => course.instructorUserId == state.selectedInstructorId).toList();
+    }
+
+    return filtered;
   }
 
-  List<app_user.User> getAllTeachers() {
-    // TODO: Implement teacher fetching
-    return [];
+  List<Course> getPaginatedCourses() {
+    final filtered = getFilteredCourses();
+    final startIndex = (state.currentPage - 1) * state.itemsPerPage;
+    final endIndex = (startIndex + state.itemsPerPage).clamp(0, filtered.length);
+    
+    if (startIndex >= filtered.length) {
+      return [];
+    }
+    
+    return filtered.sublist(startIndex, endIndex);
+  }
+
+  int getTotalPages() {
+    final filtered = getFilteredCourses();
+    return (filtered.length / state.itemsPerPage).ceil();
+  }
+
+  Future<List<app_user.User>> getAllTeachers() async {
+    try {
+      return await _courseService.getAllTeachers();
+    } catch (e) {
+      throw Exception('Failed to fetch teachers: $e');
+    }
+  }
+
+  Future<List<String>> getAvailableSections() async {
+    try {
+      return await _courseService.getAvailableSections();
+    } catch (e) {
+      throw Exception('Failed to fetch available sections: $e');
+    }
   }
 
   Future<bool> createCourse({
@@ -259,41 +359,158 @@ class CourseNotifier extends StateNotifier<CourseState> {
     required String status,
     required int createdBy,
   }) async {
-    // TODO: Implement course creation with backend
-    return false;
+    try {
+      final newCourse = await _courseService.createCourse(
+        code: code,
+        name: name,
+        instructorUserId: instructorUserId,
+        category: category,
+        section: section,
+        status: status,
+        createdBy: createdBy,
+      );
+
+      // Add to state
+      state = state.copyWith(
+        allCourses: [...state.allCourses, newCourse],
+      );
+
+      return true;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return false;
+    }
   }
 
-  Future<bool> updateCourse(
-    Course course, {
+  Future<bool> updateCourse({
+    required int courseId,
     required String code,
     required String name,
     required int instructorUserId,
     String? category,
+    String? section,
     required String status,
   }) async {
-    // TODO: Implement course update with backend
-    return false;
+    try {
+      await _courseService.updateCourse(
+        courseId: courseId,
+        code: code,
+        name: name,
+        instructorUserId: instructorUserId,
+        category: category,
+        section: section,
+        status: status,
+      );
+
+      // Update in state
+      final updatedCourses = state.allCourses.map((course) {
+        if (course.courseId == courseId) {
+          return Course(
+            courseId: courseId,
+            code: code,
+            name: name,
+            instructorUserId: instructorUserId,
+            status: status,
+            category: category,
+            section: section,
+            createdAt: course.createdAt,
+            updatedAt: DateTime.now(),
+            createdBy: course.createdBy,
+          );
+        }
+        return course;
+      }).toList();
+
+      state = state.copyWith(allCourses: updatedCourses);
+      return true;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return false;
+    }
   }
 
-  Future<bool> deleteCourse(Course course) async {
-    // TODO: Implement course deletion with backend
-    return false;
+  Future<bool> deleteCourse(int courseId) async {
+    try {
+      await _courseService.deleteCourse(courseId);
+
+      // Remove from state
+      final updatedCourses = state.allCourses.where((course) => course.courseId != courseId).toList();
+      state = state.copyWith(allCourses: updatedCourses);
+
+      return true;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return false;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getEnrolledStudents(int courseId) async {
+    try {
+      return await _courseService.getEnrolledStudents(courseId);
+    } catch (e) {
+      throw Exception('Failed to fetch enrolled students: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getAvailableStudents(int courseId) async {
+    try {
+      return await _courseService.getAvailableStudents(courseId);
+    } catch (e) {
+      throw Exception('Failed to fetch available students: $e');
+    }
+  }
+
+  Future<bool> enrollStudent({
+    required int userId,
+    required int courseId,
+    String? section,
+    required int enrolledBy,
+  }) async {
+    try {
+      await _courseService.enrollStudent(
+        userId: userId,
+        courseId: courseId,
+        section: section,
+        enrolledBy: enrolledBy,
+      );
+      return true;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return false;
+    }
+  }
+
+  Future<bool> removeEnrollment(int enrollmentId) async {
+    try {
+      await _courseService.removeEnrollment(enrollmentId);
+      return true;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return false;
+    }
+  }
+
+  Future<void> loadAllCourses() async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    
+    try {
+      final courses = await _courseService.getAllCourses();
+      state = state.copyWith(
+        allCourses: courses,
+        isLoading: false,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+      );
+    }
   }
 
   /// Get enrolled students with details for a course (Teacher)
   Future<List<Map<String, dynamic>>> getEnrolledStudentsWithDetails(int courseId) async {
     try {
       return await _courseService.getEnrolledStudents(courseId);
-    } catch (e) {
-      return [];
-    }
-  }
-
-  /// Get available students not enrolled in a course (Teacher/Admin)
-  Future<List<app_user.User>> getAvailableStudents(int courseId) async {
-    try {
-      // TODO: Implement in course_service if needed
-      return [];
     } catch (e) {
       return [];
     }
@@ -308,24 +525,56 @@ class CourseNotifier extends StateNotifier<CourseState> {
     }
   }
 
-  /// Get quiz attempts (Teacher) - for now returns empty, will be implemented
+  /// Get quiz attempts (Teacher) - returns all attempts for a specific quiz
   Future<List<Attempt>> getQuizAttempts(int quizId) async {
     try {
-      // TODO: Implement getAttemptsByQuiz in quiz_service
-      return [];
+      // Get all attempts for this quiz from all users
+      final response = await Supabase.instance.client
+          .from('Attempt')
+          .select('*')
+          .eq('QuizId', quizId)
+          .order('StartedAt', ascending: false);
+      
+      return response.map((data) => Attempt.fromJson(data)).toList();
     } catch (e) {
       return [];
     }
   }
 
   Future<bool> enrollStudentInCourse(int userId, int courseId, int enrolledBy) async {
-    // TODO: Implement student enrollment
-    return false;
+    try {
+      await _courseService.enrollStudent(
+        userId: userId,
+        courseId: courseId,
+        section: null,
+        enrolledBy: enrolledBy,
+      );
+      return true;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return false;
+    }
   }
 
   Future<bool> removeStudentFromCourse(int userId, int courseId, [int? removedBy]) async {
-    // TODO: Implement student removal
-    return false;
+    try {
+      // First, find the enrollment ID for this user and course
+      final response = await Supabase.instance.client
+          .from('Enrollment')
+          .select('EnrollmentId')
+          .eq('UserId', userId)
+          .eq('CourseId', courseId)
+          .single();
+      
+      final enrollmentId = response['EnrollmentId'] as int;
+      
+      // Then remove the enrollment
+      await _courseService.removeEnrollment(enrollmentId);
+      return true;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return false;
+    }
   }
 
   // Filter/search methods
