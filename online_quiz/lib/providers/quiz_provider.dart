@@ -5,7 +5,7 @@ import '../models/attempt.dart';
 import '../models/attempt_answer.dart';
 import '../models/choice.dart';
 import '../models/course.dart';
-import '../data/mock_data.dart';
+import '../services/quiz_service.dart';
 import 'course_provider.dart';
 
 // Quiz state class to hold all quiz-related data and UI state
@@ -15,6 +15,7 @@ class QuizState {
   final List<Quiz> filteredQuizzes;
   final Quiz? selectedQuiz;
   final List<Question> selectedQuizQuestions;
+  final Map<int, List<Choice>> questionChoices; // questionId -> choices
   final List<Attempt> userAttempts;
   final bool isLoading;
   final bool isLoadingQuizDetails;
@@ -26,7 +27,6 @@ class QuizState {
   final Map<int, Attempt?> quizAttempts; // quizId -> latest attempt
   final Map<int, double> quizScores; // quizId -> score percentage
   final Map<int, List<AttemptAnswer>> attemptAnswers; // attemptId -> answers
-  final Map<int, List<Choice>> questionChoices; // questionId -> choices
 
   const QuizState({
     this.allQuizzes = const [],
@@ -34,6 +34,7 @@ class QuizState {
     this.filteredQuizzes = const [],
     this.selectedQuiz,
     this.selectedQuizQuestions = const [],
+    this.questionChoices = const {},
     this.userAttempts = const [],
     this.isLoading = false,
     this.isLoadingQuizDetails = false,
@@ -45,7 +46,6 @@ class QuizState {
     this.quizAttempts = const {},
     this.quizScores = const {},
     this.attemptAnswers = const {},
-    this.questionChoices = const {},
   });
 
   QuizState copyWith({
@@ -54,6 +54,7 @@ class QuizState {
     List<Quiz>? filteredQuizzes,
     Quiz? selectedQuiz,
     List<Question>? selectedQuizQuestions,
+    Map<int, List<Choice>>? questionChoices,
     List<Attempt>? userAttempts,
     bool? isLoading,
     bool? isLoadingQuizDetails,
@@ -65,7 +66,6 @@ class QuizState {
     Map<int, Attempt?>? quizAttempts,
     Map<int, double>? quizScores,
     Map<int, List<AttemptAnswer>>? attemptAnswers,
-    Map<int, List<Choice>>? questionChoices,
     bool clearError = false,
     bool clearSelectedQuiz = false,
   }) {
@@ -75,6 +75,7 @@ class QuizState {
       filteredQuizzes: filteredQuizzes ?? this.filteredQuizzes,
       selectedQuiz: clearSelectedQuiz ? null : (selectedQuiz ?? this.selectedQuiz),
       selectedQuizQuestions: selectedQuizQuestions ?? this.selectedQuizQuestions,
+      questionChoices: questionChoices ?? this.questionChoices,
       userAttempts: userAttempts ?? this.userAttempts,
       isLoading: isLoading ?? this.isLoading,
       isLoadingQuizDetails: isLoadingQuizDetails ?? this.isLoadingQuizDetails,
@@ -86,7 +87,6 @@ class QuizState {
       quizAttempts: quizAttempts ?? this.quizAttempts,
       quizScores: quizScores ?? this.quizScores,
       attemptAnswers: attemptAnswers ?? this.attemptAnswers,
-      questionChoices: questionChoices ?? this.questionChoices,
     );
   }
 
@@ -97,7 +97,7 @@ class QuizState {
     return filteredQuizzes.sublist(startIndex, endIndex);
   }
 
-  int get totalPages => (filteredQuizzes.length / itemsPerPage).ceil();
+  int get totalPages => filteredQuizzes.isEmpty ? 1 : (filteredQuizzes.length / itemsPerPage).ceil();
 
   int get totalQuizzes => allQuizzes.length;
   int get completedQuizzes => quizCompletionStatus.values.where((completed) => completed).length;
@@ -111,6 +111,7 @@ class QuizState {
 // Quiz notifier class to manage quiz state
 class QuizNotifier extends StateNotifier<QuizState> {
   final Ref ref;
+  final QuizService _quizService = QuizService();
   
   QuizNotifier(this.ref) : super(const QuizState());
 
@@ -119,13 +120,11 @@ class QuizNotifier extends StateNotifier<QuizState> {
     state = state.copyWith(isLoading: true, clearError: true);
     
     try {
-      await Future.delayed(const Duration(milliseconds: 500)); // Simulate API call
-      
-      // Load all quizzes
-      final allQuizzes = List<Quiz>.from(MockData.quizzes);
+      // Load all quizzes from enrolled courses
+      final allQuizzes = await _quizService.getAvailableQuizzes(userId);
       
       // Load user attempts
-      final userAttempts = MockData.getAttemptsByUser(userId);
+      final userAttempts = await _quizService.getUserAttempts(userId);
       
       // Calculate completion status and scores for each quiz
       final Map<int, bool> completionStatus = {};
@@ -137,14 +136,15 @@ class QuizNotifier extends StateNotifier<QuizState> {
             attempt.quizId == quiz.quizId && attempt.submittedAt != null).toList();
         
         final isCompleted = quizAttempts.isNotEmpty;
-        final latestAttempt = quizAttempts.isNotEmpty ? quizAttempts.last : null;
+        final latestAttempt = quizAttempts.isNotEmpty ? quizAttempts.first : null;
         
         completionStatus[quiz.quizId] = isCompleted;
         attempts[quiz.quizId] = latestAttempt;
         
         if (latestAttempt != null) {
-          final totalPoints = MockData.getQuestionsByQuiz(quiz.quizId)
-              .fold<double>(0, (sum, q) => sum + q.points);
+          // Calculate percentage score
+          final questions = await _quizService.getQuizQuestions(quiz.quizId);
+          final totalPoints = questions.fold<double>(0, (sum, q) => sum + q.points);
           scores[quiz.quizId] = totalPoints > 0 ? (latestAttempt.score / totalPoints) * 100 : 0.0;
         }
       }
@@ -152,9 +152,7 @@ class QuizNotifier extends StateNotifier<QuizState> {
       // Load attempt answers grouped by attempt ID
       final Map<int, List<AttemptAnswer>> attemptAnswersMap = {};
       for (final attempt in userAttempts) {
-        final answers = MockData.attemptAnswers
-            .where((answer) => answer.attemptId == attempt.attemptId)
-            .toList();
+        final answers = await _quizService.getAttemptAnswers(attempt.attemptId);
         if (answers.isNotEmpty) {
           attemptAnswersMap[attempt.attemptId] = answers;
         }
@@ -170,7 +168,7 @@ class QuizNotifier extends StateNotifier<QuizState> {
       
       state = state.copyWith(
         allQuizzes: allQuizzes,
-        userQuizzes: allQuizzes, // For now, all quizzes are available to user
+        userQuizzes: allQuizzes,
         userAttempts: userAttempts,
         quizCompletionStatus: completionStatus,
         quizAttempts: attempts,
@@ -270,28 +268,26 @@ class QuizNotifier extends StateNotifier<QuizState> {
     }
   }
 
-  // Load quiz details
+  // Load quiz details with questions and choices
   Future<void> loadQuizDetails(int quizId) async {
     state = state.copyWith(isLoadingQuizDetails: true, clearError: true);
     
     try {
-      await Future.delayed(const Duration(milliseconds: 300)); // Simulate API call
-      
-      final quiz = MockData.getQuizById(quizId);
-      final questions = MockData.getQuestionsByQuiz(quizId);
-      
-      if (quiz != null) {
-        state = state.copyWith(
-          selectedQuiz: quiz,
-          selectedQuizQuestions: questions,
-          isLoadingQuizDetails: false,
-        );
-      } else {
-        state = state.copyWith(
-          isLoadingQuizDetails: false,
-          error: 'Quiz not found',
-        );
+      final quiz = await _quizService.getQuizById(quizId);
+      if (quiz == null) {
+        throw Exception('Quiz not found');
       }
+      
+      final questions = await _quizService.getQuizQuestions(quizId);
+      final questionIds = questions.map((q) => q.questionId).toList();
+      final choices = await _quizService.getChoicesForQuestions(questionIds);
+      
+      state = state.copyWith(
+        selectedQuiz: quiz,
+        selectedQuizQuestions: questions,
+        questionChoices: choices,
+        isLoadingQuizDetails: false,
+      );
     } catch (e) {
       state = state.copyWith(
         isLoadingQuizDetails: false,
@@ -299,8 +295,6 @@ class QuizNotifier extends StateNotifier<QuizState> {
       );
     }
   }
-
-
 
   // Refresh quiz data
   Future<void> refreshQuizzes(int userId) async {
@@ -320,211 +314,81 @@ class QuizNotifier extends StateNotifier<QuizState> {
   // Set current page for pagination
   void setPage(int page) {
     state = state.copyWith(currentPage: page);
-    _applyFilter(state.selectedFilter);
   }
 
   // Get course for quiz
-  Course? getCourseForQuiz(int quizId) {
-    final quiz = state.allQuizzes.firstWhere((q) => q.quizId == quizId, orElse: () => Quiz(
-      quizId: 0,
-      courseId: 0,
-      title: '',
-      isPublished: false,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-      createdBy: 0,
-    ));
-    return quiz.quizId != 0 ? MockData.getCourseById(quiz.courseId) : null;
+  Future<Course?> getCourseForQuiz(int quizId) async {
+    final quiz = state.allQuizzes.where((q) => q.quizId == quizId).firstOrNull;
+    if (quiz == null) return null;
+    
+    // Load course details to get the course
+    await ref.read(courseProvider.notifier).loadCourseDetails(quiz.courseId);
+    return ref.read(selectedCourseProvider);
   }
 
   // Start a quiz attempt
-  Future<void> startQuizAttempt(int quizId, int userId) async {
+  Future<Attempt?> startQuizAttempt(int quizId, int userId) async {
     try {
       state = state.copyWith(isLoading: true, clearError: true);
       
-      // Check if there's already an in-progress attempt
-      final existingAttempt = MockData.attempts.where((a) => 
-        a.quizId == quizId && 
-        a.userId == userId && 
-        a.submittedAt == null
-      ).firstOrNull;
-      
-      if (existingAttempt == null) {
-        // Create new attempt
-        final attemptId = DateTime.now().millisecondsSinceEpoch;
-        final newAttempt = Attempt(
-          attemptId: attemptId,
-          quizId: quizId,
-          userId: userId,
-          startedAt: DateTime.now(),
-          submittedAt: null,
-          score: 0.0,
-          timeSpentSeconds: 0,
-        );
-        
-        MockData.attempts.add(newAttempt);
-      }
+      final attempt = await _quizService.startAttempt(userId, quizId);
       
       state = state.copyWith(isLoading: false);
+      return attempt;
     } catch (e) {
       state = state.copyWith(
-         isLoading: false,
-         error: 'Failed to start quiz attempt: $e',
-       );
-     }
-   }
+        isLoading: false,
+        error: 'Failed to start quiz attempt: $e',
+      );
+      return null;
+    }
+  }
 
   // Submit quiz attempt with answers
-  Future<Attempt> submitQuizAttempt(
-    int quizId,
-    int userId,
-    Map<int, dynamic> answers,
-    DateTime startTime,
-    bool autoSubmit,
-  ) async {
+  Future<Attempt?> submitQuizAttempt({
+    required int attemptId,
+    required int quizId,
+    required int userId,
+    required Map<int, dynamic> answers,
+    required DateTime startTime,
+    required bool autoSubmit,
+  }) async {
     try {
       state = state.copyWith(isLoading: true, clearError: true);
       
-      final questions = MockData.getQuestionsByQuiz(quizId);
-      double totalScore = 0.0;
-      final endTime = DateTime.now();
-      final duration = endTime.difference(startTime);
-      
-      // Generate unique attempt ID
-      final attemptId = DateTime.now().millisecondsSinceEpoch;
-      List<AttemptAnswer> attemptAnswers = [];
-
-      for (final question in questions) {
-        final userAnswer = answers[question.questionId];
-        double questionScore = 0.0;
-        bool isCorrect = false;
-
-        if (userAnswer != null) {
-          switch (question.type) {
-            case QuestionType.single:
-              final choices = MockData.getChoicesByQuestion(question.questionId);
-              final correctChoice = choices.firstWhere((c) => c.isCorrect);
-              isCorrect = userAnswer == correctChoice.choiceId;
-              if (isCorrect) {
-                questionScore = question.points;
-              }
-              
-              attemptAnswers.add(AttemptAnswer(
-                attemptAnswerId: MockData.attemptAnswers.length + attemptAnswers.length + 1,
-                attemptId: attemptId,
-                questionId: question.questionId,
-                choiceId: userAnswer as int,
-                freeText: null,
-                isCorrect: isCorrect,
-              ));
-              break;
-
-            case QuestionType.multiple:
-              final choices = MockData.getChoicesByQuestion(question.questionId);
-              final correctChoiceIds = choices.where((c) => c.isCorrect).map((c) => c.choiceId).toSet();
-              final selectedChoiceIds = (userAnswer as List<int>).toSet();
-              
-              if (correctChoiceIds.isNotEmpty && selectedChoiceIds.isNotEmpty) {
-                final correctSelected = correctChoiceIds.intersection(selectedChoiceIds).length;
-                final incorrectSelected = selectedChoiceIds.difference(correctChoiceIds).length;
-                final totalCorrect = correctChoiceIds.length;
-                
-                // Check if all correct answers are selected and no incorrect ones
-                isCorrect = correctSelected == totalCorrect && incorrectSelected == 0;
-                
-                if (isCorrect) {
-                  questionScore = question.points;
-                } else {
-                  // Partial scoring: (correct selections - incorrect selections) / total correct
-                  final partialScore = (correctSelected - incorrectSelected) / totalCorrect;
-                  questionScore = (partialScore.clamp(0.0, 1.0) * question.points);
-                }
-              }
-              
-              // For multiple choice, create separate answers for each selected choice
-              for (final choiceId in userAnswer) {
-                final choice = choices.firstWhere((c) => c.choiceId == choiceId);
-                attemptAnswers.add(AttemptAnswer(
-                  attemptAnswerId: MockData.attemptAnswers.length + attemptAnswers.length + 1,
-                  attemptId: attemptId,
-                  questionId: question.questionId,
-                  choiceId: choiceId,
-                  freeText: null,
-                  isCorrect: choice.isCorrect,
-                ));
-              }
-              break;
-
-            case QuestionType.text:
-              // For text questions, give full points if there's an answer
-              final textAnswer = userAnswer as String;
-              isCorrect = textAnswer.trim().isNotEmpty;
-              if (isCorrect) {
-                questionScore = question.points;
-              }
-              
-              attemptAnswers.add(AttemptAnswer(
-                attemptAnswerId: MockData.attemptAnswers.length + attemptAnswers.length + 1,
-                attemptId: attemptId,
-                questionId: question.questionId,
-                choiceId: null,
-                freeText: textAnswer,
-                isCorrect: isCorrect,
-              ));
-              break;
-          }
-        } else {
-          // No answer provided
-          attemptAnswers.add(AttemptAnswer(
-            attemptAnswerId: MockData.attemptAnswers.length + attemptAnswers.length + 1,
-            attemptId: attemptId,
-            questionId: question.questionId,
-            choiceId: null,
-            freeText: null,
-            isCorrect: false,
-          ));
-        }
-
-        totalScore += questionScore;
-      }
-
-      // Create the attempt
-      final attempt = Attempt(
+      final attempt = await _quizService.submitAttempt(
         attemptId: attemptId,
         quizId: quizId,
         userId: userId,
-        startedAt: startTime,
-        submittedAt: endTime,
-        score: totalScore,
-        timeSpentSeconds: duration.inSeconds,
+        answers: answers,
+        startTime: startTime,
+        autoSubmit: autoSubmit,
       );
-
-      // Add to mock data
-      MockData.attempts.add(attempt);
-      MockData.attemptAnswers.addAll(attemptAnswers);
-
-      // Update state with the new attempt answers
-      final updatedAttemptAnswers = Map<int, List<AttemptAnswer>>.from(state.attemptAnswers);
-      updatedAttemptAnswers[attemptId] = attemptAnswers;
-
+      
       // Refresh quiz data to reflect the new attempt
       await initializeQuizzes(userId);
       
       // Also refresh course provider to update progress
       await ref.read(courseProvider.notifier).initializeCourses(userId);
       
-      // Update state with attempt answers
-      state = state.copyWith(
-        isLoading: false,
-        attemptAnswers: updatedAttemptAnswers,
-      );
+      state = state.copyWith(isLoading: false);
       return attempt;
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
         error: 'Failed to submit quiz: $e',
       );
-      rethrow;
+      return null;
+    }
+  }
+
+  // Get attempt details (for results screen)
+  Future<Map<String, dynamic>?> getAttemptDetails(int attemptId) async {
+    try {
+      return await _quizService.getAttemptDetails(attemptId);
+    } catch (e) {
+      state = state.copyWith(error: 'Failed to load attempt details: $e');
+      return null;
     }
   }
 }

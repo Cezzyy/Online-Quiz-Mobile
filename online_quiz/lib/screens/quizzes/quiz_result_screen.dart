@@ -5,13 +5,12 @@ import '../../models/course.dart';
 import '../../models/attempt.dart';
 import '../../models/question.dart';
 import '../../models/attempt_answer.dart';
-import '../../data/mock_data.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/info_card.dart';
 import '../../utils/app_theme.dart';
 import '../../providers/quiz_provider.dart';
 
-class QuizResultScreen extends ConsumerWidget {
+class QuizResultScreen extends ConsumerStatefulWidget {
   final Quiz quiz;
   final Course? course;
   final Attempt attempt;
@@ -24,14 +23,27 @@ class QuizResultScreen extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<QuizResultScreen> createState() => _QuizResultScreenState();
+}
+
+class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Load quiz details and attempt details when screen opens
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await ref.read(quizProvider.notifier).loadQuizDetails(widget.quiz.quizId);
+      await ref.read(quizProvider.notifier).getAttemptDetails(widget.attempt.attemptId);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final quizState = ref.watch(quizProvider);
-    final questions = quizState.selectedQuizQuestions.isNotEmpty 
-        ? quizState.selectedQuizQuestions 
-        : MockData.getQuestionsByQuiz(quiz.quizId);
+    final questions = quizState.selectedQuizQuestions;
     final totalQuestions = questions.length;
     final totalPoints = questions.fold<double>(0.0, (sum, q) => sum + q.points);
-    final percentage = totalPoints > 0 ? (attempt.score / totalPoints) * 100 : 0.0;
+    final percentage = totalPoints > 0 ? (widget.attempt.score / totalPoints) * 100 : 0.0;
     
     Color scoreColor;
     String gradeText;
@@ -128,7 +140,7 @@ class QuizResultScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            quiz.title,
+            widget.quiz.title,
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w500,
@@ -136,9 +148,9 @@ class QuizResultScreen extends ConsumerWidget {
             ),
             textAlign: TextAlign.center,
           ),
-          if (course != null)
+          if (widget.course != null)
             Text(
-              '${course!.code} - ${course!.name}',
+              '${widget.course!.code} - ${widget.course!.name}',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.white.withValues(alpha: 0.9),
@@ -203,13 +215,13 @@ class QuizResultScreen extends ConsumerWidget {
           InfoCardPresets.compact(
             icon: Icons.calendar_today,
             title: 'Completed On',
-            value: _formatDateTime(attempt.submittedAt!),
+            value: _formatDateTime(widget.attempt.submittedAt!),
           ),
           const SizedBox(height: 8),
           InfoCardPresets.compact(
             icon: Icons.schedule,
             title: 'Time Limit',
-            value: quiz.timeLimitMinutes != null ? '${quiz.timeLimitMinutes} minutes' : 'No time limit',
+            value: widget.quiz.timeLimitMinutes != null ? '${widget.quiz.timeLimitMinutes} minutes' : 'No time limit',
           ),
         ],
       ),
@@ -283,7 +295,7 @@ class QuizResultScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
-          _buildAnswerDetails(context, ref),
+          _buildAnswerDetails(context),
         ],
       ),
     );
@@ -331,13 +343,13 @@ class QuizResultScreen extends ConsumerWidget {
 
   int _getCorrectAnswersCount(WidgetRef ref) {
     final quizState = ref.watch(quizProvider);
-    final attemptAnswers = quizState.attemptAnswers[attempt.attemptId] ?? [];
+    final attemptAnswers = quizState.attemptAnswers[widget.attempt.attemptId] ?? [];
     return attemptAnswers.where((answer) => answer.isCorrect == true).length;
   }
 
   int _getTimeSpentMinutes() {
-    if (attempt.timeSpentSeconds == null) return 0;
-    return (attempt.timeSpentSeconds! / 60).round();
+    if (widget.attempt.timeSpentSeconds == null) return 0;
+    return (widget.attempt.timeSpentSeconds! / 60).round();
   }
 
   String _formatDateTime(DateTime dateTime) {
@@ -348,12 +360,10 @@ class QuizResultScreen extends ConsumerWidget {
     return '${months[dateTime.month - 1]} ${dateTime.day}, ${dateTime.year} at ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 
-  Widget _buildAnswerDetails(BuildContext context, WidgetRef ref) {
+  Widget _buildAnswerDetails(BuildContext context) {
     final quizState = ref.watch(quizProvider);
-    final questions = quizState.selectedQuizQuestions.isNotEmpty 
-        ? quizState.selectedQuizQuestions 
-        : MockData.getQuestionsByQuiz(quiz.quizId);
-    final attemptAnswers = quizState.attemptAnswers[attempt.attemptId] ?? [];
+    final questions = quizState.selectedQuizQuestions;
+    final attemptAnswers = quizState.attemptAnswers[widget.attempt.attemptId] ?? [];
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -380,8 +390,7 @@ class QuizResultScreen extends ConsumerWidget {
           
           // For multiple choice questions, check if all correct answers are selected
           if (question.type == QuestionType.multiple) {
-            final choices = quizState.questionChoices[question.questionId] ?? 
-                            MockData.getChoicesByQuestion(question.questionId);
+            final choices = quizState.questionChoices[question.questionId] ?? [];
             final correctChoices = choices.where((c) => c.isCorrect).toList();
             final selectedCorrectChoices = questionAnswers.where((a) => a.isCorrect == true).toList();
             final selectedIncorrectChoices = questionAnswers.where((a) => a.isCorrect == false).toList();
@@ -477,16 +486,14 @@ class QuizResultScreen extends ConsumerWidget {
       case QuestionType.single:
         final answer = answers.first;
         if (answer.choiceId != null) {
-          final choices = quizState.questionChoices[question.questionId] ?? 
-                         MockData.getChoicesByQuestion(question.questionId);
+          final choices = quizState.questionChoices[question.questionId] ?? [];
           final choice = choices.firstWhere((c) => c.choiceId == answer.choiceId);
           return choice.body;
         }
         return "Not answered";
 
       case QuestionType.multiple:
-        final choices = quizState.questionChoices[question.questionId] ?? 
-                       MockData.getChoicesByQuestion(question.questionId);
+        final choices = quizState.questionChoices[question.questionId] ?? [];
         final selectedChoices = answers
             .where((a) => a.choiceId != null)
             .map((a) => choices.firstWhere((c) => c.choiceId == a.choiceId!).body)

@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/quiz.dart';
 import '../../models/course.dart';
-import '../../models/user.dart';
-import '../../data/mock_data.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/filter_tab_widget.dart';
 import '../../providers/quiz_provider.dart';
+import '../../providers/auth_provider.dart';
 import 'quiz_detail_screen.dart';
 
 class QuizTab extends ConsumerStatefulWidget {
@@ -18,20 +17,23 @@ class QuizTab extends ConsumerStatefulWidget {
 
 class _QuizTabState extends ConsumerState<QuizTab> {
   final List<String> _filterOptions = ['All', 'Pending', 'Completed'];
-  final String currentUserId = 'user_4'; // Default current user (student)
 
   @override
   void initState() {
     super.initState();
     // Initialize quizzes when the widget is first created
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(quizProvider.notifier).initializeQuizzes(int.parse(currentUserId.replaceAll('user_', '')));
+      final authState = ref.read(authProvider);
+      if (authState.user != null) {
+        ref.read(quizProvider.notifier).initializeQuizzes(authState.user!.userId);
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final User user = MockData.getUserById(int.parse(currentUserId.replaceAll('user_', '')))!;
+    final authState = ref.watch(authProvider);
+    final user = authState.user;
     final isLoading = ref.watch(quizLoadingProvider);
     final error = ref.watch(quizErrorProvider);
     final allQuizzes = ref.watch(allQuizzesProvider);
@@ -79,7 +81,9 @@ class _QuizTabState extends ConsumerState<QuizTab> {
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {
-                  ref.read(quizProvider.notifier).refreshQuizzes(int.parse(currentUserId.replaceAll('user_', '')));
+                  if (user != null) {
+                    ref.read(quizProvider.notifier).refreshQuizzes(user.userId);
+                  }
                 },
                 child: const Text('Retry'),
               ),
@@ -101,7 +105,7 @@ class _QuizTabState extends ConsumerState<QuizTab> {
             Expanded(
               child: allQuizzes.isEmpty
                   ? _buildEmptyState()
-                  : _buildQuizList(paginatedQuizzes, user),
+                  : _buildQuizList(paginatedQuizzes),
             ),
           ],
         ),
@@ -220,7 +224,7 @@ class _QuizTabState extends ConsumerState<QuizTab> {
     );
   }
 
-  Widget _buildQuizList(List<Quiz> quizzes, User user) {
+  Widget _buildQuizList(List<Quiz> quizzes) {
     final selectedFilter = ref.watch(quizFilterProvider);
     final paginationInfo = ref.watch(quizPaginationProvider);
     final filteredQuizzes = ref.watch(filteredQuizzesProvider);
@@ -265,8 +269,13 @@ class _QuizTabState extends ConsumerState<QuizTab> {
             itemCount: quizzes.length,
             itemBuilder: (context, index) {
               final quiz = quizzes[index];
-              final course = ref.read(quizProvider.notifier).getCourseForQuiz(quiz.quizId);
-              return _buildQuizCard(quiz, course);
+              return FutureBuilder<Course?>(
+                future: ref.read(quizProvider.notifier).getCourseForQuiz(quiz.quizId),
+                builder: (context, snapshot) {
+                  final course = snapshot.data;
+                  return _buildQuizCard(quiz, course);
+                },
+              );
             },
           ),
         ),
@@ -277,9 +286,9 @@ class _QuizTabState extends ConsumerState<QuizTab> {
   }
 
   Widget _buildQuizCard(Quiz quiz, Course? course) {
-    final attempts = MockData.getAttemptsByQuiz(quiz.quizId);
-    final completedAttempt = attempts.where((a) => a.userId == int.parse(currentUserId.replaceAll('user_', '')) && a.submittedAt != null).firstOrNull;
-    final isCompleted = completedAttempt != null;
+    final quizState = ref.watch(quizProvider);
+    final completedAttempt = quizState.quizAttempts[quiz.quizId];
+    final isCompleted = completedAttempt != null && completedAttempt.submittedAt != null;
     final isOverdue = !isCompleted && quiz.isOverdue;
     final daysUntilDue = quiz.daysUntilDue;
     
@@ -390,7 +399,7 @@ class _QuizTabState extends ConsumerState<QuizTab> {
                 // Quiz Details
                 Row(
                   children: [
-                    _buildDetailItem(Icons.help_outline, '${MockData.getQuestionsByQuiz(quiz.quizId).length} Questions'),
+                    _buildDetailItem(Icons.help_outline, 'View Quiz'),
                     const SizedBox(width: 20),
                     _buildDetailItem(Icons.timer_outlined, quiz.hasTimeLimit ? '${quiz.timeLimitMinutes} min' : 'No limit'),
                     const SizedBox(width: 20),
@@ -416,7 +425,7 @@ class _QuizTabState extends ConsumerState<QuizTab> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Score: ${completedAttempt.score.toInt()}/${MockData.getQuestionsByQuiz(quiz.quizId).fold<int>(0, (sum, q) => sum + q.points.toInt())} (${((completedAttempt.score / MockData.getQuestionsByQuiz(quiz.quizId).fold<int>(0, (sum, q) => sum + q.points.toInt())) * 100).toStringAsFixed(1)}%)',
+                          'Score: ${completedAttempt.score.toInt()} points (${quizState.quizScores[quiz.quizId]?.toStringAsFixed(1) ?? '0.0'}%)',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -527,13 +536,16 @@ class _QuizTabState extends ConsumerState<QuizTab> {
   }
 
   void _navigateToQuizDetail(Quiz quiz, Course? course) {
+    final authState = ref.read(authProvider);
+    if (authState.user == null) return;
+    
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => QuizDetailScreen(
            quiz: quiz,
            course: course,
-           currentUserId: int.parse(currentUserId.replaceAll('user_', '')),
+           currentUserId: authState.user!.userId,
          ),
       ),
     );

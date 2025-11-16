@@ -1028,7 +1028,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                 course,
                 code: codeController.text,
                 name: nameController.text,
-                instructorUserId: selectedInstructorId,
+                instructorUserId: selectedInstructorId ?? course.instructorUserId,
                 category: categoryController.text.isNotEmpty ? categoryController.text : null,
                 status: selectedStatus,
               );

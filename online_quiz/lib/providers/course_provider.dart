@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/course.dart';
 import '../models/enrollment.dart';
-import '../models/user.dart';
+import '../models/user.dart' as app_user;
 import '../models/quiz.dart';
-import '../data/mock_data.dart';
+import '../services/course_service.dart';
 
 // Course state class to hold all course-related data and UI state
 class CourseState {
@@ -19,10 +19,10 @@ class CourseState {
   final Map<int, int> courseQuizCounts; // courseId -> quiz count
   final Map<int, int> completedQuizCounts; // courseId -> completed quiz count
   
-  // Admin course management state
+  // Admin/filtering properties
   final String searchQuery;
-  final String? selectedStatus;
-  final String? selectedCategory;
+  final String selectedStatus;
+  final String selectedCategory;
   final int? selectedInstructorId;
   final int currentPage;
   final int itemsPerPage;
@@ -40,11 +40,11 @@ class CourseState {
     this.courseQuizCounts = const {},
     this.completedQuizCounts = const {},
     this.searchQuery = '',
-    this.selectedStatus,
-    this.selectedCategory,
+    this.selectedStatus = 'All',
+    this.selectedCategory = 'All',
     this.selectedInstructorId,
     this.currentPage = 1,
-    this.itemsPerPage = 20,
+    this.itemsPerPage = 10,
   });
 
   CourseState copyWith({
@@ -113,12 +113,12 @@ class CourseState {
   bool isEnrolledInCourse(int courseId) {
     return userEnrollments.any((enrollment) => enrollment.courseId == courseId);
   }
-  
-
 }
 
 // Course notifier class to manage course state
 class CourseNotifier extends StateNotifier<CourseState> {
+  final CourseService _courseService = CourseService();
+  
   CourseNotifier() : super(const CourseState());
 
   // Initialize course data for a specific user
@@ -126,49 +126,25 @@ class CourseNotifier extends StateNotifier<CourseState> {
     state = state.copyWith(isLoading: true, clearError: true);
     
     try {
-      await Future.delayed(const Duration(milliseconds: 500)); // Simulate API call
+      // Load user enrollments and courses from Supabase
+      final userEnrollments = await _courseService.getUserEnrollments(userId);
+      final userCourses = await _courseService.getEnrolledCourses(userId);
       
-      // Load all courses
-      final allCourses = List<Course>.from(MockData.courses);
+      // Get all courses for admin/teacher views
+      final allCourses = userCourses; // For students, only show enrolled courses
       
-      // Load user enrollments
-      final userEnrollments = MockData.getEnrollmentsByUser(userId);
-      
-      // Load user courses based on enrollments
-      final userCourses = userEnrollments
-          .map((enrollment) => MockData.getCourseById(enrollment.courseId))
-          .where((course) => course != null)
-          .cast<Course>()
-          .toList();
-      
-      // Calculate progress and quiz counts for each user course
-      final Map<int, double> courseProgress = {};
-      final Map<int, int> courseQuizCounts = {};
-      final Map<int, int> completedQuizCounts = {};
-      
-      for (final course in userCourses) {
-        final courseQuizzes = MockData.getQuizzesByCourse(course.courseId);
-        final completedAttempts = MockData.getAttemptsByUser(userId)
-            .where((attempt) => 
-                courseQuizzes.any((quiz) => quiz.quizId == attempt.quizId) && 
-                attempt.submittedAt != null)
-            .length;
-        
-        final totalQuizzes = courseQuizzes.length;
-        final progress = totalQuizzes > 0 ? completedAttempts / totalQuizzes : 0.0;
-        
-        courseProgress[course.courseId] = progress;
-        courseQuizCounts[course.courseId] = totalQuizzes;
-        completedQuizCounts[course.courseId] = completedAttempts;
-      }
+      // Calculate progress and quiz counts
+      final courseIds = userCourses.map((c) => c.courseId).toList();
+      final courseProgress = await _courseService.getCourseProgress(userId, courseIds);
+      final quizCounts = await _courseService.getQuizCounts(userId, courseIds);
       
       state = state.copyWith(
         allCourses: allCourses,
         userCourses: userCourses,
         userEnrollments: userEnrollments,
         courseProgress: courseProgress,
-        courseQuizCounts: courseQuizCounts,
-        completedQuizCounts: completedQuizCounts,
+        courseQuizCounts: quizCounts['total']!,
+        completedQuizCounts: quizCounts['completed']!,
         isLoading: false,
       );
       
@@ -185,14 +161,12 @@ class CourseNotifier extends StateNotifier<CourseState> {
     state = state.copyWith(isLoadingCourseDetails: true, clearError: true);
     
     try {
-      await Future.delayed(const Duration(milliseconds: 300)); // Simulate API call
-      
-      final course = MockData.getCourseById(courseId);
+      final course = await _courseService.getCourseById(courseId);
       if (course == null) {
         throw Exception('Course not found');
       }
       
-      final courseQuizzes = MockData.getQuizzesByCourse(courseId);
+      final courseQuizzes = await _courseService.getCourseQuizzes(courseId);
       
       state = state.copyWith(
         selectedCourse: course,
@@ -207,8 +181,6 @@ class CourseNotifier extends StateNotifier<CourseState> {
       );
     }
   }
-
-
 
   // Refresh course data
   Future<void> refreshCourses(int userId) async {
@@ -236,463 +208,121 @@ class CourseNotifier extends StateNotifier<CourseState> {
     ).toList();
   }
 
-  // Get courses by instructor
-  List<Course> getCoursesByInstructor(int instructorId) {
-    return state.allCourses.where((course) => course.instructorUserId == instructorId).toList();
-  }
-
   // Get instructor for a course
-  User? getCourseInstructor(int courseId) {
-    final course = state.allCourses.firstWhere(
-      (c) => c.courseId == courseId,
-      orElse: () => Course(
-        courseId: 0, 
-        code: '', 
-        name: '', 
-        instructorUserId: 0,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        createdBy: 0,
-      ),
-    );
-    
-    if (course.courseId == 0) return null;
-    
-    return MockData.getUserById(course.instructorUserId);
-  }
-
-  // Teacher method: Get students enrolled in a specific course
-  List<User> getEnrolledStudents(int courseId) {
-    final enrollments = MockData.enrollments.where((e) => e.courseId == courseId).toList();
-    return enrollments
-        .map((enrollment) => MockData.getUserById(enrollment.userId))
-        .where((user) => user != null)
-        .cast<User>()
-        .toList();
-  }
-
-  // Get enrolled students with their details for a course
-  List<Map<String, dynamic>> getEnrolledStudentsWithDetails(int courseId) {
-    final enrollments = MockData.enrollments.where((e) => e.courseId == courseId).toList();
-    final students = <Map<String, dynamic>>[];
-
-    for (final enrollment in enrollments) {
-      final user = MockData.getUserById(enrollment.userId);
-      final student = MockData.getStudentByUserId(enrollment.userId);
-      
-      if (user != null) {
-        students.add({
-          'user': user,
-          'student': student,
-          'enrollment': enrollment,
-        });
-      }
-    }
-
-    return students;
-  }
-
-  // Teacher method: Get all students not enrolled in a specific course
-  List<User> getAvailableStudents(int courseId) {
-    final enrolledUserIds = MockData.enrollments
-        .where((e) => e.courseId == courseId)
-        .map((e) => e.userId)
-        .toSet();
-    
-    // Get all students (users with student role)
-    final studentRoles = MockData.userRoles.where((ur) => 
-        MockData.roles.any((role) => role.roleId == ur.roleId && role.name == 'Student')
-    ).toList();
-    
-    return studentRoles
-        .map((ur) => MockData.getUserById(ur.userId))
-        .where((user) => user != null && !enrolledUserIds.contains(user.userId))
-        .cast<User>()
-        .toList();
-  }
-
-  // Teacher method: Enroll a student in their course
-  Future<bool> enrollStudentInCourse(int studentId, int courseId, int teacherId) async {
+  Future<app_user.User?> getCourseInstructor(int instructorUserId) async {
     try {
-      // Verify teacher owns this course
-      final course = MockData.getCourseById(courseId);
-      if (course == null || course.instructorUserId != teacherId) {
-        state = state.copyWith(error: 'You can only enroll students in your own courses');
-        return false;
-      }
-
-      // Check if student is already enrolled
-      final existingEnrollment = MockData.enrollments.any(
-        (e) => e.userId == studentId && e.courseId == courseId,
-      );
-      
-      if (existingEnrollment) {
-        state = state.copyWith(error: 'Student is already enrolled in this course');
-        return false;
-      }
-
-      // Create new enrollment
-      final newEnrollment = Enrollment(
-        enrollmentId: DateTime.now().millisecondsSinceEpoch,
-        userId: studentId,
-        courseId: courseId,
-        enrolledAt: DateTime.now(),
-        enrolledBy: teacherId,
-      );
-
-      MockData.enrollments.add(newEnrollment);
-      state = state.copyWith(clearError: true);
-      return true;
-
+      return await _courseService.getCourseInstructor(instructorUserId);
     } catch (e) {
-      state = state.copyWith(error: 'Failed to enroll student: $e');
-      return false;
+      return null;
     }
   }
 
-  // Teacher method: Remove a student from their course
-  Future<bool> removeStudentFromCourse(int studentId, int courseId, int teacherId) async {
+  // Admin methods - stubs for now (TODO: implement with backend)
+  Future<void> initializeAdminCourses() async {
+    // For now, just load all courses - implement proper admin logic later
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
-      // Verify teacher owns this course
-      final course = MockData.getCourseById(courseId);
-      if (course == null || course.instructorUserId != teacherId) {
-        state = state.copyWith(error: 'You can only remove students from your own courses');
-        return false;
-      }
-
-      // Find and remove enrollment
-      final enrollmentIndex = MockData.enrollments.indexWhere(
-        (e) => e.userId == studentId && e.courseId == courseId,
-      );
-
-      if (enrollmentIndex == -1) {
-        state = state.copyWith(error: 'Student is not enrolled in this course');
-        return false;
-      }
-
-      MockData.enrollments.removeAt(enrollmentIndex);
-      state = state.copyWith(clearError: true);
-      return true;
-
+      // TODO: Load all courses from database for admin view
+      state = state.copyWith(isLoading: false);
     } catch (e) {
-      state = state.copyWith(error: 'Failed to remove student: $e');
-      return false;
+      state = state.copyWith(isLoading: false, error: 'Failed to load admin courses: $e');
     }
   }
 
-  // Admin method: Create a new course
+  List<Map<String, dynamic>> getPaginatedGroupedCourses() {
+    // TODO: Implement grouped courses by code
+    return [];
+  }
+
+  int getTotalGroupedPages() {
+    // TODO: Implement pagination
+    return 1;
+  }
+
+  List<Course> getFilteredCourses() {
+    // TODO: Implement filtering
+    return state.allCourses;
+  }
+
+  List<app_user.User> getAllTeachers() {
+    // TODO: Implement teacher fetching
+    return [];
+  }
+
   Future<bool> createCourse({
     required String code,
     required String name,
     required int instructorUserId,
     String? category,
     String? section,
-    String status = 'Active',
+    required String status,
     required int createdBy,
   }) async {
-    try {
-      // Check if course code already exists
-      final existingCourse = MockData.courses.any((c) => c.code.toLowerCase() == code.toLowerCase());
-      if (existingCourse) {
-        state = state.copyWith(error: 'Course code already exists');
-        return false;
-      }
-
-      // Generate new course ID
-      final newCourseId = MockData.courses.isNotEmpty
-          ? MockData.courses.map((c) => c.courseId).reduce((a, b) => a > b ? a : b) + 1
-          : 1;
-
-      // Create new course
-      final newCourse = Course(
-        courseId: newCourseId,
-        code: code,
-        name: name,
-        instructorUserId: instructorUserId,
-        status: status,
-        category: category,
-        section: section,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        createdBy: createdBy,
-      );
-
-      MockData.courses.add(newCourse);
-      
-      // Update state
-      state = state.copyWith(
-        allCourses: List.from(MockData.courses),
-        clearError: true,
-      );
-      
-      return true;
-
-    } catch (e) {
-      state = state.copyWith(error: 'Failed to create course: $e');
-      return false;
-    }
+    // TODO: Implement course creation with backend
+    return false;
   }
 
-  // Admin method: Update an existing course
-  Future<bool> updateCourse(Course course, {
-    String? code,
-    String? name,
-    int? instructorUserId,
+  Future<bool> updateCourse(
+    Course course, {
+    required String code,
+    required String name,
+    required int instructorUserId,
     String? category,
-    String? section,
-    String? status,
+    required String status,
   }) async {
-    try {
-      // Check if new code conflicts with existing courses (if code is being changed)
-      if (code != null && code != course.code) {
-        final existingCourse = MockData.courses.any((c) => 
-            c.courseId != course.courseId && c.code.toLowerCase() == code.toLowerCase());
-        if (existingCourse) {
-          state = state.copyWith(error: 'Course code already exists');
-          return false;
-        }
-      }
-
-      // Find course index
-      final courseIndex = MockData.courses.indexWhere((c) => c.courseId == course.courseId);
-      if (courseIndex == -1) {
-        state = state.copyWith(error: 'Course not found');
-        return false;
-      }
-
-      // Update course
-      MockData.courses[courseIndex] = course.copyWith(
-        code: code ?? course.code,
-        name: name ?? course.name,
-        instructorUserId: instructorUserId ?? course.instructorUserId,
-        category: category ?? course.category,
-        section: section ?? course.section,
-        status: status ?? course.status,
-        updatedAt: DateTime.now(),
-      );
-
-      // Update state
-      state = state.copyWith(
-        allCourses: List.from(MockData.courses),
-        clearError: true,
-      );
-      
-      return true;
-
-    } catch (e) {
-      state = state.copyWith(error: 'Failed to update course: $e');
-      return false;
-    }
+    // TODO: Implement course update with backend
+    return false;
   }
 
-  // Admin method: Delete a course
   Future<bool> deleteCourse(Course course) async {
-    try {
-      // Check if course has enrollments
-      final hasEnrollments = MockData.enrollments.any((e) => e.courseId == course.courseId);
-      if (hasEnrollments) {
-        state = state.copyWith(error: 'Cannot delete course with enrolled students');
-        return false;
-      }
-
-      // Check if course has quizzes
-      final hasQuizzes = MockData.quizzes.any((q) => q.courseId == course.courseId);
-      if (hasQuizzes) {
-        state = state.copyWith(error: 'Cannot delete course with existing quizzes');
-        return false;
-      }
-
-      // Remove course
-      MockData.courses.removeWhere((c) => c.courseId == course.courseId);
-
-      // Update state
-      state = state.copyWith(
-        allCourses: List.from(MockData.courses),
-        clearError: true,
-      );
-      
-      return true;
-
-    } catch (e) {
-      state = state.copyWith(error: 'Failed to delete course: $e');
-      return false;
-    }
+    // TODO: Implement course deletion with backend
+    return false;
   }
 
-  // Admin method: Get all teachers (for course assignment)
-  List<User> getAllTeachers() {
-    final teacherRoles = MockData.userRoles.where((ur) => 
-        MockData.roles.any((role) => role.roleId == ur.roleId && role.name == 'Teacher')
-    ).toList();
-    
-    return teacherRoles
-        .map((ur) => MockData.getUserById(ur.userId))
-        .where((user) => user != null)
-        .cast<User>()
-        .toList();
+  List<Map<String, dynamic>> getEnrolledStudentsWithDetails(int courseId) {
+    // TODO: Implement fetching enrolled students
+    return [];
   }
 
-  // Admin method: Get courses by status
-  List<Course> getCoursesByStatus(String status) {
-    return state.allCourses.where((course) => course.status.toLowerCase() == status.toLowerCase()).toList();
+  List<app_user.User> getAvailableStudents(int courseId) {
+    // TODO: Implement fetching available students
+    return [];
   }
 
-  // Admin method: Search courses with filters
-  List<Course> searchCoursesWithFilters({
-    String query = '',
-    String? status,
-    String? category,
-    int? instructorId,
-  }) {
-    List<Course> filteredCourses = state.allCourses;
-
-    // Filter by search query
-    if (query.isNotEmpty) {
-      final lowercaseQuery = query.toLowerCase();
-      filteredCourses = filteredCourses.where((course) =>
-          course.name.toLowerCase().contains(lowercaseQuery) ||
-          course.code.toLowerCase().contains(lowercaseQuery) ||
-          (course.category?.toLowerCase().contains(lowercaseQuery) ?? false)
-      ).toList();
-    }
-
-    // Filter by status
-    if (status != null && status.isNotEmpty) {
-      filteredCourses = filteredCourses.where((course) => 
-          course.status.toLowerCase() == status.toLowerCase()).toList();
-    }
-
-    // Filter by category
-    if (category != null && category.isNotEmpty) {
-      filteredCourses = filteredCourses.where((course) => 
-          course.category?.toLowerCase() == category.toLowerCase()).toList();
-    }
-
-    // Filter by instructor
-    if (instructorId != null) {
-      filteredCourses = filteredCourses.where((course) => 
-          course.instructorUserId == instructorId).toList();
-    }
-
-    return filteredCourses;
+  Future<bool> enrollStudentInCourse(int userId, int courseId, int enrolledBy) async {
+    // TODO: Implement student enrollment
+    return false;
   }
 
-  // Helper method: Get grouped courses (grouped by course code)
-  List<Map<String, dynamic>> getGroupedCourses() {
-    final Map<String, List<Course>> groupedCourses = {};
-    
-    // Group courses by their base code
-    for (final course in state.allCourses) {
-      if (!groupedCourses.containsKey(course.code)) {
-        groupedCourses[course.code] = [];
-      }
-      groupedCourses[course.code]!.add(course);
-    }
-    
-    // Convert to list of maps with aggregated data
-    final List<Map<String, dynamic>> groupedList = [];
-    
-    groupedCourses.forEach((courseCode, courses) {
-      final firstCourse = courses.first;
-      final totalEnrollments = courses.fold<int>(0, (sum, course) => 
-          sum + MockData.getEnrollmentsByCourse(course.courseId).length);
-      
-      // Get all instructors for this course
-      final instructors = courses.map((course) => MockData.getUserById(course.instructorUserId)?.fullName ?? 'Unknown').toSet().toList();
-      
-      // Get all sections for this course
-      final sections = courses.map((course) => course.section ?? 'A').toSet().toList()..sort();
-      
-      groupedList.add({
-        'courseCode': courseCode,
-        'courseName': firstCourse.name,
-        'category': firstCourse.category,
-        'status': firstCourse.status,
-        'sections': sections,
-        'instructors': instructors,
-        'totalEnrollments': totalEnrollments,
-        'courses': courses, // Keep reference to individual courses
-        'primaryCourse': firstCourse, // Use first course as primary for actions
-      });
-    });
-    
-    return groupedList;
+  Future<bool> removeStudentFromCourse(int userId, int courseId, [int? removedBy]) async {
+    // TODO: Implement student removal
+    return false;
   }
 
-  // Helper method: Get paginated grouped courses
-  List<Map<String, dynamic>> getPaginatedGroupedCourses() {
-    final groupedCourses = getGroupedCourses();
-    final startIndex = (state.currentPage - 1) * state.itemsPerPage;
-    final endIndex = (startIndex + state.itemsPerPage).clamp(0, groupedCourses.length);
-    return groupedCourses.sublist(startIndex, endIndex);
-  }
-
-  // Helper method: Get total pages for grouped courses
-  int getTotalGroupedPages() {
-    final groupedCourses = getGroupedCourses();
-    return (groupedCourses.length / state.itemsPerPage).ceil();
-  }
-
-  // Helper method: Get courses by base code (all sections)
-  List<Course> getCoursesByBaseCode(String baseCode) {
-    return state.allCourses.where((course) => course.code == baseCode).toList();
-  }
-
-  // Helper method: Get unique course codes (base codes without sections)
-  List<String> getUniqueCourseCodes() {
-    return state.allCourses.map((course) => course.code).toSet().toList();
-  }
-
-  // Helper method: Get sections for a specific course code
-  List<String> getSectionsForCourse(String courseCode) {
-    return state.allCourses
-        .where((course) => course.code == courseCode)
-        .map((course) => course.section ?? 'A')
-        .toSet()
-        .toList()
-        ..sort();
-  }
-
-  // Helper method: Get instructors for a specific course code
-  List<User> getInstructorsForCourse(String courseCode) {
-    final courseIds = state.allCourses
-        .where((course) => course.code == courseCode)
-        .map((course) => course.instructorUserId)
-        .toSet();
-    
-    return courseIds
-        .map((instructorId) => MockData.getUserById(instructorId))
-        .where((user) => user != null)
-        .cast<User>()
-        .toList();
-  }
-
-  // Admin pagination methods
+  // Filter/search methods
   void updateSearchQuery(String query) {
     state = state.copyWith(searchQuery: query, currentPage: 1);
   }
 
   void updateSelectedStatus(String? status) {
-    state = state.copyWith(selectedStatus: status, currentPage: 1);
+    if (status != null) {
+      state = state.copyWith(selectedStatus: status, currentPage: 1);
+    }
   }
 
   void updateSelectedCategory(String? category) {
-    state = state.copyWith(selectedCategory: category, currentPage: 1);
+    if (category != null) {
+      state = state.copyWith(selectedCategory: category, currentPage: 1);
+    }
   }
 
   void updateSelectedInstructor(int? instructorId) {
     state = state.copyWith(selectedInstructorId: instructorId, currentPage: 1);
   }
 
+  // Pagination methods
   void goToPage(int page) {
     state = state.copyWith(currentPage: page);
-  }
-
-  void nextPage() {
-    final totalPages = getTotalPages();
-    if (state.currentPage < totalPages) {
-      state = state.copyWith(currentPage: state.currentPage + 1);
-    }
   }
 
   void previousPage() {
@@ -701,48 +331,8 @@ class CourseNotifier extends StateNotifier<CourseState> {
     }
   }
 
-  int getTotalPages() {
-    final filteredCourses = getFilteredCourses();
-    return (filteredCourses.length / state.itemsPerPage).ceil();
-  }
-
-  List<Course> getPaginatedCourses() {
-    final filteredCourses = getFilteredCourses();
-    final startIndex = (state.currentPage - 1) * state.itemsPerPage;
-    final endIndex = (startIndex + state.itemsPerPage).clamp(0, filteredCourses.length);
-    return filteredCourses.sublist(startIndex, endIndex);
-  }
-
-  List<Course> getFilteredCourses() {
-    return searchCoursesWithFilters(
-      query: state.searchQuery,
-      status: state.selectedStatus,
-      category: state.selectedCategory,
-      instructorId: state.selectedInstructorId,
-    );
-  }
-
-  // Admin method: Initialize admin course management
-  Future<void> initializeAdminCourses() async {
-    state = state.copyWith(isLoading: true, clearError: true);
-    
-    try {
-      await Future.delayed(const Duration(milliseconds: 500)); // Simulate API call
-      
-      // Load all courses
-      final allCourses = List<Course>.from(MockData.courses);
-      
-      state = state.copyWith(
-        allCourses: allCourses,
-        isLoading: false,
-      );
-      
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Failed to load courses: $e',
-      );
-    }
+  void nextPage() {
+    state = state.copyWith(currentPage: state.currentPage + 1);
   }
 }
 

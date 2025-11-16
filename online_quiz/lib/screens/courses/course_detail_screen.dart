@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/mock_data.dart';
 import '../../models/course.dart';
 import '../../models/quiz.dart';
-import '../../models/teacher.dart';
 import '../../models/user.dart';
 import '../quizzes/quiz_detail_screen.dart';
 import '../../utils/app_theme.dart';
 import '../../providers/course_provider.dart';
 import '../../providers/quiz_provider.dart';
+import '../../providers/auth_provider.dart';
 
 
 class CourseDetailScreen extends ConsumerStatefulWidget {
@@ -26,30 +26,28 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     super.initState();
     // Load course details when screen is opened
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(courseProvider.notifier).loadCourseDetails(widget.course.courseId);
-      ref.read(quizProvider.notifier).initializeQuizzes(4); // Default student user ID
+      final authState = ref.read(authProvider);
+      if (authState.user != null) {
+        ref.read(courseProvider.notifier).loadCourseDetails(widget.course.courseId);
+        ref.read(quizProvider.notifier).initializeQuizzes(authState.user!.userId);
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final courseState = ref.watch(courseProvider);
-    // final currentUser = ref.watch(currentUserProvider); // TODO: Use when implementing user-specific features
+    final quizState = ref.watch(quizProvider);
     
     // Use course data from provider if available, otherwise use the passed course
     final course = courseState.selectedCourse ?? widget.course;
     final courseQuizzes = courseState.selectedCourseQuizzes;
     
-    // Calculate progress directly from MockData (same approach as quiz tab)
-    final allCourseQuizzes = MockData.getQuizzesByCourse(course.courseId);
-    final totalQuizzes = allCourseQuizzes.length;
-    final completedAttempts = MockData.getAttemptsByUser(4)
-        .where((attempt) => 
-            allCourseQuizzes.any((quiz) => quiz.quizId == attempt.quizId) && 
-            attempt.submittedAt != null)
-        .length;
-    final completedQuizzes = completedAttempts;
-    final progress = totalQuizzes > 0 ? completedAttempts / totalQuizzes : 0.0;
+    // Calculate progress from quiz provider state
+    final totalQuizzes = courseQuizzes.length;
+    final completedQuizzes = courseQuizzes.where((quiz) => 
+        quizState.isQuizCompleted(quiz.quizId)).length;
+    final progress = totalQuizzes > 0 ? completedQuizzes / totalQuizzes : 0.0;
     
     return Scaffold(
       appBar: AppBar(
@@ -121,15 +119,9 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   }
   
   Widget _buildCourseHeader(Course course, double progress, int completedQuizzes, int totalQuizzes) {
-    final teacher = MockData.teachers.firstWhere(
-      (t) => t.userId == course.instructorUserId,
-      orElse: () => Teacher(
-        userId: 0,
-        department: 'Unknown Department',
-      ),
-    );
+    // Get instructor from MockData for now until course service loads instructor details
     final teacherUser = MockData.users.firstWhere(
-      (u) => u.userId == teacher.userId,
+      (u) => u.userId == course.instructorUserId,
       orElse: () => User(
         userId: 0,
         fullName: 'Unknown Teacher',
@@ -310,26 +302,27 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   }
   
   Widget _buildQuizCard(BuildContext context, Quiz quiz, Course course) {
-    // Use the same approach as quiz tab - directly check MockData for latest completion status
-    final attempts = MockData.getAttemptsByQuiz(quiz.quizId);
-    final completedAttempt = attempts.where((a) => a.userId == 4 && a.submittedAt != null).firstOrNull;
-    final isCompleted = completedAttempt != null;
-    final quizQuestions = MockData.questions.where((q) => q.quizId == quiz.quizId).toList();
-    final totalQuestions = quizQuestions.length;
-    final totalPossiblePoints = quizQuestions.fold(0.0, (sum, question) => sum + question.points);
-    final score = completedAttempt != null && totalPossiblePoints > 0
-        ? (completedAttempt.score / totalPossiblePoints * 100)
-        : 0.0;
+    final quizState = ref.watch(quizProvider);
+    
+    final completedAttempt = quizState.quizAttempts[quiz.quizId];
+    final isCompleted = completedAttempt != null && completedAttempt.submittedAt != null;
+    final score = quizState.quizScores[quiz.quizId] ?? 0.0;
+    
+    // For now, use placeholder for question count until quiz details are loaded
+    const totalQuestions = 'View';
     
     return GestureDetector(
       onTap: () {
+        final authState = ref.read(authProvider);
+        if (authState.user == null) return;
+        
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => QuizDetailScreen(
               quiz: quiz,
               course: course,
-              currentUserId: 4, // Default student user ID
+              currentUserId: authState.user!.userId,
             ),
           ),
         );

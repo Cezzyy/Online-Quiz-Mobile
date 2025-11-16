@@ -11,7 +11,7 @@ import '../../utils/app_theme.dart';
 import '../../providers/quiz_provider.dart';
 import 'quiz_screen.dart';
 
-class QuizDetailScreen extends ConsumerWidget {
+class QuizDetailScreen extends ConsumerStatefulWidget {
   final Quiz quiz;
   final Course? course;
   final int currentUserId;
@@ -24,13 +24,27 @@ class QuizDetailScreen extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<QuizDetailScreen> createState() => _QuizDetailScreenState();
+}
+
+class _QuizDetailScreenState extends ConsumerState<QuizDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Load quiz details when screen opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(quizProvider.notifier).loadQuizDetails(widget.quiz.quizId);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // Get quiz data from provider
     final quizState = ref.watch(quizProvider);
-    final attempt = quizState.quizAttempts[quiz.quizId];
+    final attempt = quizState.quizAttempts[widget.quiz.quizId];
     final isCompleted = attempt != null;
-    final isOverdue = !isCompleted && quiz.isOverdue;
-    final daysUntilDue = quiz.daysUntilDue;
+    final isOverdue = !isCompleted && widget.quiz.isOverdue;
+    final daysUntilDue = widget.quiz.daysUntilDue;
     
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -53,9 +67,9 @@ class QuizDetailScreen extends ConsumerWidget {
         child: Column(
           children: [
             _buildQuizHeader(context, isCompleted, isOverdue, daysUntilDue),
-            _buildQuizInfo(context, ref),
-            _buildQuizStats(context, ref),
-            if (isCompleted) _buildResultSection(context, ref, attempt),
+            _buildQuizInfo(context),
+            _buildQuizStats(context),
+            if (isCompleted) _buildResultSection(context, attempt),
             _buildInstructions(context, isCompleted),
             const SizedBox(height: 100), // Space for floating button
           ],
@@ -130,16 +144,16 @@ class QuizDetailScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      quiz.title,
+                      widget.quiz.title,
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
                     ),
-                    if (course != null)
+                    if (widget.course != null)
                       Text(
-                        '${course!.code} - ${course!.name}',
+                        '${widget.course!.code} - ${widget.course!.name}',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.white.withValues(alpha: 0.9),
@@ -171,12 +185,10 @@ class QuizDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuizInfo(BuildContext context, WidgetRef ref) {
+  Widget _buildQuizInfo(BuildContext context) {
     final quizState = ref.watch(quizProvider);
-    final questions = quizState.selectedQuizQuestions.isNotEmpty 
-        ? quizState.selectedQuizQuestions 
-        : MockData.getQuestionsByQuiz(quiz.quizId);
-    final instructor = course != null ? MockData.getUserById(course!.instructorUserId) : null;
+    final questions = quizState.selectedQuizQuestions;
+    final instructor = widget.course != null ? MockData.getUserById(widget.course!.instructorUserId) : null;
     
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -214,19 +226,19 @@ class QuizDetailScreen extends ConsumerWidget {
           InfoCardPresets.compact(
             icon: Icons.timer_outlined,
             title: 'Time Limit',
-            value: quiz.hasTimeLimit ? '${quiz.timeLimitMinutes} minutes' : 'No limit',
+            value: widget.quiz.hasTimeLimit ? '${widget.quiz.timeLimitMinutes} minutes' : 'No limit',
           ),
           const SizedBox(height: 12),
           InfoCardPresets.compact(
             icon: Icons.calendar_today_outlined,
             title: 'Due Date',
-            value: quiz.hasDueDate ? _formatDateTime(quiz.dueAt!) : 'No due date',
+            value: widget.quiz.hasDueDate ? _formatDateTime(widget.quiz.dueAt!) : 'No due date',
           ),
           const SizedBox(height: 12),
           InfoCardPresets.compact(
             icon: Icons.add_circle_outline,
             title: 'Date Added',
-            value: _formatDateTime(quiz.createdAt),
+            value: _formatDateTime(widget.quiz.createdAt),
           ),
           if (instructor != null) ...[
             const SizedBox(height: 12),
@@ -243,12 +255,10 @@ class QuizDetailScreen extends ConsumerWidget {
 
 
 
-  Widget _buildQuizStats(BuildContext context, WidgetRef ref) {
+  Widget _buildQuizStats(BuildContext context) {
     final quizState = ref.watch(quizProvider);
-    final questions = quizState.selectedQuizQuestions.isNotEmpty 
-        ? quizState.selectedQuizQuestions 
-        : MockData.getQuestionsByQuiz(quiz.quizId);
-    final attempt = quizState.quizAttempts[quiz.quizId];
+    final questions = quizState.selectedQuizQuestions;
+    final attempt = quizState.quizAttempts[widget.quiz.quizId];
     final isCompleted = attempt != null;
     
     return Container(
@@ -293,7 +303,7 @@ class QuizDetailScreen extends ConsumerWidget {
                 child: StatCard(
                   icon: Icons.timer_outlined,
                   title: 'Time Limit',
-                  value: quiz.hasTimeLimit ? '${quiz.timeLimitMinutes}m' : 'None',
+                  value: widget.quiz.hasTimeLimit ? '${widget.quiz.timeLimitMinutes}m' : 'None',
                   color: Colors.orange,
                 ),
               ),
@@ -315,11 +325,9 @@ class QuizDetailScreen extends ConsumerWidget {
 
 
 
-  Widget _buildResultSection(BuildContext context, WidgetRef ref, Attempt attempt) {
+  Widget _buildResultSection(BuildContext context, Attempt attempt) {
     final quizState = ref.watch(quizProvider);
-    final questions = quizState.selectedQuizQuestions.isNotEmpty 
-        ? quizState.selectedQuizQuestions 
-        : MockData.getQuestionsByQuiz(quiz.quizId);
+    final questions = quizState.selectedQuizQuestions;
     final totalPoints = questions.fold<int>(0, (sum, q) => sum + q.points.toInt());
     final percentage = totalPoints > 0 ? (attempt.score / totalPoints) * 100 : 0.0;
     
@@ -490,7 +498,7 @@ class QuizDetailScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           _buildInstructionItem(context, 'Read each question carefully before answering'),
-          _buildInstructionItem(context, quiz.hasTimeLimit ? 'You have ${quiz.timeLimitMinutes} minutes to complete the quiz' : 'No time limit for this quiz'),
+          _buildInstructionItem(context, widget.quiz.hasTimeLimit ? 'You have ${widget.quiz.timeLimitMinutes} minutes to complete the quiz' : 'No time limit for this quiz'),
           _buildInstructionItem(context, 'Make sure you have a stable internet connection'),
           _buildInstructionItem(context, 'Once submitted, you cannot change your answers'),
           if (!isCompleted)
@@ -541,7 +549,7 @@ class QuizDetailScreen extends ConsumerWidget {
       margin: const EdgeInsets.symmetric(horizontal: 20),
       child: ElevatedButton.icon(
         onPressed: isOverdue ? null : () {
-          _showStartQuizDialog(context, ref);
+          _showStartQuizDialog(context);
         },
         icon: Icon(
           isOverdue ? Icons.error : Icons.play_arrow,
@@ -567,16 +575,14 @@ class QuizDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _showStartQuizDialog(BuildContext context, WidgetRef ref) {
+  void _showStartQuizDialog(BuildContext context) {
     final quizState = ref.watch(quizProvider);
-    final questions = quizState.selectedQuizQuestions.isNotEmpty 
-        ? quizState.selectedQuizQuestions 
-        : MockData.getQuestionsByQuiz(quiz.quizId);
+    final questions = quizState.selectedQuizQuestions;
     
     AppDialog.show(
       context: context,
       title: 'Start Quiz',
-      subtitle: 'Are you ready to start "${quiz.title}"?',
+      subtitle: 'Are you ready to start "${widget.quiz.title}"?',
       type: DialogType.confirmation,
       icon: Icons.quiz_outlined,
       iconColor: Colors.blue,
@@ -588,7 +594,7 @@ class QuizDetailScreen extends ConsumerWidget {
              context,
              Icons.access_time,
              'Time Limit',
-             '${quiz.timeLimitMinutes ?? 'No limit'} minutes',
+             '${widget.quiz.timeLimitMinutes ?? 'No limit'} minutes',
              Theme.of(context).colorScheme.primary,
            ),
           const SizedBox(height: 12),
@@ -656,8 +662,8 @@ class QuizDetailScreen extends ConsumerWidget {
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => QuizScreen(
-                  quiz: quiz,
-                  currentUserId: currentUserId,
+                  quiz: widget.quiz,
+                  currentUserId: widget.currentUserId,
                 ),
               ),
             );

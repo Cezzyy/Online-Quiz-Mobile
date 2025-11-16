@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/quiz.dart';
 import '../../models/question.dart';
-import '../../data/mock_data.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/dialog.dart';
 import '../../providers/quiz_provider.dart';
@@ -33,20 +32,36 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
   DateTime? startTime;
   int timeRemainingSeconds = 0;
   bool isSubmitting = false;
+  int? attemptId; // Track the current attempt ID
 
   @override
   void initState() {
     super.initState();
-    questions = MockData.getQuestionsByQuiz(widget.quiz.quizId);
+    questions = [];
     pageController = PageController();
     startTime = DateTime.now();
     
-    // Initialize quiz attempt through provider
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(quizProvider.notifier).startQuizAttempt(
+    // Load quiz details and initialize attempt through provider
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await ref.read(quizProvider.notifier).loadQuizDetails(widget.quiz.quizId);
+      
+      // Get questions from provider after loading
+      final quizState = ref.read(quizProvider);
+      setState(() {
+        questions = quizState.selectedQuizQuestions;
+      });
+      
+      // Start quiz attempt and store attemptId
+      final attempt = await ref.read(quizProvider.notifier).startQuizAttempt(
         widget.quiz.quizId,
         widget.currentUserId,
       );
+      
+      if (attempt != null) {
+        setState(() {
+          attemptId = attempt.attemptId;
+        });
+      }
     });
     
     // Initialize timer
@@ -337,7 +352,8 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
   }
 
   Widget _buildSingleChoiceAnswers(Question question) {
-    final choices = MockData.getChoicesByQuestion(question.questionId);
+    final quizState = ref.watch(quizProvider);
+    final choices = quizState.questionChoices[question.questionId] ?? [];
     final selectedChoiceId = answers[question.questionId] as int?;
 
     return Column(
@@ -419,7 +435,8 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
   }
 
   Widget _buildMultipleChoiceAnswers(Question question) {
-    final choices = MockData.getChoicesByQuestion(question.questionId);
+    final quizState = ref.watch(quizProvider);
+    final choices = quizState.questionChoices[question.questionId] ?? [];
     final selectedChoiceIds = (answers[question.questionId] as List<int>?) ?? [];
 
     return Column(
@@ -727,16 +744,22 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
     );
 
     try {
+      // Check if we have an attemptId
+      if (attemptId == null) {
+        throw Exception('No attempt ID found');
+      }
+      
       // Submit quiz through provider
       final attempt = await ref.read(quizProvider.notifier).submitQuizAttempt(
-        widget.quiz.quizId,
-        widget.currentUserId,
-        answers,
-        startTime!,
-        autoSubmit,
+        attemptId: attemptId!,
+        quizId: widget.quiz.quizId,
+        userId: widget.currentUserId,
+        answers: answers,
+        startTime: startTime!,
+        autoSubmit: autoSubmit,
       );
 
-      if (context.mounted) {
+      if (context.mounted && attempt != null) {
         navigator.pop(); // Close loading dialog
         
         scaffoldMessenger.showSnackBar(
@@ -754,12 +777,15 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
           ),
         );
         
+        // Get course from provider
+        final course = await ref.read(quizProvider.notifier).getCourseForQuiz(widget.quiz.quizId);
+        
         // Navigate to quiz result screen
         navigator.pushReplacement(
           MaterialPageRoute(
             builder: (context) => QuizResultScreen(
               quiz: widget.quiz,
-              course: MockData.getCourseById(widget.quiz.courseId),
+              course: course,
               attempt: attempt,
             ),
           ),
