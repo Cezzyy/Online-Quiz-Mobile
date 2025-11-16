@@ -41,7 +41,8 @@ class EmptyStateWidget extends StatelessWidget {
     final defaultIconColor = iconColor ?? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4);
     final defaultTitleColor = titleColor ?? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7);
     final defaultMessageColor = messageColor ?? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6);
-    final defaultInfoCardColor = infoCardColor ?? Theme.of(context).colorScheme.primaryContainer;
+    final infoCardBackgroundColor = Theme.of(context).colorScheme.primaryContainer;
+    final infoCardAccentColor = infoCardColor ?? Theme.of(context).colorScheme.primary;
 
     return Center(
       child: Padding(
@@ -90,17 +91,17 @@ class EmptyStateWidget extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: defaultInfoCardColor,
+                  color: infoCardBackgroundColor,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: (infoCardColor ?? Theme.of(context).colorScheme.primary).withValues(alpha: 0.2),
+                    color: infoCardAccentColor.withValues(alpha: 0.2),
                   ),
                 ),
                 child: Row(
                   children: [
                     Icon(
                       Icons.info_outline,
-                      color: infoCardColor ?? Colors.blue,
+                      color: infoCardAccentColor,
                       size: 20,
                     ),
                     const SizedBox(width: 12),
@@ -109,7 +110,7 @@ class EmptyStateWidget extends StatelessWidget {
                         infoCardText!,
                         style: TextStyle(
                           fontSize: 14,
-                          color: (infoCardColor ?? Colors.blue).withValues(alpha: 0.8),
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
