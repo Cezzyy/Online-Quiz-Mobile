@@ -7,6 +7,7 @@ class Quiz {
   final bool isPublished;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final int createdBy;
 
   const Quiz({
     required this.quizId,
@@ -17,6 +18,7 @@ class Quiz {
     required this.isPublished,
     required this.createdAt,
     required this.updatedAt,
+    required this.createdBy,
   });
 
   factory Quiz.fromJson(Map<String, dynamic> json) {
@@ -29,6 +31,7 @@ class Quiz {
       isPublished: json['Is_Published'] as bool,
       createdAt: DateTime.parse(json['CreatedAt'] as String),
       updatedAt: DateTime.parse(json['UpdatedAt'] as String),
+      createdBy: json['CreatedBy'] as int,
     );
   }
 
@@ -42,6 +45,7 @@ class Quiz {
       'Is_Published': isPublished,
       'CreatedAt': createdAt.toIso8601String(),
       'UpdatedAt': updatedAt.toIso8601String(),
+      'CreatedBy': createdBy,
     };
   }
 
@@ -54,6 +58,7 @@ class Quiz {
     bool? isPublished,
     DateTime? createdAt,
     DateTime? updatedAt,
+    int? createdBy,
   }) {
     return Quiz(
       quizId: quizId ?? this.quizId,
@@ -64,6 +69,7 @@ class Quiz {
       isPublished: isPublished ?? this.isPublished,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      createdBy: createdBy ?? this.createdBy,
     );
   }
 

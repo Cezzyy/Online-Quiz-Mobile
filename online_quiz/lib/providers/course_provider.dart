@@ -337,6 +337,7 @@ class CourseNotifier extends StateNotifier<CourseState> {
         userId: studentId,
         courseId: courseId,
         enrolledAt: DateTime.now(),
+        enrolledBy: teacherId,
       );
 
       MockData.enrollments.add(newEnrollment);

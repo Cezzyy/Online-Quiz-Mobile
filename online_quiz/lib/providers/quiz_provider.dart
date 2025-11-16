@@ -332,6 +332,7 @@ class QuizNotifier extends StateNotifier<QuizState> {
       isPublished: false,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
+      createdBy: 0,
     ));
     return quiz.quizId != 0 ? MockData.getCourseById(quiz.courseId) : null;
   }

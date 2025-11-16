@@ -9,7 +9,7 @@ class User {
 
   final DateTime createdAt;
   final DateTime updatedAt;
-
+  final int? createdBy;
 
   const User({
     required this.userId,
@@ -19,9 +19,9 @@ class User {
     required this.status,
     this.contactNumber = '',
     this.emergencyContactNumber = '',
-
     required this.createdAt,
     required this.updatedAt,
+    this.createdBy,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -35,7 +35,7 @@ class User {
       updatedAt: DateTime.parse(json['UpdatedAt'] as String),
       contactNumber: json['ContactNumber'] as String? ?? '',
       emergencyContactNumber: json['EmergencyContactNumber'] as String? ?? '',
-
+      createdBy: json['CreatedBy'] as int?,
     );
   }
 
@@ -50,7 +50,7 @@ class User {
       'UpdatedAt': updatedAt.toIso8601String(),
       'ContactNumber': contactNumber,
       'EmergencyContactNumber': emergencyContactNumber,
-
+      'CreatedBy': createdBy,
     };
   }
 
@@ -64,7 +64,7 @@ class User {
     DateTime? updatedAt,
     String? contactNumber,
     String? emergencyContactNumber,
-
+    int? createdBy,
   }) {
     return User(
       userId: userId ?? this.userId,
@@ -76,7 +76,7 @@ class User {
       updatedAt: updatedAt ?? this.updatedAt,
       contactNumber: contactNumber ?? this.contactNumber,
       emergencyContactNumber: emergencyContactNumber ?? this.emergencyContactNumber,
-
+      createdBy: createdBy ?? this.createdBy,
     );
   }
 

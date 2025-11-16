@@ -347,6 +347,7 @@ class MockData {
       courseId: 1, // CS101-CS31A
       enrolledAt: DateTime(2024, 1, 10),
       section: 'CS31A',
+      enrolledBy: 2, // Donald Francisco (instructor of CS101-CS31A)
     ),
     Enrollment(
       enrollmentId: 2,
@@ -354,6 +355,7 @@ class MockData {
       courseId: 2, // MATH201-CS31A
       enrolledAt: DateTime(2024, 1, 10),
       section: 'CS31A',
+      enrolledBy: 10, // Dr. Mark Johnson (instructor of MATH201-CS31A)
     ),
     Enrollment(
       enrollmentId: 9,
@@ -361,6 +363,7 @@ class MockData {
       courseId: 3, // CS201-CS31A
       enrolledAt: DateTime(2024, 1, 10),
       section: 'CS31A',
+      enrolledBy: 12, // Mr. David Brown (instructor of CS201-CS31A)
     ),
     Enrollment(
       enrollmentId: 10,
@@ -368,6 +371,7 @@ class MockData {
       courseId: 9, // CS102-CS31A
       enrolledAt: DateTime(2024, 1, 10),
       section: 'CS31A',
+      enrolledBy: 2, // Donald Francisco (instructor of CS102-CS31A)
     ),
     
     // Maria Santos (userId: 5) - IT11B section
@@ -377,6 +381,7 @@ class MockData {
       courseId: 4, // IT301-IT11B
       enrolledAt: DateTime(2024, 1, 11),
       section: 'IT11B',
+      enrolledBy: 11, // Ms. Maria Garcia (instructor of IT301-IT11B)
     ),
     Enrollment(
       enrollmentId: 11,
@@ -384,6 +389,7 @@ class MockData {
       courseId: 11, // IT101-IT11B
       enrolledAt: DateTime(2024, 1, 11),
       section: 'IT11B',
+      enrolledBy: 11, // Ms. Maria Garcia (instructor of IT101-IT11B)
     ),
     
     // John Dela Cruz (userId: 6) - CS31A section
@@ -393,6 +399,7 @@ class MockData {
       courseId: 1, // CS101-CS31A
       enrolledAt: DateTime(2024, 1, 12),
       section: 'CS31A',
+      enrolledBy: 2, // Donald Francisco (instructor of CS101-CS31A)
     ),
     Enrollment(
       enrollmentId: 6,
@@ -400,6 +407,7 @@ class MockData {
       courseId: 2, // MATH201-CS31A
       enrolledAt: DateTime(2024, 1, 12),
       section: 'CS31A',
+      enrolledBy: 10, // Dr. Mark Johnson (instructor of MATH201-CS31A)
     ),
     Enrollment(
       enrollmentId: 7,
@@ -407,6 +415,7 @@ class MockData {
       courseId: 3, // CS201-CS31A
       enrolledAt: DateTime(2024, 1, 12),
       section: 'CS31A',
+      enrolledBy: 12, // Mr. David Brown (instructor of CS201-CS31A)
     ),
     Enrollment(
       enrollmentId: 12,
@@ -414,6 +423,7 @@ class MockData {
       courseId: 9, // CS102-CS31A
       enrolledAt: DateTime(2024, 1, 12),
       section: 'CS31A',
+      enrolledBy: 2, // Donald Francisco (instructor of CS102-CS31A)
     ),
     
     // Jane Smith (userId: 7) - CS11C section
@@ -423,6 +433,7 @@ class MockData {
       courseId: 6, // CS101-CS11C
       enrolledAt: DateTime(2024, 1, 13),
       section: 'CS11C',
+      enrolledBy: 9, // Prof. Sarah Smith (instructor of CS101-CS11C)
     ),
     Enrollment(
       enrollmentId: 13,
@@ -430,6 +441,7 @@ class MockData {
       courseId: 10, // CS102-CS11C
       enrolledAt: DateTime(2024, 1, 13),
       section: 'CS11C',
+      enrolledBy: 12, // Mr. David Brown (instructor of CS102-CS11C)
     ),
     
     // Michael Reyes (userId: 8) - IT21A section
@@ -439,6 +451,7 @@ class MockData {
       courseId: 7, // MATH201-IT21A
       enrolledAt: DateTime(2024, 1, 14),
       section: 'IT21A',
+      enrolledBy: 10, // Dr. Mark Johnson (instructor of MATH201-IT21A)
     ),
     Enrollment(
       enrollmentId: 15,
@@ -446,6 +459,7 @@ class MockData {
       courseId: 8, // IT301-IT21A
       enrolledAt: DateTime(2024, 1, 14),
       section: 'IT21A',
+      enrolledBy: 11, // Ms. Maria Garcia (instructor of IT301-IT21A)
     ),
     Enrollment(
       enrollmentId: 16,
@@ -453,6 +467,7 @@ class MockData {
       courseId: 12, // IT101-IT21A
       enrolledAt: DateTime(2024, 1, 14),
       section: 'IT21A',
+      enrolledBy: 11, // Ms. Maria Garcia (instructor of IT101-IT21A)
     ),
   ];
 
@@ -467,6 +482,7 @@ class MockData {
       isPublished: true,
       createdAt: DateTime(2024, 1, 15),
       updatedAt: DateTime(2024, 1, 15),
+      createdBy: 2, // Donald Francisco (instructor of CS101-CS31A)
     ),
     Quiz(
       quizId: 2,
@@ -477,6 +493,7 @@ class MockData {
       isPublished: true,
       createdAt: DateTime(2024, 1, 16),
       updatedAt: DateTime(2024, 1, 16),
+      createdBy: 2, // Donald Francisco (instructor of CS101-CS31A)
     ),
     Quiz(
       quizId: 3,
@@ -487,6 +504,7 @@ class MockData {
       isPublished: true,
       createdAt: DateTime(2024, 1, 17),
       updatedAt: DateTime(2024, 1, 17),
+      createdBy: 10, // Dr. Mark Johnson (instructor of MATH201-CS31A)
     ),
   ];
 

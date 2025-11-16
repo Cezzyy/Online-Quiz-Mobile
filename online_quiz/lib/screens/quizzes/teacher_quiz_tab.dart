@@ -707,6 +707,7 @@ class _CreateQuizDialogState extends State<_CreateQuizDialog> {
         isPublished: false, // Always start as draft
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
+        createdBy: widget.course.instructorUserId,
       );
 
       // Add the quiz to mock data as a draft
