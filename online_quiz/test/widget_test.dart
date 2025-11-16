@@ -8,10 +8,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:online_quiz/main.dart';
 
 void main() {
+  // Set up test environment before running tests
+  setUpAll(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    
+    // Mock SharedPreferences
+    SharedPreferences.setMockInitialValues({});
+    
+    // Initialize Supabase with dummy values for testing
+    await Supabase.initialize(
+      url: 'https://test.supabase.co',
+      anonKey: 'test-anon-key',
+    );
+  });
+
   testWidgets('ACLC Quiz App smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(
