@@ -6,6 +6,7 @@ import '../models/attempt_answer.dart';
 import '../models/choice.dart';
 import '../models/course.dart';
 import '../services/quiz_service.dart';
+import '../services/teacher_quiz_service.dart';
 import 'course_provider.dart';
 
 // Quiz state class to hold all quiz-related data and UI state
@@ -112,6 +113,7 @@ class QuizState {
 class QuizNotifier extends StateNotifier<QuizState> {
   final Ref ref;
   final QuizService _quizService = QuizService();
+  final TeacherQuizService _teacherQuizService = TeacherQuizService();
   
   QuizNotifier(this.ref) : super(const QuizState());
 
@@ -389,6 +391,272 @@ class QuizNotifier extends StateNotifier<QuizState> {
     } catch (e) {
       state = state.copyWith(error: 'Failed to load attempt details: $e');
       return null;
+    }
+  }
+
+  // ==================== TEACHER QUIZ MANAGEMENT ====================
+
+  /// Create a new quiz (Teacher)
+  Future<Quiz?> createQuiz({
+    required int courseId,
+    required String title,
+    required int createdBy,
+    DateTime? dueAt,
+    int? timeLimitMinutes,
+    bool isPublished = false,
+  }) async {
+    try {
+      state = state.copyWith(isLoading: true, clearError: true);
+
+      final quiz = await _teacherQuizService.createQuiz(
+        courseId: courseId,
+        title: title,
+        createdBy: createdBy,
+        dueAt: dueAt,
+        timeLimitMinutes: timeLimitMinutes,
+        isPublished: isPublished,
+      );
+
+      // Refresh quizzes list
+      final updatedQuizzes = [...state.allQuizzes, quiz];
+      state = state.copyWith(
+        allQuizzes: updatedQuizzes,
+        isLoading: false,
+      );
+
+      return quiz;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to create quiz: $e',
+      );
+      return null;
+    }
+  }
+
+  /// Update an existing quiz (Teacher)
+  Future<bool> updateQuiz({
+    required int quizId,
+    String? title,
+    DateTime? dueAt,
+    int? timeLimitMinutes,
+    bool? isPublished,
+  }) async {
+    try {
+      state = state.copyWith(isLoading: true, clearError: true);
+
+      final updatedQuiz = await _teacherQuizService.updateQuiz(
+        quizId: quizId,
+        title: title,
+        dueAt: dueAt,
+        timeLimitMinutes: timeLimitMinutes,
+        isPublished: isPublished,
+      );
+
+      // Update quiz in the list
+      final updatedQuizzes = state.allQuizzes.map((q) {
+        return q.quizId == quizId ? updatedQuiz : q;
+      }).toList();
+
+      state = state.copyWith(
+        allQuizzes: updatedQuizzes,
+        selectedQuiz: state.selectedQuiz?.quizId == quizId ? updatedQuiz : state.selectedQuiz,
+        isLoading: false,
+      );
+
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to update quiz: $e',
+      );
+      return false;
+    }
+  }
+
+  /// Delete a quiz (Teacher)
+  Future<bool> deleteQuiz(int quizId) async {
+    try {
+      state = state.copyWith(isLoading: true, clearError: true);
+
+      await _teacherQuizService.deleteQuiz(quizId);
+
+      // Remove quiz from the list
+      final updatedQuizzes = state.allQuizzes.where((q) => q.quizId != quizId).toList();
+
+      state = state.copyWith(
+        allQuizzes: updatedQuizzes,
+        selectedQuiz: state.selectedQuiz?.quizId == quizId ? null : state.selectedQuiz,
+        isLoading: false,
+      );
+
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to delete quiz: $e',
+      );
+      return false;
+    }
+  }
+
+  /// Toggle quiz publish status (Teacher)
+  Future<bool> togglePublishQuiz(int quizId, bool isPublished) async {
+    try {
+      state = state.copyWith(isLoading: true, clearError: true);
+
+      final updatedQuiz = await _teacherQuizService.togglePublishQuiz(quizId, isPublished);
+
+      // Update quiz in the list
+      final updatedQuizzes = state.allQuizzes.map((q) {
+        return q.quizId == quizId ? updatedQuiz : q;
+      }).toList();
+
+      state = state.copyWith(
+        allQuizzes: updatedQuizzes,
+        selectedQuiz: state.selectedQuiz?.quizId == quizId ? updatedQuiz : state.selectedQuiz,
+        isLoading: false,
+      );
+
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to toggle publish status: $e',
+      );
+      return false;
+    }
+  }
+
+  /// Create a complete quiz with questions and choices (Teacher)
+  Future<Quiz?> createCompleteQuiz({
+    required int courseId,
+    required String title,
+    required int createdBy,
+    DateTime? dueAt,
+    int? timeLimitMinutes,
+    bool isPublished = false,
+    required List<Map<String, dynamic>> questionsWithChoices,
+  }) async {
+    try {
+      state = state.copyWith(isLoading: true, clearError: true);
+
+      final quiz = await _teacherQuizService.createCompleteQuiz(
+        courseId: courseId,
+        title: title,
+        createdBy: createdBy,
+        dueAt: dueAt,
+        timeLimitMinutes: timeLimitMinutes,
+        isPublished: isPublished,
+        questionsWithChoices: questionsWithChoices,
+      );
+
+      // Refresh quizzes list
+      final updatedQuizzes = [...state.allQuizzes, quiz];
+      state = state.copyWith(
+        allQuizzes: updatedQuizzes,
+        isLoading: false,
+      );
+
+      return quiz;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to create complete quiz: $e',
+      );
+      return null;
+    }
+  }
+
+  /// Update a complete quiz with questions and choices (Teacher)
+  Future<bool> updateCompleteQuiz({
+    required int quizId,
+    String? title,
+    DateTime? dueAt,
+    int? timeLimitMinutes,
+    bool? isPublished,
+    List<Map<String, dynamic>>? questionsWithChoices,
+  }) async {
+    try {
+      state = state.copyWith(isLoading: true, clearError: true);
+
+      final updatedQuiz = await _teacherQuizService.updateCompleteQuiz(
+        quizId: quizId,
+        title: title,
+        dueAt: dueAt,
+        timeLimitMinutes: timeLimitMinutes,
+        isPublished: isPublished,
+        questionsWithChoices: questionsWithChoices,
+      );
+
+      // Update quiz in the list
+      final updatedQuizzes = state.allQuizzes.map((q) {
+        return q.quizId == quizId ? updatedQuiz : q;
+      }).toList();
+
+      state = state.copyWith(
+        allQuizzes: updatedQuizzes,
+        selectedQuiz: state.selectedQuiz?.quizId == quizId ? updatedQuiz : state.selectedQuiz,
+        isLoading: false,
+      );
+
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to update complete quiz: $e',
+      );
+      return false;
+    }
+  }
+
+  /// Get question count for a quiz (Teacher)
+  Future<int> getQuestionCount(int quizId) async {
+    try {
+      return await _teacherQuizService.getQuestionCount(quizId);
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /// Get total points for a quiz (Teacher)
+  Future<double> getTotalPoints(int quizId) async {
+    try {
+      return await _teacherQuizService.getTotalPoints(quizId);
+    } catch (e) {
+      return 0.0;
+    }
+  }
+
+  /// Validate quiz before publishing (Teacher)
+  Future<Map<String, dynamic>> validateQuiz(int quizId) async {
+    try {
+      return await _teacherQuizService.validateQuiz(quizId);
+    } catch (e) {
+      return {
+        'valid': false,
+        'message': 'Failed to validate quiz: $e',
+      };
+    }
+  }
+
+  /// Load quizzes for a specific course (Teacher)
+  Future<void> loadQuizzesForCourse(int courseId) async {
+    try {
+      state = state.copyWith(isLoading: true, clearError: true);
+
+      final quizzes = await _quizService.getQuizzesByCourse(courseId);
+
+      state = state.copyWith(
+        allQuizzes: quizzes,
+        filteredQuizzes: quizzes,
+        isLoading: false,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to load quizzes: $e',
+      );
     }
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/mock_data.dart';
 import '../../models/course.dart';
+import '../../models/user.dart';
 import 'course_detail_screen.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../utils/app_theme.dart';
@@ -154,7 +154,6 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
     final progress = courseState.getCourseProgress(course.courseId);
     final totalQuizzes = courseState.getCourseQuizCount(course.courseId);
     // final completedQuizzes = courseState.getCompletedQuizCount(course.courseId); // TODO: Use when displaying completion stats
-    final teacherUser = MockData.users.where((u) => u.userId == course.instructorUserId).firstOrNull;
     
     return GestureDetector(
       onTap: () {
@@ -242,12 +241,17 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Instructor: ${teacherUser?.fullName ?? 'Unknown'}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                          ),
+                        FutureBuilder<User?>(
+                          future: ref.read(courseProvider.notifier).getCourseInstructor(course.courseId),
+                          builder: (context, snapshot) {
+                            return Text(
+                              'Instructor: ${snapshot.data?.fullName ?? 'Loading...'}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                              ),
+                            );
+                          },
                         ),
                         const SizedBox(height: 1), // Reduced from 2 to 1
                         Text(

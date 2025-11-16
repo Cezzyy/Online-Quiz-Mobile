@@ -3,12 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/quiz.dart';
 import '../../models/course.dart';
 import '../../models/attempt.dart';
-import '../../data/mock_data.dart';
+import '../../models/user.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/info_card.dart';
 import '../../widgets/dialog.dart';
 import '../../utils/app_theme.dart';
 import '../../providers/quiz_provider.dart';
+import '../../providers/course_provider.dart';
 import 'quiz_screen.dart';
 
 class QuizDetailScreen extends ConsumerStatefulWidget {
@@ -188,7 +189,6 @@ class _QuizDetailScreenState extends ConsumerState<QuizDetailScreen> {
   Widget _buildQuizInfo(BuildContext context) {
     final quizState = ref.watch(quizProvider);
     final questions = quizState.selectedQuizQuestions;
-    final instructor = widget.course != null ? MockData.getUserById(widget.course!.instructorUserId) : null;
     
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -240,14 +240,25 @@ class _QuizDetailScreenState extends ConsumerState<QuizDetailScreen> {
             title: 'Date Added',
             value: _formatDateTime(widget.quiz.createdAt),
           ),
-          if (instructor != null) ...[
-            const SizedBox(height: 12),
-            InfoCardPresets.compact(
-              icon: Icons.person_outline,
-              title: 'Instructor',
-              value: instructor.fullName,
+          if (widget.course != null)
+            FutureBuilder<User?>(
+              future: ref.read(courseProvider.notifier).getCourseInstructor(widget.course!.courseId),
+              builder: (context, snapshot) {
+                if (snapshot.hasData && snapshot.data != null) {
+                  return Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      InfoCardPresets.compact(
+                        icon: Icons.person_outline,
+                        title: 'Instructor',
+                        value: snapshot.data!.fullName,
+                      ),
+                    ],
+                  );
+                }
+                return const SizedBox.shrink();
+              },
             ),
-          ],
         ],
       ),
     );

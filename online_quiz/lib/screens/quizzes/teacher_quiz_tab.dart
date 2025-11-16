@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/mock_data.dart';
 import '../../models/course.dart';
 import '../../models/quiz.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/stat_card.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/course_provider.dart';
+import '../../providers/quiz_provider.dart';
 import 'create_quiz_screen.dart';
 
 class TeacherQuizTab extends ConsumerStatefulWidget {
@@ -47,11 +47,18 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
     });
   }
 
-  void _loadQuizzesForCourse(Course course) {
+  void _loadQuizzesForCourse(Course course) async {
     setState(() {
       selectedCourse = course;
-      courseQuizzes = MockData.getQuizzesByCourse(course.courseId);
+      isLoading = true;
+    });
+
+    await ref.read(quizProvider.notifier).loadQuizzesForCourse(course.courseId);
+    
+    setState(() {
+      courseQuizzes = ref.read(quizProvider).allQuizzes;
       currentPage = 0; // Reset to first page when loading new course
+      isLoading = false;
     });
   }
 
@@ -62,10 +69,10 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
       isRefreshing = true;
     });
     
-    await Future.delayed(const Duration(milliseconds: 800));
+    await ref.read(quizProvider.notifier).loadQuizzesForCourse(selectedCourse!.courseId);
     
     setState(() {
-      courseQuizzes = MockData.getQuizzesByCourse(selectedCourse!.courseId);
+      courseQuizzes = ref.read(quizProvider).allQuizzes;
       currentPage = 0; // Reset to first page after refresh
       isRefreshing = false;
     });
@@ -121,27 +128,33 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              // Remove quiz from mock data
-              MockData.quizzes.removeWhere((q) => q.quizId == quiz.quizId);
-              // Remove associated questions
-              MockData.questions.removeWhere((q) => q.quizId == quiz.quizId);
-              // Remove associated choices
-              final questionIds = MockData.questions
-                  .where((q) => q.quizId == quiz.quizId)
-                  .map((q) => q.questionId)
-                  .toList();
-              MockData.choices.removeWhere((c) => questionIds.contains(c.questionId));
-              
+            onPressed: () async {
               Navigator.pop(context);
-              setState(() {
-                currentPage = 0; // Reset to first page
-              });
-              _loadQuizzesForCourse(selectedCourse!);
               
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Quiz "${quiz.title}" deleted successfully')),
-              );
+              // Delete quiz using provider
+              final success = await ref.read(quizProvider.notifier).deleteQuiz(quiz.quizId);
+              
+              if (success) {
+                setState(() {
+                  courseQuizzes = ref.read(quizProvider).allQuizzes;
+                  currentPage = 0; // Reset to first page
+                });
+                
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Quiz "${quiz.title}" deleted successfully')),
+                  );
+                }
+              } else {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(ref.read(quizProvider).error ?? 'Failed to delete quiz'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Delete'),
@@ -169,6 +182,7 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
   @override
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
+    final courseState = ref.watch(courseProvider);
     
     if (currentUser == null) {
       return const Scaffold(
@@ -176,7 +190,7 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
       );
     }
 
-    final teacherCourses = MockData.getCoursesByInstructor(currentUser.userId);
+    final teacherCourses = courseState.allCourses;
 
     return Scaffold(
         body: Padding(
@@ -352,7 +366,7 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
                                     itemCount: paginatedQuizzes.length,
                                     itemBuilder: (context, index) {
                                       final quiz = paginatedQuizzes[index];
-                                      final questions = MockData.getQuestionsByQuiz(quiz.quizId);
+                                      // Question count will be fetched when needed
                                       
                                       return Card(
                                         margin: const EdgeInsets.only(bottom: 12),
@@ -375,7 +389,13 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                               const SizedBox(height: 4),
-                                              Text('${questions.length} questions'),
+                                              FutureBuilder<int>(
+                                                future: ref.read(quizProvider.notifier).getQuestionCount(quiz.quizId),
+                                                builder: (context, snapshot) {
+                                                  final count = snapshot.data ?? 0;
+                                                  return Text('$count questions');
+                                                },
+                                              ),
                                               if (quiz.dueAt != null)
                                                 Text(
                                                   'Due: ${_formatDate(quiz.dueAt!)}',
@@ -538,26 +558,35 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
     );
   }
 
-  void _togglePublishStatus(Quiz quiz) {
-    final updatedQuiz = quiz.copyWith(
-      isPublished: !quiz.isPublished,
-      updatedAt: DateTime.now(),
+  Future<void> _togglePublishStatus(Quiz quiz) async {
+    // Toggle publish status using provider
+    final success = await ref.read(quizProvider.notifier).togglePublishQuiz(
+      quiz.quizId,
+      !quiz.isPublished,
     );
     
-    // Update in mock data
-    final index = MockData.quizzes.indexWhere((q) => q.quizId == quiz.quizId);
-    if (index != -1) {
-      MockData.quizzes[index] = updatedQuiz;
+    if (success) {
       setState(() {
+        courseQuizzes = ref.read(quizProvider).allQuizzes;
         currentPage = 0; // Reset to first page
       });
-      _loadQuizzesForCourse(selectedCourse!);
-      
+    }
+    
+    if (!mounted) return;
+    
+    if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Quiz "${quiz.title}" ${updatedQuiz.isPublished ? 'published' : 'unpublished'} successfully',
+            'Quiz "${quiz.title}" ${!quiz.isPublished ? 'published' : 'unpublished'} successfully',
           ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(ref.read(quizProvider).error ?? 'Failed to toggle publish status'),
+          backgroundColor: Colors.red,
         ),
       );
     }
@@ -568,7 +597,7 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
   }
 }
 
-class _CreateQuizDialog extends StatefulWidget {
+class _CreateQuizDialog extends ConsumerStatefulWidget {
   final Course course;
   final VoidCallback onQuizCreated;
 
@@ -578,10 +607,10 @@ class _CreateQuizDialog extends StatefulWidget {
   });
 
   @override
-  State<_CreateQuizDialog> createState() => _CreateQuizDialogState();
+  ConsumerState<_CreateQuizDialog> createState() => _CreateQuizDialogState();
 }
 
-class _CreateQuizDialogState extends State<_CreateQuizDialog> {
+class _CreateQuizDialogState extends ConsumerState<_CreateQuizDialog> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   int? _selectedTimeLimit;
@@ -690,7 +719,7 @@ class _CreateQuizDialogState extends State<_CreateQuizDialog> {
     );
   }
 
-  void _createQuiz() {
+  Future<void> _createQuiz() async {
     // Check if all required fields are filled
     if (_dueDate == null) {
       setState(() {}); // Trigger rebuild to show error
@@ -698,31 +727,38 @@ class _CreateQuizDialogState extends State<_CreateQuizDialog> {
     }
     
     if (_formKey.currentState!.validate()) {
-      final newQuiz = Quiz(
-        quizId: DateTime.now().millisecondsSinceEpoch,
+      // Create the quiz using provider
+      final createdQuiz = await ref.read(quizProvider.notifier).createQuiz(
         courseId: widget.course.courseId,
         title: _titleController.text.trim(),
-        dueAt: _dueDate!,
-        timeLimitMinutes: _selectedTimeLimit!,
-        isPublished: false, // Always start as draft
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
         createdBy: widget.course.instructorUserId,
+        dueAt: _dueDate,
+        timeLimitMinutes: _selectedTimeLimit,
+        isPublished: false,
       );
-
-      // Add the quiz to mock data as a draft
-      MockData.quizzes.add(newQuiz);
       
-      // Close the dialog
+      if (!mounted) return;
+      
+      if (createdQuiz == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ref.read(quizProvider).error ?? 'Failed to create quiz'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      
+      // Close the dialog and navigate
       Navigator.pop(context);
-
-      // Navigate to the quiz creation screen
+      
+      // Navigate to the quiz creation screen with the created quiz
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => CreateQuizScreen(
             course: widget.course,
-            quiz: newQuiz,
+            quiz: createdQuiz,
           ),
         ),
       ).then((_) {
@@ -739,7 +775,7 @@ class _CreateQuizDialogState extends State<_CreateQuizDialog> {
   }
 }
 
-class _EditQuizDialog extends StatefulWidget {
+class _EditQuizDialog extends ConsumerStatefulWidget {
   final Quiz quiz;
   final Course course;
   final VoidCallback onQuizUpdated;
@@ -751,10 +787,10 @@ class _EditQuizDialog extends StatefulWidget {
   });
 
   @override
-  State<_EditQuizDialog> createState() => _EditQuizDialogState();
+  ConsumerState<_EditQuizDialog> createState() => _EditQuizDialogState();
 }
 
-class _EditQuizDialogState extends State<_EditQuizDialog> {
+class _EditQuizDialogState extends ConsumerState<_EditQuizDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _titleController;
   late int? _selectedTimeLimit;
@@ -883,7 +919,7 @@ class _EditQuizDialogState extends State<_EditQuizDialog> {
     );
   }
 
-  void _updateQuiz() {
+  Future<void> _updateQuiz() async {
     // Check if all required fields are filled
     if (_dueDate == null) {
       setState(() {}); // Trigger rebuild to show error
@@ -891,23 +927,29 @@ class _EditQuizDialogState extends State<_EditQuizDialog> {
     }
     
     if (_formKey.currentState!.validate()) {
-      final updatedQuiz = widget.quiz.copyWith(
+      // Update using provider
+      final success = await ref.read(quizProvider.notifier).updateQuiz(
+        quizId: widget.quiz.quizId,
         title: _titleController.text.trim(),
-        dueAt: _dueDate!,
-        timeLimitMinutes: _selectedTimeLimit!,
+        dueAt: _dueDate,
+        timeLimitMinutes: _selectedTimeLimit,
         isPublished: _isPublished,
-        updatedAt: DateTime.now(),
       );
-
-      // Update in mock data
-      final index = MockData.quizzes.indexWhere((q) => q.quizId == widget.quiz.quizId);
-      if (index != -1) {
-        MockData.quizzes[index] = updatedQuiz;
+      
+      if (!mounted) return;
+      
+      if (success) {
         widget.onQuizUpdated();
         Navigator.pop(context);
-
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Quiz "${updatedQuiz.title}" updated successfully')),
+          SnackBar(content: Text('Quiz "${_titleController.text}" updated successfully')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ref.read(quizProvider).error ?? 'Failed to update quiz'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }

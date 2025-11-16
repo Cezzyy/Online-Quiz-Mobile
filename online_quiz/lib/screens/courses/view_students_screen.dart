@@ -45,9 +45,9 @@ class _ViewStudentsScreenState extends ConsumerState<ViewStudentsScreen> {
     super.dispose();
   }
 
-  void _loadStudents() {
+  void _loadStudents() async {
     final courseNotifier = ref.read(courseProvider.notifier);
-    final students = courseNotifier.getEnrolledStudentsWithDetails(widget.course.courseId);
+    final students = await courseNotifier.getEnrolledStudentsWithDetails(widget.course.courseId);
     
     final sectionsSet = <String>{'All'};
     for (final studentData in students) {
@@ -57,11 +57,13 @@ class _ViewStudentsScreenState extends ConsumerState<ViewStudentsScreen> {
       }
     }
 
-    setState(() {
-      enrolledStudents = students;
-      sections = sectionsSet.toList()..sort();
-      _applyFilters();
-    });
+    if (mounted) {
+      setState(() {
+        enrolledStudents = students;
+        sections = sectionsSet.toList()..sort();
+        _applyFilters();
+      });
+    }
   }
 
   void _onSearchChanged() {

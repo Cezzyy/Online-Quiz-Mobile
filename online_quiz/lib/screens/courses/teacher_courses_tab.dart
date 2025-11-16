@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/mock_data.dart';
 import '../../models/course.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/stat_card.dart';
@@ -43,8 +42,8 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
       );
     }
 
-    // Get teacher's courses
-    final teacherCourses = MockData.getCoursesByInstructor(currentUser.userId);
+    // Get teacher's courses from Supabase
+    final teacherCourses = courseState.allCourses;
     
     // Show loading indicator while courses are being loaded
     if (courseState.isLoading && teacherCourses.isEmpty) {
@@ -169,9 +168,7 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
   }
   
   Widget _buildCourseCard(BuildContext context, Course course) {
-    final enrollments = MockData.getEnrollmentsByCourse(course.courseId);
-    final quizzes = MockData.getQuizzesByCourse(course.courseId);
-    final totalAttempts = _getTotalAttemptsForCourse(course.courseId);
+    // Data will be loaded dynamically in the UI
     
     return Container(
       decoration: BoxDecoration(
@@ -278,39 +275,54 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
             ),
             const SizedBox(height: 20),
             
-            // Statistics Row
-            Row(
-              children: [
-                Expanded(
-                  child: StatCard(
-                    icon: Icons.people_outline,
-                    title: 'Students',
-                    value: enrollments.length.toString(),
-                    color: AppTheme.successColor,
-                    height: 150,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: StatCard(
-                    icon: Icons.quiz_outlined,
-                    title: 'Quizzes',
-                    value: quizzes.length.toString(),
-                    color: AppTheme.getQuizTypeColor('quiz'),
-                    height: 150,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: StatCard(
-                    icon: Icons.assignment_turned_in_outlined,
-                    title: 'Submissions',
-                    value: totalAttempts.toString(),
-                    color: AppTheme.getQuizTypeColor('system'),
-                    height: 150,
-                  ),
-                ),
-              ],
+            // Statistics Row - Load dynamically from Supabase
+            FutureBuilder<Map<String, int>>(
+              future: _getCourseStatistics(course.courseId),
+              builder: (context, snapshot) {
+                final enrollmentCount = snapshot.data?['enrollments'] ?? 0;
+                final quizCount = snapshot.data?['quizzes'] ?? 0;
+                final submissionCount = snapshot.data?['submissions'] ?? 0;
+                
+                return Row(
+                  children: [
+                    Expanded(
+                      child: StatCard(
+                        icon: Icons.people_outline,
+                        title: 'Students',
+                        value: snapshot.connectionState == ConnectionState.waiting 
+                            ? '...' 
+                            : enrollmentCount.toString(),
+                        color: AppTheme.successColor,
+                        height: 150,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: StatCard(
+                        icon: Icons.quiz_outlined,
+                        title: 'Quizzes',
+                        value: snapshot.connectionState == ConnectionState.waiting 
+                            ? '...' 
+                            : quizCount.toString(),
+                        color: AppTheme.getQuizTypeColor('quiz'),
+                        height: 150,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: StatCard(
+                        icon: Icons.assignment_turned_in_outlined,
+                        title: 'Submissions',
+                        value: snapshot.connectionState == ConnectionState.waiting 
+                            ? '...' 
+                            : submissionCount.toString(),
+                        color: AppTheme.getQuizTypeColor('system'),
+                        height: 150,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 20),
             
@@ -358,35 +370,7 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
 
   
   Widget _buildRecentActivity(BuildContext context, Course course) {
-    final recentAttempts = _getRecentAttemptsForCourse(course.courseId);
-    
-    if (recentAttempts.isEmpty) {
-      return Container(
-         padding: const EdgeInsets.all(16),
-         decoration: BoxDecoration(
-           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
-           borderRadius: BorderRadius.circular(12),
-         ),
-         child: Row(
-           children: [
-             Icon(
-               Icons.info_outline,
-               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-               size: 20,
-             ),
-             const SizedBox(width: 12),
-             Text(
-               'No recent quiz activity',
-               style: TextStyle(
-                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                 fontSize: 14,
-               ),
-             ),
-           ],
-         ),
-       );
-    }
-    
+    // Simplified: Just show that quiz activity exists
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -419,7 +403,7 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                   '${recentAttempts.length} recent quiz ${recentAttempts.length == 1 ? 'submission' : 'submissions'}',
+                   'View detailed activity in Results tab',
                    style: TextStyle(
                      color: Theme.of(context).colorScheme.onSurface,
                      fontSize: 14,
@@ -434,35 +418,30 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
     );
   }
   
-  int _getTotalAttemptsForCourse(int courseId) {
-    final quizzes = MockData.getQuizzesByCourse(courseId);
-    int totalAttempts = 0;
-    
-    for (final quiz in quizzes) {
-      final attempts = MockData.getAttemptsByQuiz(quiz.quizId);
-      totalAttempts += attempts.where((attempt) => attempt.submittedAt != null).length;
+  Future<Map<String, int>> _getCourseStatistics(int courseId) async {
+    try {
+      final enrollments = await ref.read(courseProvider.notifier).getEnrolledStudentsWithDetails(courseId);
+      final quizzes = await ref.read(courseProvider.notifier).getCourseQuizzes(courseId);
+      
+      int totalSubmissions = 0;
+      for (final quiz in quizzes) {
+        final attempts = await ref.read(courseProvider.notifier).getQuizAttempts(quiz.quizId);
+        totalSubmissions += attempts.where((attempt) => attempt.submittedAt != null).length;
+      }
+      
+      return {
+        'enrollments': enrollments.length,
+        'quizzes': quizzes.length,
+        'submissions': totalSubmissions,
+      };
+    } catch (e) {
+      return {
+        'enrollments': 0,
+        'quizzes': 0,
+        'submissions': 0,
+      };
     }
-    
-    return totalAttempts;
-  }
-  
-  List<dynamic> _getRecentAttemptsForCourse(int courseId) {
-    final quizzes = MockData.getQuizzesByCourse(courseId);
-    final recentAttempts = <dynamic>[];
-    
-    for (final quiz in quizzes) {
-      final attempts = MockData.getAttemptsByQuiz(quiz.quizId)
-          .where((attempt) => attempt.submittedAt != null)
-          .toList();
-      recentAttempts.addAll(attempts);
-    }
-    
-    // Sort by submission date and take the most recent ones
-    recentAttempts.sort((a, b) => b.submittedAt!.compareTo(a.submittedAt!));
-    return recentAttempts.take(5).toList();
-  }
-  
-  void _viewStudents(BuildContext context, Course course) {
+  }  void _viewStudents(BuildContext context, Course course) {
     Navigator.push(
       context,
       MaterialPageRoute(

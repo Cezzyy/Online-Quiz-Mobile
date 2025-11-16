@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/mock_data.dart';
 import '../../models/course.dart';
 import '../../models/quiz.dart';
 import '../../models/user.dart';
@@ -119,19 +118,6 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   }
   
   Widget _buildCourseHeader(Course course, double progress, int completedQuizzes, int totalQuizzes) {
-    // Get instructor from MockData for now until course service loads instructor details
-    final teacherUser = MockData.users.firstWhere(
-      (u) => u.userId == course.instructorUserId,
-      orElse: () => User(
-        userId: 0,
-        fullName: 'Unknown Teacher',
-        email: '',
-        passwordHash: '',
-        status: 'Active',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ),
-    );
     
     return Container(
       width: double.infinity,
@@ -158,15 +144,20 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
             ),
             const SizedBox(height: 8),
             Flexible(
-              child: Text(
-                'Instructor: ${teacherUser.fullName}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 2,
+              child: FutureBuilder<User?>(
+                future: ref.read(courseProvider.notifier).getCourseInstructor(course.courseId),
+                builder: (context, snapshot) {
+                  return Text(
+                    'Instructor: ${snapshot.data?.fullName ?? 'Loading...'}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                  );
+                },
               ),
             ),
             const SizedBox(height: 4),

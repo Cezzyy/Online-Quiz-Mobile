@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/mock_data.dart';
 import '../../models/course.dart';
 import '../../models/user.dart';
 import '../../models/student.dart';
@@ -54,18 +53,18 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
       final courseNotifier = ref.read(courseProvider.notifier);
       
       // Load enrolled students using course provider
-      final enrolled = courseNotifier.getEnrolledStudentsWithDetails(widget.course.courseId);
+      final enrolled = await courseNotifier.getEnrolledStudentsWithDetails(widget.course.courseId);
       
       // Load available students (not enrolled in this course) using course provider
-      final availableUsers = courseNotifier.getAvailableStudents(widget.course.courseId);
+      final availableUsers = await courseNotifier.getAvailableStudents(widget.course.courseId);
       final students = <Map<String, dynamic>>[];
       
       // Convert available users to the expected format
       for (final user in availableUsers) {
-        final student = MockData.getStudentByUserId(user.userId);
+        // For now, create placeholder student data
         final studentData = {
           'user': user,
-          'student': student,
+          'student': null, // TODO: Load student details from Supabase
         };
         students.add(studentData);
       }
@@ -85,23 +84,25 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
         }
       }
 
-      setState(() {
-        allStudents = students;
-        enrolledStudents = enrolled;
-        sections = sectionsSet.toList()..sort();
-        yearLevels = yearLevelsSet.toList()..sort((a, b) {
-          if (a == 'All') return -1;
-          if (b == 'All') return 1;
-          return int.tryParse(a)?.compareTo(int.tryParse(b) ?? 0) ?? 0;
-        });
-        isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
-      
       if (mounted) {
+        setState(() {
+          allStudents = students;
+          enrolledStudents = enrolled;
+          sections = sectionsSet.toList()..sort();
+          yearLevels = yearLevelsSet.toList()..sort((a, b) {
+            if (a == 'All') return -1;
+            if (b == 'All') return 1;
+            return int.tryParse(a)?.compareTo(int.tryParse(b) ?? 0) ?? 0;
+          });
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error loading data: $e'),

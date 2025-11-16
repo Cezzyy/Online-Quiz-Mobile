@@ -3,8 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/quiz.dart';
 import '../../models/course.dart';
 import '../../models/question.dart';
-import '../../models/choice.dart';
-import '../../data/mock_data.dart';
+import '../../providers/quiz_provider.dart';
 import '../../widgets/empty_state_widget.dart';
 
 class CreateQuizScreen extends ConsumerStatefulWidget {
@@ -28,7 +27,6 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
   DateTime? _dueDate;
   
   final List<QuestionData> _questions = [];
-  int _nextQuestionId = 1;
 
   final List<Map<String, dynamic>> _timeLimitOptions = [
     {'label': '30 min', 'value': 30},
@@ -47,32 +45,36 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
     
     // Load existing questions if this is an existing quiz
     _loadExistingQuestions();
-    
-    // Generate unique question IDs
-    _nextQuestionId = DateTime.now().millisecondsSinceEpoch;
   }
 
-  void _loadExistingQuestions() {
-    final existingQuestions = MockData.getQuestionsByQuiz(widget.quiz.quizId);
-    
-    for (final question in existingQuestions) {
-      final choices = MockData.getChoicesByQuestion(question.questionId);
-      final choiceDataList = choices.map((choice) => ChoiceData(
-        text: choice.body,
-        isCorrect: choice.isCorrect,
-      )).toList();
+  void _loadExistingQuestions() async {
+    try {
+      // Load quiz details which includes questions and choices
+      await ref.read(quizProvider.notifier).loadQuizDetails(widget.quiz.quizId);
       
-      _questions.add(QuestionData(
-        type: question.type,
-        body: question.body,
-        points: question.points,
-        choices: choiceDataList,
-      ));
-    }
-    
-    // Update next question ID to avoid conflicts
-    if (_questions.isNotEmpty) {
-      _nextQuestionId = DateTime.now().millisecondsSinceEpoch + _questions.length;
+      final quizState = ref.read(quizProvider);
+      final existingQuestions = quizState.selectedQuizQuestions;
+      final questionChoices = quizState.questionChoices;
+      
+      for (final question in existingQuestions) {
+        final choices = questionChoices[question.questionId] ?? [];
+        final choiceDataList = choices.map((choice) => ChoiceData(
+          text: choice.body,
+          isCorrect: choice.isCorrect,
+        )).toList();
+        
+        setState(() {
+          _questions.add(QuestionData(
+            type: question.type,
+            body: question.body,
+            points: question.points,
+            choices: choiceDataList,
+          ));
+        });
+      }
+    } catch (e) {
+      // If loading fails, start with empty questions (new quiz)
+      // This is expected for newly created quizzes
     }
   }
 
@@ -469,15 +471,15 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
     );
   }
 
-  void _saveAsDraft() {
+  Future<void> _saveAsDraft() async {
     if (_validateQuiz()) {
-      _saveQuiz(false);
+      await _saveQuiz(false);
     }
   }
 
-  void _publishQuiz() {
+  Future<void> _publishQuiz() async {
     if (_validateQuiz()) {
-      _saveQuiz(true);
+      await _saveQuiz(true);
     }
   }
 
@@ -503,69 +505,83 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
     return true;
   }
 
-  void _saveQuiz(bool publish) {
-    // Update the quiz
-    final updatedQuiz = widget.quiz.copyWith(
-      title: _titleController.text.trim(),
-      dueAt: _dueDate!,
-      timeLimitMinutes: _selectedTimeLimit!,
-      isPublished: publish,
-      updatedAt: DateTime.now(),
+  Future<void> _saveQuiz(bool publish) async {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
-    // Update quiz in mock data
-    final quizIndex = MockData.quizzes.indexWhere((q) => q.quizId == widget.quiz.quizId);
-    if (quizIndex != -1) {
-      MockData.quizzes[quizIndex] = updatedQuiz;
-    }
-
-    // Remove existing questions and choices for this quiz
-    MockData.questions.removeWhere((q) => q.quizId == widget.quiz.quizId);
-    final existingQuestionIds = MockData.questions
-        .where((q) => q.quizId == widget.quiz.quizId)
-        .map((q) => q.questionId)
-        .toList();
-    MockData.choices.removeWhere((c) => existingQuestionIds.contains(c.questionId));
-
-    // Add new questions and choices
-    for (int i = 0; i < _questions.length; i++) {
-      final questionData = _questions[i];
-      final questionId = _nextQuestionId + i;
+    try {
+      // Prepare questions with choices in the format expected by updateCompleteQuiz
+      final questionsWithChoices = <Map<String, dynamic>>[];
       
-      final question = Question(
-        questionId: questionId,
-        quizId: widget.quiz.quizId,
-        type: questionData.type,
-        body: questionData.body,
-        points: questionData.points,
-        sortOrder: i + 1,
-      );
-      
-      MockData.questions.add(question);
-
-      // Add choices for multiple choice questions
-      for (int j = 0; j < questionData.choices.length; j++) {
-        final choiceData = questionData.choices[j];
-        final choice = Choice(
-          choiceId: (questionId * 100) + j + 1,
-          questionId: questionId,
-          body: choiceData.text,
-          isCorrect: choiceData.isCorrect,
-        );
-        MockData.choices.add(choice);
+      for (int i = 0; i < _questions.length; i++) {
+        final questionData = _questions[i];
+        
+        final questionMap = {
+          'type': questionData.type.toString().split('.').last,
+          'body': questionData.body,
+          'points': questionData.points,
+          'sortOrder': i + 1,
+          'choices': questionData.choices.map((choice) => {
+            'body': choice.text,
+            'isCorrect': choice.isCorrect,
+          }).toList(),
+        };
+        
+        questionsWithChoices.add(questionMap);
       }
-    }
 
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          publish 
-              ? 'Quiz "${updatedQuiz.title}" published successfully!'
-              : 'Quiz "${updatedQuiz.title}" saved as draft.',
+      // Update quiz with questions and choices using provider
+      final success = await ref.read(quizProvider.notifier).updateCompleteQuiz(
+        quizId: widget.quiz.quizId,
+        title: _titleController.text.trim(),
+        dueAt: _dueDate,
+        timeLimitMinutes: _selectedTimeLimit,
+        isPublished: publish,
+        questionsWithChoices: questionsWithChoices,
+      );
+
+      if (!mounted) return;
+      
+      // Close loading dialog
+      Navigator.pop(context);
+
+      if (success) {
+        // Close the quiz editor
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              publish 
+                  ? 'Quiz "${_titleController.text}" published successfully!'
+                  : 'Quiz "${_titleController.text}" saved as draft.',
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ref.read(quizProvider).error ?? 'Failed to save quiz'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      
+      // Close loading dialog
+      Navigator.pop(context);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving quiz: $e'),
+          backgroundColor: Colors.red,
         ),
-      ),
-    );
+      );
+    }
   }
 
   @override

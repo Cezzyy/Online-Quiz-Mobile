@@ -3,6 +3,7 @@ import '../models/course.dart';
 import '../models/enrollment.dart';
 import '../models/user.dart' as app_user;
 import '../models/quiz.dart';
+import '../models/attempt.dart';
 import '../services/course_service.dart';
 
 // Course state class to hold all course-related data and UI state
@@ -279,14 +280,42 @@ class CourseNotifier extends StateNotifier<CourseState> {
     return false;
   }
 
-  List<Map<String, dynamic>> getEnrolledStudentsWithDetails(int courseId) {
-    // TODO: Implement fetching enrolled students
-    return [];
+  /// Get enrolled students with details for a course (Teacher)
+  Future<List<Map<String, dynamic>>> getEnrolledStudentsWithDetails(int courseId) async {
+    try {
+      return await _courseService.getEnrolledStudents(courseId);
+    } catch (e) {
+      return [];
+    }
   }
 
-  List<app_user.User> getAvailableStudents(int courseId) {
-    // TODO: Implement fetching available students
-    return [];
+  /// Get available students not enrolled in a course (Teacher/Admin)
+  Future<List<app_user.User>> getAvailableStudents(int courseId) async {
+    try {
+      // TODO: Implement in course_service if needed
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Get course quizzes (Teacher)
+  Future<List<Quiz>> getCourseQuizzes(int courseId) async {
+    try {
+      return await _courseService.getCourseQuizzes(courseId);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Get quiz attempts (Teacher) - for now returns empty, will be implemented
+  Future<List<Attempt>> getQuizAttempts(int quizId) async {
+    try {
+      // TODO: Implement getAttemptsByQuiz in quiz_service
+      return [];
+    } catch (e) {
+      return [];
+    }
   }
 
   Future<bool> enrollStudentInCourse(int userId, int courseId, int enrolledBy) async {
