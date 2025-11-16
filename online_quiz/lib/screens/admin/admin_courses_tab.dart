@@ -907,20 +907,24 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                   // Reload courses
                   await notifier.loadAllCourses();
                   
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Course created successfully!'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Course created successfully!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
                 } else {
                   final courseState = ref.read(courseProvider);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(courseState.error ?? 'Failed to create course'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(courseState.error ?? 'Failed to create course'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 }
               }
             }
@@ -1615,21 +1619,25 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                   // Reload courses
                   await notifier.loadAllCourses();
                   
-                  AppDialog.show(
-                    context: context,
-                    title: 'Success',
-                    type: DialogType.success,
-                    content: Text('Section ${sectionController.text} added successfully!'),
-                    actions: [DialogAction.ok()],
-                  );
+                  if (context.mounted) {
+                    AppDialog.show(
+                      context: context,
+                      title: 'Success',
+                      type: DialogType.success,
+                      content: Text('Section ${sectionController.text} added successfully!'),
+                      actions: [DialogAction.ok()],
+                    );
+                  }
                 } else {
                   final courseState = ref.read(courseProvider);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(courseState.error ?? 'Failed to add section'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(courseState.error ?? 'Failed to add section'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 }
               }
             }
