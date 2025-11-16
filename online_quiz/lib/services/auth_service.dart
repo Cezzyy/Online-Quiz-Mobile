@@ -173,4 +173,323 @@ class AuthService {
       return null;
     }
   }
+
+  /// Get all users with their roles
+  Future<List<Map<String, dynamic>>> getAllUsers() async {
+    try {
+      final response = await _supabase
+          .from('User')
+          .select('''
+            *,
+            UserRole!inner(
+              RoleId,
+              Role!inner(
+                RoleId,
+                Name
+              )
+            )
+          ''')
+          .order('CreatedAt', ascending: false);
+
+      final users = <Map<String, dynamic>>[];
+      for (final userData in response) {
+        final user = models.User.fromJson(userData);
+        final roleData = userData['UserRole'];
+        final roleName = roleData is List 
+            ? roleData.isNotEmpty ? roleData[0]['Role']['Name'] : 'Unknown'
+            : roleData['Role']['Name'];
+
+        users.add({
+          'user': user,
+          'role': roleName,
+        });
+      }
+
+      return users;
+    } on PostgrestException catch (e) {
+      throw Exception('Failed to fetch users: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to fetch users: $e');
+    }
+  }
+
+  /// Get all teachers with user details
+  Future<List<Map<String, dynamic>>> getAllTeachers() async {
+    try {
+      final response = await _supabase
+          .from('Teacher')
+          .select('''
+            *,
+            User!inner(*)
+          ''')
+          .order('UserId', ascending: false);
+
+      final teachers = <Map<String, dynamic>>[];
+      for (final teacherData in response) {
+        final userData = teacherData['User'];
+        final user = models.User.fromJson(userData);
+        
+        teachers.add({
+          'user': user,
+          'department': teacherData['Department'],
+        });
+      }
+
+      return teachers;
+    } on PostgrestException catch (e) {
+      throw Exception('Failed to fetch teachers: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to fetch teachers: $e');
+    }
+  }
+
+  /// Get all students with user details
+  Future<List<Map<String, dynamic>>> getAllStudents() async {
+    try {
+      final response = await _supabase
+          .from('Student')
+          .select('''
+            *,
+            User!inner(*)
+          ''')
+          .order('UserId', ascending: false);
+
+      final students = <Map<String, dynamic>>[];
+      for (final studentData in response) {
+        final userData = studentData['User'];
+        final user = models.User.fromJson(userData);
+        
+        students.add({
+          'user': user,
+          'studentId': studentData['StudentId'],
+          'section': studentData['Section'],
+          'yearLevel': studentData['Year_Level'],
+          'course': studentData['Course'],
+        });
+      }
+
+      return students;
+    } on PostgrestException catch (e) {
+      throw Exception('Failed to fetch students: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to fetch students: $e');
+    }
+  }
+
+  /// Create a new user with role assignment
+  Future<models.User> createUser({
+    required String email,
+    required String password,
+    required String fullName,
+    required String role, // 'Student', 'Teacher', or 'Admin'
+    required int createdBy,
+    String? contactNumber,
+    String? emergencyContactNumber,
+    String? department, // For teachers
+    String? studentId, // For students
+    String? section, // For students
+    int? yearLevel, // For students
+  }) async {
+    try {
+      // 1. Create user record
+      final userResponse = await _supabase
+          .from('User')
+          .insert({
+            'Email': email,
+            'PasswordHash': password, // Note: In production, hash the password
+            'FullName': fullName,
+            'ContactNumber': contactNumber ?? '',
+            'EmergencyContactNumber': emergencyContactNumber ?? '',
+            'Status': 'Active',
+            'CreatedBy': createdBy,
+            'CreatedAt': DateTime.now().toIso8601String(),
+            'UpdatedAt': DateTime.now().toIso8601String(),
+          })
+          .select()
+          .single();
+
+      final user = models.User.fromJson(userResponse);
+
+      // 2. Get role ID
+      final roleResponse = await _supabase
+          .from('Role')
+          .select('RoleId')
+          .eq('Name', role)
+          .single();
+
+      final roleId = roleResponse['RoleId'] as int;
+
+      // 3. Assign user role
+      await _supabase
+          .from('UserRole')
+          .insert({
+            'UserId': user.userId,
+            'RoleId': roleId,
+          });
+
+      // 4. Create role-specific record
+      if (role == 'Teacher') {
+        await _supabase
+            .from('Teacher')
+            .insert({
+              'UserId': user.userId,
+              'Department': department ?? '',
+            });
+      } else if (role == 'Student') {
+        await _supabase
+            .from('Student')
+            .insert({
+              'UserId': user.userId,
+              'StudentId': studentId ?? '',
+              'Section': section ?? '',
+              'YearLevel': yearLevel ?? 1,
+            });
+      }
+
+      return user;
+    } on PostgrestException catch (e) {
+      throw Exception('Failed to create user: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to create user: $e');
+    }
+  }
+
+  /// Update user details
+  Future<void> updateUser({
+    required int userId,
+    String? email,
+    String? fullName,
+    String? contactNumber,
+    String? emergencyContactNumber,
+    String? status,
+    String? department, // For teachers
+    String? studentId, // For students
+    String? section, // For students
+    int? yearLevel, // For students
+  }) async {
+    try {
+      // Update user record
+      final updateData = <String, dynamic>{
+        'UpdatedAt': DateTime.now().toIso8601String(),
+      };
+
+      if (email != null) updateData['Email'] = email;
+      if (fullName != null) updateData['FullName'] = fullName;
+      if (contactNumber != null) updateData['ContactNumber'] = contactNumber;
+      if (emergencyContactNumber != null) updateData['EmergencyContactNumber'] = emergencyContactNumber;
+      if (status != null) updateData['Status'] = status;
+
+      await _supabase
+          .from('User')
+          .update(updateData)
+          .eq('UserId', userId);
+
+      // Update teacher-specific fields if provided
+      if (department != null) {
+        await _supabase
+            .from('Teacher')
+            .update({'Department': department})
+            .eq('UserId', userId);
+      }
+
+      // Update student-specific fields if provided
+      if (studentId != null || section != null || yearLevel != null) {
+        final studentUpdateData = <String, dynamic>{};
+        if (studentId != null) studentUpdateData['StudentId'] = studentId;
+        if (section != null) studentUpdateData['Section'] = section;
+        if (yearLevel != null) studentUpdateData['YearLevel'] = yearLevel;
+
+        await _supabase
+            .from('Student')
+            .update(studentUpdateData)
+            .eq('UserId', userId);
+      }
+    } on PostgrestException catch (e) {
+      throw Exception('Failed to update user: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to update user: $e');
+    }
+  }
+
+  /// Delete a user (soft delete by setting status to Inactive)
+  Future<void> deleteUser(int userId) async {
+    try {
+      // Soft delete - set status to Inactive
+      await _supabase
+          .from('User')
+          .update({
+            'Status': 'Inactive',
+            'UpdatedAt': DateTime.now().toIso8601String(),
+          })
+          .eq('UserId', userId);
+    } on PostgrestException catch (e) {
+      throw Exception('Failed to delete user: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to delete user: $e');
+    }
+  }
+
+  /// Get user role
+  Future<String?> getUserRole(int userId) async {
+    try {
+      final response = await _supabase
+          .from('UserRole')
+          .select('Role!inner(Name)')
+          .eq('UserId', userId)
+          .maybeSingle();
+
+      if (response == null) return null;
+
+      return response['Role']['Name'] as String;
+    } on PostgrestException catch (e) {
+      throw Exception('Failed to get user role: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to get user role: $e');
+    }
+  }
+
+  /// Get user with role and profile details
+  Future<Map<String, dynamic>?> getUserDetails(int userId) async {
+    try {
+      // Get user
+      final userResponse = await _supabase
+          .from('User')
+          .select('*')
+          .eq('UserId', userId)
+          .maybeSingle();
+
+      if (userResponse == null) return null;
+
+      final user = models.User.fromJson(userResponse);
+
+      // Get role
+      final role = await getUserRole(userId);
+
+      // Get profile data based on role
+      Map<String, dynamic>? profileData;
+      if (role == 'Student') {
+        profileData = await _supabase
+            .from('Student')
+            .select()
+            .eq('UserId', userId)
+            .maybeSingle();
+      } else if (role == 'Teacher') {
+        profileData = await _supabase
+            .from('Teacher')
+            .select()
+            .eq('UserId', userId)
+            .maybeSingle();
+      }
+
+      return {
+        'user': user,
+        'role': role,
+        'profile': profileData,
+      };
+    } on PostgrestException catch (e) {
+      throw Exception('Failed to get user details: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to get user details: $e');
+    }
+  }
 }

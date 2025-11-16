@@ -1,9 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../data/mock_data.dart';
 import '../models/user.dart';
 import '../models/teacher.dart';
 import '../models/student.dart';
-import '../models/user_role.dart';
+import '../services/auth_service.dart';
 
 // User management state
 class UserManagementState {
@@ -63,22 +62,55 @@ enum UserType { all, teachers, students }
 
 // User management notifier
 class UserManagementNotifier extends StateNotifier<UserManagementState> {
-  UserManagementNotifier() : super(const UserManagementState()) {
-    _loadUsers();
-  }
+  final AuthService _authService = AuthService();
 
-  void _loadUsers() {
-    state = state.copyWith(isLoading: true);
+  UserManagementNotifier() : super(const UserManagementState());
+
+  Future<void> loadUsers() async {
+    state = state.copyWith(isLoading: true, clearError: true);
     
-    // Simulate loading delay
-    Future.delayed(const Duration(milliseconds: 500), () {
+    try {
+      final usersData = await _authService.getAllUsers();
+      final teachersData = await _authService.getAllTeachers();
+      final studentsData = await _authService.getAllStudents();
+
+      final users = usersData.map((data) => data['user'] as User).toList();
+      final teachers = <Teacher>[];
+      final students = <Student>[];
+
+      // Process teachers
+      for (final data in teachersData) {
+        final user = data['user'] as User;
+        teachers.add(Teacher(
+          userId: user.userId,
+          department: data['department'] as String? ?? '',
+        ));
+      }
+
+      // Process students
+      for (final data in studentsData) {
+        final user = data['user'] as User;
+        students.add(Student(
+          userId: user.userId,
+          studentId: data['studentId'] as String? ?? '',
+          yearLevel: data['yearLevel'] as int?,
+          section: data['section'] as String?,
+          course: data['course'] as String?,
+        ));
+      }
+
       state = state.copyWith(
-        users: MockData.users,
-        teachers: MockData.teachers,
-        students: MockData.students,
+        users: users,
+        teachers: teachers,
+        students: students,
         isLoading: false,
       );
-    });
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+      );
+    }
   }
 
   void updateSearchQuery(String query) {
@@ -164,63 +196,33 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
     required String contactNumber,
     required String emergencyContactNumber,
     required UserType userType,
+    required int createdBy,
     String? department,
     String? studentId,
     int? yearLevel,
     String? section,
-    String? course,
   }) async {
     state = state.copyWith(isLoading: true, clearError: true);
     
     try {
-      // Simulate API call
-      await Future.delayed(const Duration(milliseconds: 1000));
+      final roleName = userType == UserType.teachers ? 'Teacher' : 'Student';
       
-      // Generate new user ID
-      final newUserId = MockData.users.isNotEmpty 
-          ? MockData.users.map((u) => u.userId).reduce((a, b) => a > b ? a : b) + 1
-          : 1;
-      
-      // Create new user
-      final newUser = User(
-        userId: newUserId,
+      await _authService.createUser(
         email: email,
-        passwordHash: 'hashed_$password', // In real app, properly hash password
+        password: password,
         fullName: fullName,
-        status: 'Active',
+        role: roleName,
+        createdBy: createdBy,
         contactNumber: contactNumber,
         emergencyContactNumber: emergencyContactNumber,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+        department: department,
+        studentId: studentId,
+        section: section,
+        yearLevel: yearLevel,
       );
       
-      // Add to mock data
-      MockData.users.add(newUser);
-      
-      // Add role
-      final roleId = userType == UserType.teachers ? 2 : 3; // Teacher or Student role
-      MockData.userRoles.add(UserRole(userId: newUserId, roleId: roleId));
-      
-      // Add specific user type data
-      if (userType == UserType.teachers && department != null) {
-        MockData.teachers.add(Teacher(userId: newUserId, department: department));
-      } else if (userType == UserType.students && studentId != null) {
-        MockData.students.add(Student(
-          userId: newUserId,
-          studentId: studentId,
-          yearLevel: yearLevel,
-          section: section,
-          course: course,
-        ));
-      }
-      
-      // Update state
-      state = state.copyWith(
-        users: List.from(MockData.users),
-        teachers: List.from(MockData.teachers),
-        students: List.from(MockData.students),
-        isLoading: false,
-      );
+      // Reload users after creation
+      await loadUsers();
       
     } catch (e) {
       state = state.copyWith(
@@ -240,55 +242,25 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
     String? studentId,
     int? yearLevel,
     String? section,
-    String? course,
   }) async {
     state = state.copyWith(isLoading: true, clearError: true);
     
     try {
-      // Simulate API call
-      await Future.delayed(const Duration(milliseconds: 800));
-      
-      // Update user in mock data
-      final userIndex = MockData.users.indexWhere((u) => u.userId == user.userId);
-      if (userIndex != -1) {
-        MockData.users[userIndex] = user.copyWith(
-          email: email ?? user.email,
-          fullName: fullName ?? user.fullName,
-          contactNumber: contactNumber ?? user.contactNumber,
-          emergencyContactNumber: emergencyContactNumber ?? user.emergencyContactNumber,
-          status: status ?? user.status,
-          updatedAt: DateTime.now(),
-        );
-      }
-      
-      // Update teacher data if applicable
-      if (department != null) {
-        final teacherIndex = MockData.teachers.indexWhere((t) => t.userId == user.userId);
-        if (teacherIndex != -1) {
-          MockData.teachers[teacherIndex] = MockData.teachers[teacherIndex].copyWith(department: department);
-        }
-      }
-      
-      // Update student data if applicable
-      if (studentId != null || yearLevel != null || section != null || course != null) {
-        final studentIndex = MockData.students.indexWhere((s) => s.userId == user.userId);
-        if (studentIndex != -1) {
-          MockData.students[studentIndex] = MockData.students[studentIndex].copyWith(
-            studentId: studentId ?? MockData.students[studentIndex].studentId,
-            yearLevel: yearLevel ?? MockData.students[studentIndex].yearLevel,
-            section: section ?? MockData.students[studentIndex].section,
-            course: course ?? MockData.students[studentIndex].course,
-          );
-        }
-      }
-      
-      // Update state
-      state = state.copyWith(
-        users: List.from(MockData.users),
-        teachers: List.from(MockData.teachers),
-        students: List.from(MockData.students),
-        isLoading: false,
+      await _authService.updateUser(
+        userId: user.userId,
+        email: email,
+        fullName: fullName,
+        contactNumber: contactNumber,
+        emergencyContactNumber: emergencyContactNumber,
+        status: status,
+        department: department,
+        studentId: studentId,
+        section: section,
+        yearLevel: yearLevel,
       );
+      
+      // Reload users after update
+      await loadUsers();
       
     } catch (e) {
       state = state.copyWith(
@@ -302,21 +274,12 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
     state = state.copyWith(isLoading: true, clearError: true);
     
     try {
-      // Simulate API call
-      await Future.delayed(const Duration(milliseconds: 600));
+      await _authService.deleteUser(user.userId);
       
-      // Remove from mock data
-      MockData.users.removeWhere((u) => u.userId == user.userId);
-      MockData.userRoles.removeWhere((ur) => ur.userId == user.userId);
-      MockData.teachers.removeWhere((t) => t.userId == user.userId);
-      MockData.students.removeWhere((s) => s.userId == user.userId);
+      // Reload users after deletion
+      await loadUsers();
       
-      // Update state
       state = state.copyWith(
-        users: List.from(MockData.users),
-        teachers: List.from(MockData.teachers),
-        students: List.from(MockData.students),
-        isLoading: false,
         selectedUser: null,
       );
       

@@ -22,8 +22,8 @@ class CourseState {
   
   // Admin/filtering properties
   final String searchQuery;
-  final String selectedStatus;
-  final String selectedCategory;
+  final String? selectedStatus;
+  final String? selectedCategory;
   final int? selectedInstructorId;
   final int currentPage;
   final int itemsPerPage;
@@ -41,8 +41,8 @@ class CourseState {
     this.courseQuizCounts = const {},
     this.completedQuizCounts = const {},
     this.searchQuery = '',
-    this.selectedStatus = 'All',
-    this.selectedCategory = 'All',
+    this.selectedStatus,
+    this.selectedCategory,
     this.selectedInstructorId,
     this.currentPage = 1,
     this.itemsPerPage = 10,

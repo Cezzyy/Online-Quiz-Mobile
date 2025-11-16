@@ -1,21 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../utils/app_theme.dart';
-import '../../data/mock_data.dart';
 import '../../models/user.dart';
 import '../../models/teacher.dart';
 import '../../models/student.dart';
 import '../../providers/user_management_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/dialog.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/info_card.dart';
 
-class AdminUsersTab extends ConsumerWidget {
+class AdminUsersTab extends ConsumerStatefulWidget {
   const AdminUsersTab({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AdminUsersTab> createState() => _AdminUsersTabState();
+}
+
+class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(userManagementProvider.notifier).loadUsers();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final userState = ref.watch(userManagementProvider);
     final userNotifier = ref.read(userManagementProvider.notifier);
 
@@ -61,39 +74,28 @@ class AdminUsersTab extends ConsumerWidget {
       ),
       child: Column(
         children: [
-          // Title and Stats
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // Quick Stats
+          Row(
             children: [
-              Text(
-                'User Management',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.getTextColor(context),
+              Expanded(
+                child: _buildQuickStat(context, 'Total', state.users.length.toString(), Icons.people),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQuickStat(
+                  context, 
+                  'Admins', 
+                  (state.users.length - state.teachers.length - state.students.length).toString(), 
+                  Icons.admin_panel_settings
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Manage teachers and students',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: AppTheme.getSecondaryTextColor(context),
-                ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQuickStat(context, 'Teachers', state.teachers.length.toString(), Icons.school),
               ),
-              const SizedBox(height: 16),
-              // Quick Stats - Wrap in SingleChildScrollView for horizontal scrolling
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _buildQuickStat(context, 'Total', state.users.length.toString(), Icons.people),
-                    const SizedBox(width: 12),
-                    _buildQuickStat(context, 'Teachers', state.teachers.length.toString(), Icons.school),
-                    const SizedBox(width: 12),
-                    _buildQuickStat(context, 'Students', state.students.length.toString(), Icons.person),
-                  ],
-                ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQuickStat(context, 'Students', state.students.length.toString(), Icons.person),
               ),
             ],
           ),
@@ -154,27 +156,36 @@ class AdminUsersTab extends ConsumerWidget {
 
   Widget _buildQuickStat(BuildContext context, String label, String value, IconData icon) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
         color: AppTheme.primaryColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             icon,
-            size: 14,
+            size: 16,
             color: AppTheme.primaryColor,
           ),
-          const SizedBox(width: 6),
+          const SizedBox(height: 4),
           Text(
-            '$value $label',
+            value,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.primaryColor,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
               fontWeight: FontWeight.w600,
               color: AppTheme.primaryColor,
             ),
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -184,6 +195,7 @@ class AdminUsersTab extends ConsumerWidget {
   Widget _buildContent(BuildContext context, UserManagementState state, UserManagementNotifier notifier) {
     final paginatedUsers = notifier.getPaginatedUsers();
     final totalPages = notifier.getTotalPages();
+    final userState = ref.watch(userManagementProvider);
     
     if (paginatedUsers.isEmpty) {
       return EmptyStateWidget(
@@ -205,127 +217,165 @@ class AdminUsersTab extends ConsumerWidget {
         // Table
         Expanded(
           child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SingleChildScrollView(
-              child: DataTable(
-                headingRowColor: WidgetStateProperty.all(
-                  AppTheme.getDividerColor(context).withValues(alpha: 0.1),
-                ),
-                dataRowColor: WidgetStateProperty.all(
-                  AppTheme.getCardColor(context),
-                ),
-                columns: const [
-                  DataColumn(label: Text('User')),
-                  DataColumn(label: Text('Email')),
-                  DataColumn(label: Text('Role')),
-                  DataColumn(label: Text('Status')),
-                  DataColumn(label: Text('Contact')),
-                  DataColumn(label: Text('Actions')),
-                ],
-                rows: paginatedUsers.map((user) {
-                  final userRole = MockData.getUserRole(user.userId);
-                  
-                  return DataRow(
-                    cells: [
-                      DataCell(
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            CircleAvatar(
-                              radius: 16,
-                              backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
-                              child: Text(
-                                user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : '?',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.primaryColor,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                user.fullName,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.getTextColor(context),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          user.email,
-                          style: TextStyle(
-                            color: AppTheme.getSecondaryTextColor(context),
-                          ),
-                        ),
-                      ),
-                      DataCell(
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: _getRoleColor(userRole).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            userRole ?? 'Unknown',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: _getRoleColor(userRole),
-                            ),
-                          ),
-                        ),
-                      ),
-                      DataCell(
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: user.isActive 
-                                ? Colors.green.withValues(alpha: 0.1)
-                                : Colors.red.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            user.status,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: user.isActive ? Colors.green : Colors.red,
-                            ),
-                          ),
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          user.contactNumber.isNotEmpty ? user.contactNumber : 'Not provided',
-                          style: TextStyle(
-                            color: AppTheme.getSecondaryTextColor(context),
-                          ),
-                        ),
-                      ),
-                      DataCell(
-                        PopupMenuButton<String>(
-                          onSelected: (value) => _handleUserAction(context, value, user, notifier),
-                          itemBuilder: (context) => [
-                            const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                            const PopupMenuItem(value: 'view', child: Text('View Details')),
-                            const PopupMenuItem(value: 'delete', child: Text('Delete')),
-                          ],
-                          child: Icon(
-                            Icons.more_vert,
-                            color: AppTheme.getSecondaryTextColor(context),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                }).toList(),
+            child: DataTable(
+              headingRowColor: WidgetStateProperty.all(
+                AppTheme.getDividerColor(context).withValues(alpha: 0.1),
               ),
+              dataRowColor: WidgetStateProperty.all(
+                AppTheme.getCardColor(context),
+              ),
+              columnSpacing: 24,
+              columns: const [
+                DataColumn(
+                  label: Expanded(
+                    child: Text(
+                      'Name',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Role',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Actions',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+              rows: paginatedUsers.map((user) {
+                // Determine role based on whether user is in teachers or students list
+                String userRole = 'User';
+                if (userState.teachers.any((t) => t.userId == user.userId)) {
+                  userRole = 'Teacher';
+                } else if (userState.students.any((s) => s.userId == user.userId)) {
+                  userRole = 'Student';
+                }
+                
+                return DataRow(
+                  cells: [
+                    DataCell(
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 18,
+                            backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
+                            child: Text(
+                              user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : '?',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primaryColor,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  user.fullName,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                    color: AppTheme.getTextColor(context),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  user.email,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppTheme.getSecondaryTextColor(context),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    DataCell(
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: _getRoleColor(userRole).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          userRole,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: _getRoleColor(userRole),
+                          ),
+                        ),
+                      ),
+                    ),
+                    DataCell(
+                      PopupMenuButton<String>(
+                        onSelected: (value) {
+                          switch (value) {
+                            case 'view':
+                              _showUserDetailsDialog(context, user);
+                              break;
+                            case 'edit':
+                              _showEditUserDialog(context, user, notifier);
+                              break;
+                            case 'delete':
+                              _showDeleteConfirmationDialog(context, user, notifier);
+                              break;
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: 'view',
+                            child: Row(
+                              children: [
+                                Icon(Icons.visibility_outlined, size: 18),
+                                SizedBox(width: 8),
+                                Text('View Details'),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                Icon(Icons.edit_outlined, size: 18),
+                                SizedBox(width: 8),
+                                Text('Edit'),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete_outline, size: 18),
+                                SizedBox(width: 8),
+                                Text('Delete'),
+                              ],
+                            ),
+                          ),
+                        ],
+                        child: Icon(
+                          Icons.more_vert,
+                          color: AppTheme.getSecondaryTextColor(context),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
             ),
           ),
         ),
@@ -466,20 +516,6 @@ class AdminUsersTab extends ConsumerWidget {
         return Colors.green;
       default:
         return Colors.grey;
-    }
-  }
-
-  void _handleUserAction(BuildContext context, String action, User user, UserManagementNotifier notifier) {
-    switch (action) {
-      case 'edit':
-        _showEditUserDialog(context, user, notifier);
-        break;
-      case 'view':
-        _showUserDetailsDialog(context, user);
-        break;
-      case 'delete':
-        _showDeleteConfirmationDialog(context, user, notifier);
-        break;
     }
   }
 
@@ -742,6 +778,9 @@ class AdminUsersTab extends ConsumerWidget {
             if (formKey.currentState!.validate()) {
               Navigator.of(context).pop();
               
+              final currentUser = ref.read(authProvider).user;
+              if (currentUser == null) return;
+
               await notifier.createUser(
                 email: emailController.text,
                 password: passwordController.text,
@@ -749,11 +788,11 @@ class AdminUsersTab extends ConsumerWidget {
                 contactNumber: contactController.text,
                 emergencyContactNumber: emergencyController.text,
                 userType: selectedUserType,
+                createdBy: currentUser.userId,
                 department: selectedUserType == UserType.teachers ? departmentController.text : null,
                 studentId: selectedUserType == UserType.students ? studentIdController.text : null,
                 yearLevel: selectedUserType == UserType.students ? selectedYearLevel : null,
                 section: selectedUserType == UserType.students ? sectionController.text : null,
-                course: selectedUserType == UserType.students ? courseController.text : null,
               );
               
               if (context.mounted) {
@@ -784,15 +823,24 @@ class AdminUsersTab extends ConsumerWidget {
     String? selectedStatus = user.status;
     int? selectedYearLevel;
     
-    // Get existing role-specific data
-    final userRole = MockData.getUserRole(user.userId);
-    final teacher = MockData.teachers.firstWhere((t) => t.userId == user.userId, orElse: () => Teacher(userId: -1));
-    final student = MockData.students.firstWhere((s) => s.userId == user.userId, orElse: () => Student(userId: -1, studentId: ''));
+    // Get existing role-specific data from state
+    final userState = ref.read(userManagementProvider);
+    String userRole = 'User';
+    Teacher? teacher;
+    Student? student;
     
-    if (teacher.userId != -1) {
+    if (userState.teachers.any((t) => t.userId == user.userId)) {
+      userRole = 'Teacher';
+      teacher = userState.teachers.firstWhere((t) => t.userId == user.userId);
+    } else if (userState.students.any((s) => s.userId == user.userId)) {
+      userRole = 'Student';
+      student = userState.students.firstWhere((s) => s.userId == user.userId);
+    }
+    
+    if (teacher != null) {
       departmentController.text = teacher.department ?? '';
     }
-    if (student.userId != -1) {
+    if (student != null) {
       studentIdController.text = student.studentId;
       selectedYearLevel = student.yearLevel;
       sectionController.text = student.section ?? '';
@@ -982,7 +1030,6 @@ class AdminUsersTab extends ConsumerWidget {
                 studentId: userRole == 'Student' ? studentIdController.text : null,
                 yearLevel: userRole == 'Student' ? selectedYearLevel : null,
                 section: userRole == 'Student' ? sectionController.text : null,
-                course: userRole == 'Student' ? courseController.text : null,
               );
               
               if (context.mounted) {
@@ -1001,9 +1048,18 @@ class AdminUsersTab extends ConsumerWidget {
   }
 
   void _showUserDetailsDialog(BuildContext context, User user) {
-    final userRole = MockData.getUserRole(user.userId);
-    final teacher = MockData.teachers.firstWhere((t) => t.userId == user.userId, orElse: () => Teacher(userId: -1));
-    final student = MockData.students.firstWhere((s) => s.userId == user.userId, orElse: () => Student(userId: -1, studentId: ''));
+    final userState = ref.read(userManagementProvider);
+    String userRole = 'User';
+    Teacher? teacher;
+    Student? student;
+    
+    if (userState.teachers.any((t) => t.userId == user.userId)) {
+      userRole = 'Teacher';
+      teacher = userState.teachers.firstWhere((t) => t.userId == user.userId);
+    } else if (userState.students.any((s) => s.userId == user.userId)) {
+      userRole = 'Student';
+      student = userState.students.firstWhere((s) => s.userId == user.userId);
+    }
 
     AppDialog.show(
       context: context,
@@ -1059,7 +1115,7 @@ class AdminUsersTab extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Text(
-                            userRole ?? 'Unknown',
+                            userRole,
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -1125,7 +1181,7 @@ class AdminUsersTab extends ConsumerWidget {
           const SizedBox(height: 24),
           
           // Role-specific Information
-          if (userRole == 'Teacher' && teacher.userId != -1) ...[
+          if (userRole == 'Teacher' && teacher != null) ...[
             Text(
               'Teacher Information',
               style: TextStyle(
@@ -1141,7 +1197,7 @@ class AdminUsersTab extends ConsumerWidget {
               value: teacher.department ?? 'Not specified',
               color: Colors.blue,
             ),
-          ] else if (userRole == 'Student' && student.userId != -1) ...[
+          ] else if (userRole == 'Student' && student != null) ...[
             Text(
               'Student Information',
               style: TextStyle(
@@ -1164,7 +1220,7 @@ class AdminUsersTab extends ConsumerWidget {
             InfoCardPresets.compact(
               icon: Icons.grade,
               title: 'Year Level',
-              value: student.yearLevel?.toString() ?? 'Not specified',
+              value: student.yearLevel.toString(),
               color: Colors.orange,
             ),
             
