@@ -62,6 +62,17 @@ jobs:
       - name: flutter pub get
         run: flutter pub get
 
+      - name: Create dummy .env file
+        run: |
+          cat > .env << EOF
+          SUPABASE_URL=https://dummy-url.supabase.co
+          SUPABASE_ANON_KEY=dummy-anon-key
+          SUPABASE_SERVICE_ROLE_KEY=dummy-service-role-key
+          DATABASE_URL=dummy-database-url
+          DIRECT_URL=dummy-direct-url
+          JWT_SECRET=dummy-jwt-secret
+          EOF
+
       - name: Analyze
         run: flutter analyze
 
