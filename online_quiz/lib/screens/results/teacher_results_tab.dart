@@ -121,7 +121,8 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
                       const Text('No courses assigned to you.')
                     else
                       DropdownButtonFormField<Course>(
-                    initialValue: _selectedCourse,
+                        initialValue: _selectedCourse,
+                        isExpanded: true,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
                           hintText: 'Choose a course',

@@ -21,13 +21,6 @@ class TeacherProfileTab extends ConsumerWidget {
     final authState = ref.watch(authProvider);
     final settingsState = ref.watch(settingsProvider);
     final teacherProfileState = ref.watch(teacherProfileProvider);
-    
-    // Load teacher data when user is authenticated
-    if (authState.isAuthenticated && authState.user != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(teacherProfileProvider.notifier).loadTeacherData(authState.user!.userId);
-      });
-    }
 
     // Show loading state
     if (teacherProfileState.isLoading && teacherProfileState.user == null) {
@@ -204,7 +197,7 @@ class TeacherProfileTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatisticsSection(BuildContext context, Map<String, int> statistics) {
+  Widget _buildStatisticsSection(BuildContext context, Map<String, num> statistics) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -223,7 +216,7 @@ class TeacherProfileTab extends ConsumerWidget {
               child: StatCard(
                 icon: Icons.class_outlined,
                 title: 'Courses',
-                value: statistics['courses']?.toString() ?? '0',
+                value: statistics['courses']?.toInt().toString() ?? '0',
                 color: AppTheme.getCourseColor('CS101'),
               ),
             ),
@@ -232,7 +225,7 @@ class TeacherProfileTab extends ConsumerWidget {
               child: StatCard(
                 icon: Icons.quiz_outlined,
                 title: 'Quizzes',
-                value: statistics['quizzes']?.toString() ?? '0',
+                value: statistics['quizzes']?.toInt().toString() ?? '0',
                 color: AppTheme.getQuizTypeColor('quiz'),
               ),
             ),
@@ -241,7 +234,7 @@ class TeacherProfileTab extends ConsumerWidget {
               child: StatCard(
                 icon: Icons.people_outlined,
                 title: 'Students',
-                value: statistics['students']?.toString() ?? '0',
+                value: statistics['students']?.toInt().toString() ?? '0',
                 color: AppTheme.getQuizTypeColor('course'),
               ),
             ),

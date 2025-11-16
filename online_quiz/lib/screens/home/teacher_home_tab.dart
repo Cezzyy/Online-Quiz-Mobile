@@ -1,23 +1,71 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/course.dart';
-import '../../models/attempt.dart';
 import '../../models/user.dart';
-import '../../data/mock_data.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/info_card.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../utils/app_theme.dart';
-import '../../providers/course_provider.dart';
-import '../../providers/quiz_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/teacher_profile_provider.dart';
+import '../../services/teacher_service.dart';
 
-class TeacherHomeTab extends ConsumerWidget {
+class TeacherHomeTab extends ConsumerStatefulWidget {
   const TeacherHomeTab({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TeacherHomeTab> createState() => _TeacherHomeTabState();
+}
+
+class _TeacherHomeTabState extends ConsumerState<TeacherHomeTab> {
+  List<Map<String, dynamic>> _recentActivity = [];
+  bool _isLoadingActivity = false;
+  String? _activityError;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final currentUser = ref.read(currentUserProvider);
+      if (currentUser != null && mounted) {
+        ref.read(teacherProfileProvider.notifier).loadTeacherData(currentUser.userId);
+        _loadRecentActivityData(currentUser.userId);
+      }
+    });
+  }
+
+  Future<void> _loadRecentActivityData(int userId) async {
+    if (!mounted) return;
+    
+    setState(() {
+      _isLoadingActivity = true;
+      _activityError = null;
+    });
+
+    try {
+      final teacherService = TeacherService();
+      final activity = await teacherService.getRecentActivity(userId, limit: 5);
+      
+      if (mounted) {
+        setState(() {
+          _recentActivity = activity;
+          _isLoadingActivity = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _activityError = e.toString();
+          _isLoadingActivity = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
+    final teacherState = ref.watch(teacherProfileProvider);
     
     if (currentUser == null) {
       return const Scaffold(
@@ -27,43 +75,74 @@ class TeacherHomeTab extends ConsumerWidget {
       );
     }
 
-    // Watch providers for reactive updates
-    final courseState = ref.watch(courseProvider);
-    
-    // Initialize providers if not already loaded
-    if (!courseState.isLoading && courseState.allCourses.isEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(courseProvider.notifier).initializeCourses(currentUser.userId);
-        ref.read(quizProvider.notifier).initializeQuizzes(currentUser.userId);
-      });
+    if (teacherState.isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (teacherState.error != null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: AppTheme.errorColor),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  teacherState.error!,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  ref.read(teacherProfileProvider.notifier).loadTeacherData(currentUser.userId);
+                },
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
     }
     
-    // Get teacher's courses
-    final teacherCourses = MockData.getCoursesByInstructor(currentUser.userId);
-    final teacherStats = _calculateTeacherStats(teacherCourses);
+    final statistics = ref.watch(teacherStatisticsProvider);
+    final courses = ref.watch(teacherCoursesProvider);
+    final quizzes = ref.watch(teacherQuizzesProvider);
     
     return Scaffold(
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 20),
-            // Welcome Section
-            _buildWelcomeSection(context, currentUser),
-            const SizedBox(height: 30),
-            
-            // Statistics Cards
-            _buildStatsSection(context, teacherStats),
-            const SizedBox(height: 30),
-            
-            // Course Overview
-            _buildCourseOverview(context, teacherCourses),
-            const SizedBox(height: 30),
-            
-            // Recent Quiz Activity
-            _buildRecentQuizActivity(context, teacherCourses),
-          ],
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await ref.read(teacherProfileProvider.notifier).refreshTeacherData(currentUser.userId);
+          await _loadRecentActivityData(currentUser.userId);
+        },
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 20),
+              // Welcome Section
+              _buildWelcomeSection(context, currentUser),
+              const SizedBox(height: 30),
+              
+              // Statistics Cards
+              _buildStatsSection(context, statistics, teacherState.totalStudents),
+              const SizedBox(height: 30),
+              
+              // Course Overview
+              _buildCourseOverview(context, courses, quizzes),
+              const SizedBox(height: 30),
+              
+              // Recent Quiz Activity
+              _buildRecentQuizActivity(context),
+            ],
+          ),
         ),
       ),
     );
@@ -135,7 +214,7 @@ class TeacherHomeTab extends ConsumerWidget {
     );
   }
   
-  Widget _buildStatsSection(BuildContext context, Map<String, dynamic> stats) {
+  Widget _buildStatsSection(BuildContext context, Map<String, num> stats, double totalStudents) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -154,7 +233,7 @@ class TeacherHomeTab extends ConsumerWidget {
               child: StatCard(
                 icon: Icons.book_outlined,
                 title: 'Courses',
-                value: stats['totalCourses'].toString(),
+                value: stats['courses'].toString(),
                 color: AppTheme.getQuizTypeColor('course'),
               ),
             ),
@@ -163,7 +242,7 @@ class TeacherHomeTab extends ConsumerWidget {
               child: StatCard(
                 icon: Icons.people_outline,
                 title: 'Students',
-                value: stats['totalStudents'].toString(),
+                value: totalStudents.toInt().toString(),
                 color: AppTheme.successColor,
               ),
             ),
@@ -176,7 +255,7 @@ class TeacherHomeTab extends ConsumerWidget {
               child: StatCard(
                 icon: Icons.quiz_outlined,
                 title: 'Quizzes',
-                value: stats['totalQuizzes'].toString(),
+                value: stats['quizzes'].toString(),
                 color: AppTheme.getQuizTypeColor('quiz'),
               ),
             ),
@@ -184,8 +263,8 @@ class TeacherHomeTab extends ConsumerWidget {
             Expanded(
               child: StatCard(
                 icon: Icons.assignment_turned_in_outlined,
-                title: 'Submissions',
-                value: stats['totalSubmissions'].toString(),
+                title: 'Quizzes',
+                value: stats['quizzes'].toString(),
                 color: AppTheme.getQuizTypeColor('system'),
               ),
             ),
@@ -195,7 +274,7 @@ class TeacherHomeTab extends ConsumerWidget {
     );
   }
   
-  Widget _buildCourseOverview(BuildContext context, List<Course> courses) {
+  Widget _buildCourseOverview(BuildContext context, List<Course> courses, List<dynamic> allQuizzes) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -237,39 +316,21 @@ class TeacherHomeTab extends ConsumerWidget {
           )
         else
           Column(
-            children: courses.map((course) {
-              final courseQuizzes = MockData.getQuizzesByCourse(course.courseId);
-              final enrolledStudents = MockData.getEnrollmentsByCourse(course.courseId);
-              final totalAttempts = _getTotalAttemptsForCourse(course.courseId);
+            children: courses.take(5).map((course) {
+              final courseQuizzes = allQuizzes.where((q) => q.courseId == course.courseId).toList();
               final courseColor = AppTheme.getCourseColor(course.code);
               
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: InfoCard(
                   icon: Icons.book,
-                  title: '${enrolledStudents.length} Students • ${courseQuizzes.length} Quizzes',
+                  title: '${course.code} • ${courseQuizzes.length} Quizzes',
                   value: course.name,
                   iconColor: courseColor,
-                  trailing: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '$totalAttempts',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                      Text(
-                        'Submissions',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.getSecondaryTextColor(context),
-                        ),
-                      ),
-                    ],
+                  trailing: Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: AppTheme.getSecondaryTextColor(context),
                   ),
                   onTap: () {
                     // Navigate to course details
@@ -282,9 +343,7 @@ class TeacherHomeTab extends ConsumerWidget {
     );
   }
   
-  Widget _buildRecentQuizActivity(BuildContext context, List<Course> courses) {
-    final recentAttempts = _getRecentAttempts(courses);
-    
+  Widget _buildRecentQuizActivity(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -297,7 +356,26 @@ class TeacherHomeTab extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 16),
-        if (recentAttempts.isEmpty)
+        if (_isLoadingActivity)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(20.0),
+              child: CircularProgressIndicator(),
+            ),
+          )
+        else if (_activityError != null)
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppTheme.getCardColor(context),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'Error loading activity: $_activityError',
+              style: TextStyle(color: AppTheme.errorColor),
+            ),
+          )
+        else if (_recentActivity.isEmpty)
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -312,45 +390,37 @@ class TeacherHomeTab extends ConsumerWidget {
                 ),
               ],
             ),
-            child: EmptyStateWidget(
+            child: const EmptyStateWidget(
               icon: Icons.quiz_outlined,
               title: 'No Recent Activity',
               message: 'No quiz submissions yet. Students will appear here once they start taking quizzes.',
               iconSize: 48,
               titleFontSize: 16,
               messageFontSize: 14,
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16),
             ),
           )
         else
           Column(
-            children: recentAttempts.take(5).map((attempt) {
-              final quiz = MockData.getQuizById(attempt.quizId);
-              final student = MockData.getUserById(attempt.userId);
-              final course = courses.firstWhere((c) => 
-                MockData.getQuizzesByCourse(c.courseId).any((q) => q.quizId == attempt.quizId)
-              );
-              
-              if (quiz == null || student == null) return const SizedBox.shrink();
-              
-              // Calculate percentage score
-              final questions = MockData.getQuestionsByQuiz(attempt.quizId);
-              final totalPoints = questions.fold<double>(0.0, (sum, q) => sum + q.points);
-              final scorePercentage = totalPoints > 0 ? (attempt.score / totalPoints) * 100 : 0.0;
+            children: _recentActivity.map((activity) {
+              final scorePercentage = (activity['TotalScore'] as num?)?.toDouble() ?? 0.0;
+              final submittedAt = activity['SubmittedAt'] != null 
+                  ? DateTime.parse(activity['SubmittedAt'] as String)
+                  : DateTime.now();
               
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: InfoCard(
                   icon: Icons.assignment_turned_in,
-                  title: student.fullName,
-                  value: '${quiz.title} • ${course.code}',
+                  title: activity['StudentName'] as String? ?? 'Unknown Student',
+                  value: '${activity['QuizName'] as String? ?? 'Quiz'} • ${activity['CourseCode'] as String? ?? ''}',
                   iconColor: AppTheme.getScoreColor(scorePercentage),
                   trailing: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        '${scorePercentage.toStringAsFixed(1)}%',
+                        scorePercentage.toStringAsFixed(1),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -358,7 +428,7 @@ class TeacherHomeTab extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        _formatDate(attempt.submittedAt ?? DateTime.now()),
+                        _formatDate(submittedAt),
                         style: TextStyle(
                           fontSize: 12,
                           color: AppTheme.getSecondaryTextColor(context),
@@ -375,64 +445,6 @@ class TeacherHomeTab extends ConsumerWidget {
           ),
       ],
     );
-  }
-  
-  Map<String, dynamic> _calculateTeacherStats(List<Course> courses) {
-    int totalStudents = 0;
-    int totalQuizzes = 0;
-    int totalSubmissions = 0;
-    
-    for (var course in courses) {
-      // Count enrolled students
-      final enrollments = MockData.getEnrollmentsByCourse(course.courseId);
-      totalStudents += enrollments.length;
-      
-      // Count quizzes
-      final quizzes = MockData.getQuizzesByCourse(course.courseId);
-      totalQuizzes += quizzes.length;
-      
-      // Count submissions
-      for (var quiz in quizzes) {
-        final attempts = MockData.getAttemptsByQuiz(quiz.quizId);
-        totalSubmissions += attempts.where((a) => a.submittedAt != null).length;
-      }
-    }
-    
-    return {
-      'totalCourses': courses.length,
-      'totalStudents': totalStudents,
-      'totalQuizzes': totalQuizzes,
-      'totalSubmissions': totalSubmissions,
-    };
-  }
-  
-  int _getTotalAttemptsForCourse(int courseId) {
-    final quizzes = MockData.getQuizzesByCourse(courseId);
-    int totalAttempts = 0;
-    
-    for (var quiz in quizzes) {
-      final attempts = MockData.getAttemptsByQuiz(quiz.quizId);
-      totalAttempts += attempts.where((a) => a.submittedAt != null).length;
-    }
-    
-    return totalAttempts;
-  }
-  
-  List<Attempt> _getRecentAttempts(List<Course> courses) {
-    List<Attempt> allAttempts = [];
-    
-    for (var course in courses) {
-      final quizzes = MockData.getQuizzesByCourse(course.courseId);
-      for (var quiz in quizzes) {
-        final attempts = MockData.getAttemptsByQuiz(quiz.quizId);
-        allAttempts.addAll(attempts.where((a) => a.submittedAt != null));
-      }
-    }
-    
-    // Sort by submission date (most recent first)
-    allAttempts.sort((a, b) => (b.submittedAt ?? DateTime.now()).compareTo(a.submittedAt ?? DateTime.now()));
-    
-    return allAttempts;
   }
   
 

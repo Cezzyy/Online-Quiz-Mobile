@@ -4,6 +4,7 @@ import '../../models/course.dart';
 import '../../models/quiz.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/stat_card.dart';
+import '../../widgets/info_card.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/course_provider.dart';
 import '../../providers/quiz_provider.dart';
@@ -215,7 +216,16 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
                     ),
                     const SizedBox(height: 12),
                     if (teacherCourses.isEmpty)
-                      const Text('No courses assigned to you.')
+                      InfoCard(
+                        icon: Icons.class_outlined,
+                        title: 'Select Course',
+                        value: 'No courses assigned to you.',
+                        iconColor: Theme.of(context).colorScheme.primary,
+                        padding: const EdgeInsets.all(16),
+                        iconSize: 20,
+                        titleFontSize: 12,
+                        valueFontSize: 14,
+                      )
                     else
                       DropdownButtonFormField<Course>(
                         initialValue: selectedCourse,
@@ -310,24 +320,60 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
 
             // Quiz List
             Expanded(
-              child: selectedCourse == null
-                  ? EmptyStateWidget(
-                      icon: Icons.school,
-                      title: 'Select a Course',
-                      message: 'Choose a course from the dropdown above to manage its quizzes.',
+              child: isRefreshing
+                  ? const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text('Refreshing courses...'),
+                        ],
+                      ),
                     )
-                  : courseQuizzes.isEmpty
+                  : teacherCourses.isEmpty
+                  ? EmptyStateWidget(
+                      icon: Icons.class_outlined,
+                      title: 'No Classes Assigned',
+                      message: 'You don\'t have any classes assigned yet.',
+                      subtitle: 'Contact your administrator to get courses assigned.',
+                      showInfoCard: true,
+                      infoCardText: 'If you recently received assignments, refresh to load them.',
+                      action: ElevatedButton(
+                        onPressed: () async {
+                          setState(() {
+                            isRefreshing = true;
+                          });
+                          
+                          await ref.read(courseProvider.notifier).initializeCourses(currentUser.userId);
+                          
+                          if (mounted) {
+                            setState(() {
+                              isRefreshing = false;
+                            });
+                          }
+                        },
+                        child: const Text('Refresh'),
+                      ),
+                    )
+                  : selectedCourse == null
                       ? EmptyStateWidget(
-                          icon: Icons.quiz_outlined,
-                          title: 'No Quizzes Yet',
-                          message: 'Create your first quiz for ${selectedCourse!.name}.',
-                          action: ElevatedButton.icon(
-                            onPressed: _showCreateQuizDialog,
-                            icon: const Icon(Icons.add),
-                            label: const Text('Create Quiz'),
-                          ),
+                          icon: Icons.school,
+                          title: 'Select a Course',
+                          message: 'Choose a course from the dropdown above to manage its quizzes.',
                         )
-                      : isRefreshing
+                      : courseQuizzes.isEmpty
+                          ? EmptyStateWidget(
+                              icon: Icons.quiz_outlined,
+                              title: 'No Quizzes Yet',
+                              message: 'Create your first quiz for ${selectedCourse!.name}.',
+                              action: ElevatedButton.icon(
+                                onPressed: _showCreateQuizDialog,
+                                icon: const Icon(Icons.add),
+                                label: const Text('Create Quiz'),
+                              ),
+                            )
+                          : isRefreshing
                           ? const Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,

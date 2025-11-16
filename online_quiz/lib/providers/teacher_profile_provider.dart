@@ -3,7 +3,9 @@ import '../models/user.dart';
 import '../models/teacher.dart';
 import '../models/course.dart';
 import '../models/quiz.dart';
-import '../data/mock_data.dart';
+import '../services/teacher_service.dart';
+import '../services/course_service.dart';
+import '../services/quiz_service.dart';
 
 // State class to hold teacher profile data and UI state
 class TeacherProfileState {
@@ -11,7 +13,7 @@ class TeacherProfileState {
   final Teacher? teacher;
   final List<Course> courses;
   final List<Quiz> quizzes;
-  final int totalStudents;
+  final double totalStudents;
   final bool isLoading;
   final String? error;
 
@@ -30,7 +32,7 @@ class TeacherProfileState {
     Teacher? teacher,
     List<Course>? courses,
     List<Quiz>? quizzes,
-    int? totalStudents,
+    double? totalStudents,
     bool? isLoading,
     String? error,
     bool clearError = false,
@@ -56,38 +58,54 @@ class TeacherProfileNotifier extends StateNotifier<TeacherProfileState> {
     state = state.copyWith(isLoading: true, clearError: true);
     
     try {
-      await Future.delayed(const Duration(milliseconds: 500));
+      final teacherService = TeacherService();
+      final courseService = CourseService();
+      final quizService = QuizService();
       
-      // Get user data
-      final user = MockData.getUserById(userId);
-      if (user == null) {
+      // Get teacher data with user info
+      final teacherData = await teacherService.getTeacherWithUser(userId);
+      if (teacherData == null) {
         state = state.copyWith(
           isLoading: false,
-          error: 'User not found',
+          error: 'Teacher not found',
         );
         return;
       }
 
-      // Get teacher data
-      final teacher = MockData.teachers.firstWhere(
-        (t) => t.userId == userId,
-        orElse: () => Teacher(userId: userId, department: 'Unknown'),
+      // Extract user and teacher from combined data
+      final user = User(
+        userId: teacherData['UserId'] as int,
+        fullName: teacherData['FullName'] as String,
+        email: teacherData['Email'] as String,
+        passwordHash: '', // Not needed for display
+        status: teacherData['Status'] as String? ?? 'Active',
+        contactNumber: teacherData['ContactNumber'] as String? ?? '',
+        emergencyContactNumber: teacherData['EmergencyContactNumber'] as String? ?? '',
+        createdAt: DateTime.parse(teacherData['CreatedAt'] as String),
+        updatedAt: teacherData['UpdatedAt'] != null 
+            ? DateTime.parse(teacherData['UpdatedAt'] as String)
+            : DateTime.parse(teacherData['CreatedAt'] as String),
+        createdBy: teacherData['CreatedBy'] as int?,
+      );
+
+      final teacher = Teacher(
+        userId: teacherData['UserId'] as int,
+        department: teacherData['Department'] as String?,
       );
 
       // Get teacher's courses
-      final courses = MockData.getCoursesByInstructor(userId);
+      final courses = await courseService.getCoursesByInstructor(userId);
       
       // Get all quizzes for teacher's courses
       final quizzes = <Quiz>[];
       for (final course in courses) {
-        quizzes.addAll(MockData.getQuizzesByCourse(course.courseId));
+        final courseQuizzes = await quizService.getQuizzesByCourse(course.courseId);
+        quizzes.addAll(courseQuizzes);
       }
 
-      // Calculate total students across all courses
-      int totalStudents = 0;
-      for (final course in courses) {
-        totalStudents += MockData.getEnrollmentsByCourse(course.courseId).length;
-      }
+      // Get teacher statistics for total students
+      final statistics = await teacherService.getTeacherStatistics(userId);
+      final totalStudents = (statistics['totalStudents'] as num?)?.toDouble() ?? 0.0;
 
       state = state.copyWith(
         user: user,
@@ -112,7 +130,7 @@ class TeacherProfileNotifier extends StateNotifier<TeacherProfileState> {
   }
 
   // Get teaching statistics
-  Map<String, int> getTeachingStatistics() {
+  Map<String, num> getTeachingStatistics() {
     return {
       'courses': state.courses.length,
       'quizzes': state.quizzes.length,
@@ -171,9 +189,13 @@ final teacherQuizzesProvider = Provider<List<Quiz>>((ref) {
   return ref.watch(teacherProfileProvider).quizzes;
 });
 
-final teacherStatisticsProvider = Provider<Map<String, int>>((ref) {
-  final notifier = ref.watch(teacherProfileProvider.notifier);
-  return notifier.getTeachingStatistics();
+final teacherStatisticsProvider = Provider<Map<String, num>>((ref) {
+  final state = ref.watch(teacherProfileProvider);
+  return {
+    'courses': state.courses.length,
+    'quizzes': state.quizzes.length,
+    'students': state.totalStudents,
+  };
 });
 
 final teacherIsLoadingProvider = Provider<bool>((ref) {
