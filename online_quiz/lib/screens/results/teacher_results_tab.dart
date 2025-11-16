@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/course.dart';
 import '../../models/quiz.dart';
-
-import '../../data/mock_data.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/course_provider.dart';
 import '../../providers/quiz_provider.dart';
+import '../../providers/analytics_provider.dart';
 import '../../widgets/empty_state_widget.dart';
+import '../../widgets/info_card.dart';
 import 'quiz_student_results_screen.dart';
 
 class TeacherResultsTab extends ConsumerStatefulWidget {
@@ -92,8 +92,7 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
       );
     }
 
-    final teacherCourses = _getTeacherCourses(authState.user!.userId);
-    final filteredResults = _getFilteredResults(teacherCourses);
+    final teacherCourses = courseState.allCourses;
 
     return Scaffold(
         body: Padding(
@@ -118,7 +117,16 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
                     ),
                     const SizedBox(height: 12),
                     if (teacherCourses.isEmpty)
-                      const Text('No courses assigned to you.')
+                      InfoCard(
+                        icon: Icons.class_outlined,
+                        title: 'Select Course',
+                        value: 'No courses assigned to you.',
+                        iconColor: Theme.of(context).colorScheme.primary,
+                        padding: const EdgeInsets.all(16),
+                        iconSize: 20,
+                        titleFontSize: 12,
+                        valueFontSize: 14,
+                      )
                     else
                       DropdownButtonFormField<Course>(
                         initialValue: _selectedCourse,
@@ -153,39 +161,34 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
 
             // Results Content
             Expanded(
-              child: _selectedCourse == null
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.school_outlined,
-                            size: 64,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Select a course to view results',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                            ),
-                          ),
-                        ],
+              child: teacherCourses.isEmpty
+                  ? EmptyStateWidget(
+                      icon: Icons.class_outlined,
+                      title: 'No Classes Assigned',
+                      message: 'You don\'t have any classes assigned yet.',
+                      subtitle: 'Contact your administrator to get courses assigned.',
+                      showInfoCard: true,
+                      infoCardText: 'If you recently received assignments, refresh to load them.',
+                      action: ElevatedButton(
+                        onPressed: () async {
+                          final user = ref.read(authProvider).user;
+                          if (user != null) {
+                            await ref.read(courseProvider.notifier).initializeCourses(user.userId);
+                            if (mounted) {
+                              setState(() {});
+                            }
+                          }
+                        },
+                        child: const Text('Refresh'),
                       ),
                     )
-                  : filteredResults.isEmpty
+                  : _selectedCourse == null
                       ? EmptyStateWidget(
                           icon: Icons.analytics_outlined,
-                          title: 'No Results Available',
-                          message: 'No quiz results found for this course',
+                          title: 'Select a Course',
+                          message: 'Choose a course from the dropdown above to view results and analytics.',
                         )
-                      : ListView(
-                          children: [
-                            // Show detailed results for selected course
-                            ..._buildDetailedCourseResults(_selectedCourse!.courseId),
-                            const SizedBox(height: 20),
-                          ],
-                        ),
+                      : _buildCourseResults(_selectedCourse!),
             ),
           ],
         ),
@@ -193,91 +196,216 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
     );
   }
 
-  List<Course> _getTeacherCourses(int teacherId) {
-    return MockData.getCoursesByInstructor(teacherId);
-  }
+  Widget _buildCourseResults(Course course) {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: ref.read(analyticsProvider.notifier).getCourseStatistics(course.courseId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-
-
-  List<dynamic> _getFilteredResults(List<Course> courses) {
-    if (_selectedCourse == null) {
-      return [];
-    } else {
-      final quizzes = MockData.getQuizzesByCourse(_selectedCourse!.courseId);
-      return quizzes;
-    }
-  }
-
-  List<Widget> _buildDetailedCourseResults(int courseId) {
-    final quizzes = MockData.getQuizzesByCourse(courseId);
-    final enrollments = MockData.getEnrollmentsByCourse(courseId);
-
-    List<Widget> widgets = [];
-
-    // Course header
-    widgets.add(
-      Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
-              spreadRadius: 1,
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.school_outlined,
-                    color: Theme.of(context).colorScheme.primary,
-                    size: 24,
-                  ),
+                Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.error,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    '${enrollments.length} students enrolled',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
+                const SizedBox(height: 16),
+                Text('Error loading course statistics'),
+                const SizedBox(height: 8),
+                ElevatedButton(
+                  onPressed: () => setState(() {}),
+                  child: const Text('Retry'),
                 ),
               ],
             ),
+          );
+        }
+
+        final statistics = snapshot.data!;
+        final allQuizzes = ref.read(quizProvider).allQuizzes;
+        final quizzes = allQuizzes.where((q) => q.courseId == course.courseId).toList();
+
+        if (quizzes.isEmpty) {
+          return EmptyStateWidget(
+            icon: Icons.quiz_outlined,
+            title: 'No Quizzes Yet',
+            message: 'Create quizzes for this course to see analytics',
+          );
+        }
+
+        return ListView(
+          children: [
+            _buildCourseStatisticsCard(course, statistics),
+            const SizedBox(height: 20),
+            _buildQuizzesList(quizzes),
+            const SizedBox(height: 20),
           ],
-        ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCourseStatisticsCard(Course course, Map<String, dynamic> statistics) {
+    final totalStudents = statistics['totalStudents'] as int;
+    final totalQuizzes = statistics['totalQuizzes'] as int;
+    final publishedQuizzes = statistics['publishedQuizzes'] as int;
+    final averageScore = statistics['averageScore'] as double;
+    final completionRate = statistics['completionRate'] as double;
+    final activeStudents = statistics['activeStudents'] as int;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
+            spreadRadius: 1,
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.school_outlined,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      course.name,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    Text(
+                      course.code,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatItem(
+                  icon: Icons.people_outline,
+                  label: 'Total Students',
+                  value: totalStudents.toString(),
+                ),
+              ),
+              Expanded(
+                child: _buildStatItem(
+                  icon: Icons.check_circle_outline,
+                  label: 'Active Students',
+                  value: activeStudents.toString(),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatItem(
+                  icon: Icons.quiz_outlined,
+                  label: 'Quizzes',
+                  value: '$publishedQuizzes/$totalQuizzes',
+                ),
+              ),
+              Expanded(
+                child: _buildStatItem(
+                  icon: Icons.trending_up,
+                  label: 'Avg Score',
+                  value: '${averageScore.toStringAsFixed(1)}%',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildStatItem(
+            icon: Icons.task_alt,
+            label: 'Completion Rate',
+            value: '${completionRate.toStringAsFixed(1)}%',
+          ),
+        ],
       ),
     );
+  }
 
-    widgets.add(const SizedBox(height: 20));
-
-    // Quiz results
-    if (quizzes.isEmpty) {
-      widgets.add(
-        EmptyStateWidget(
-          icon: Icons.quiz_outlined,
-          title: 'No Quizzes',
-          message: 'No quizzes have been created for this course yet.',
+  Widget _buildStatItem({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 20,
+          color: Theme.of(context).colorScheme.primary,
         ),
-      );
-    } else {
-      widgets.add(
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuizzesList(List<Quiz> quizzes) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         Text(
           'Quiz Results',
           style: TextStyle(
@@ -286,84 +414,78 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
-      );
-      widgets.add(const SizedBox(height: 16));
-
-      for (final quiz in quizzes) {
-        widgets.add(_buildQuizResultCard(quiz));
-        widgets.add(const SizedBox(height: 12));
-      }
-    }
-
-    return widgets;
+        const SizedBox(height: 16),
+        ...quizzes.map((quiz) => _buildQuizResultCard(quiz)),
+      ],
+    );
   }
 
   Widget _buildQuizResultCard(Quiz quiz) {
-    final attempts = MockData.getAttemptsByQuiz(quiz.quizId)
-        .where((a) => a.submittedAt != null)
-        .toList();
-    
-    final questions = MockData.getQuestionsByQuiz(quiz.quizId);
-    final totalPoints = questions.fold<double>(0.0, (sum, q) => sum + q.points);
-    
-    // Get all enrolled students for this course to calculate completion rate
-    final course = MockData.getCourseById(quiz.courseId)!;
-    final enrollments = MockData.getEnrollmentsByCourse(course.courseId);
-    final totalStudents = enrollments.length;
-    final completionRate = totalStudents > 0 ? (attempts.length / totalStudents) * 100 : 0.0;
-    
-    double averageScore = 0.0;
-    double averagePercentage = 0.0;
-    
-    if (attempts.isNotEmpty) {
-      averageScore = attempts.fold<double>(0, (sum, a) => sum + a.score) / attempts.length;
-      averagePercentage = totalPoints > 0 ? (averageScore / totalPoints) * 100 : 0.0;
-    }
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
-        leading: CircleAvatar(
-          backgroundColor: Colors.blue.withValues(alpha: 0.1),
-          child: Icon(
-            Icons.quiz_outlined,
-            color: Colors.blue,
-          ),
-        ),
-        title: Text(
-          quiz.title,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text('${attempts.length} attempts'),
-            Text('Avg Score: ${averagePercentage.toStringAsFixed(1)}%'),
-            Text('Completion: ${completionRate.toStringAsFixed(1)}%'),
-            if (quiz.dueAt != null)
-              Text(
-                'Due: ${_formatDate(quiz.dueAt!)}',
-                style: TextStyle(
-                  color: quiz.isOverdue ? Colors.red : null,
-                ),
-              ),
-          ],
-        ),
-        onTap: () {
-          // Navigate to quiz student results screen
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => QuizStudentResultsScreen(
-                quiz: quiz,
-                course: _selectedCourse!,
-              ),
+    return FutureBuilder<Map<String, dynamic>>(
+      future: ref.read(analyticsProvider.notifier).getQuizAnalytics(quiz.quizId),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: const ListTile(
+              contentPadding: EdgeInsets.all(16),
+              leading: CircularProgressIndicator(),
+              title: Text('Loading...'),
             ),
           );
-        },
-      ),
+        }
+
+        final analytics = snapshot.data!;
+        final completedAttempts = analytics['completedAttempts'] as int;
+        final averagePercentage = analytics['averagePercentage'] as double;
+        final completionRate = analytics['completionRate'] as double;
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(16),
+            leading: CircleAvatar(
+              backgroundColor: Colors.blue.withValues(alpha: 0.1),
+              child: const Icon(
+                Icons.quiz_outlined,
+                color: Colors.blue,
+              ),
+            ),
+            title: Text(
+              quiz.title,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 4),
+                Text('$completedAttempts attempts'),
+                Text('Avg Score: ${averagePercentage.toStringAsFixed(1)}%'),
+                Text('Completion: ${completionRate.toStringAsFixed(1)}%'),
+                if (quiz.dueAt != null)
+                  Text(
+                    'Due: ${_formatDate(quiz.dueAt!)}',
+                    style: TextStyle(
+                      color: quiz.isOverdue ? Colors.red : null,
+                    ),
+                  ),
+              ],
+            ),
+            onTap: () {
+              // Navigate to quiz student results screen
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => QuizStudentResultsScreen(
+                    quiz: quiz,
+                    course: _selectedCourse!,
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 

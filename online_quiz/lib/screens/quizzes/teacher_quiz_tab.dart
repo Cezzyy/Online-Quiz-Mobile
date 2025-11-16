@@ -191,6 +191,12 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
       );
     }
 
+    if (courseState.isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final teacherCourses = courseState.allCourses;
 
     return Scaffold(
@@ -320,18 +326,7 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
 
             // Quiz List
             Expanded(
-              child: isRefreshing
-                  ? const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(),
-                          SizedBox(height: 16),
-                          Text('Refreshing courses...'),
-                        ],
-                      ),
-                    )
-                  : teacherCourses.isEmpty
+              child: teacherCourses.isEmpty
                   ? EmptyStateWidget(
                       icon: Icons.class_outlined,
                       title: 'No Classes Assigned',
@@ -341,16 +336,9 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
                       infoCardText: 'If you recently received assignments, refresh to load them.',
                       action: ElevatedButton(
                         onPressed: () async {
-                          setState(() {
-                            isRefreshing = true;
-                          });
-                          
                           await ref.read(courseProvider.notifier).initializeCourses(currentUser.userId);
-                          
                           if (mounted) {
-                            setState(() {
-                              isRefreshing = false;
-                            });
+                            setState(() {});
                           }
                         },
                         child: const Text('Refresh'),
