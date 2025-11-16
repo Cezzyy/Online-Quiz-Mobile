@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/user_profile_provider.dart';
+import '../../providers/auth_provider.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -22,7 +23,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     
     // Load user data when screen initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(userProfileProvider.notifier).loadUserData();
+      final authState = ref.read(authProvider);
+      if (authState.user != null) {
+        ref.read(userProfileProvider.notifier).loadUserData(authState.user!.userId);
+      }
     });
   }
 
@@ -136,7 +140,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
-                        onPressed: () => ref.read(userProfileProvider.notifier).loadUserData(),
+                        onPressed: () {
+                          final authState = ref.read(authProvider);
+                          if (authState.user != null) {
+                            ref.read(userProfileProvider.notifier).loadUserData(authState.user!.userId);
+                          }
+                        },
                         child: const Text('Retry'),
                       ),
                     ],

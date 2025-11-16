@@ -1,17 +1,85 @@
 import 'package:flutter/material.dart';
-import '../../data/mock_data.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/user_profile_provider.dart';
 import '../../utils/app_theme.dart';
 import 'edit_profile_screen.dart';
 import '../settings/settings_screen.dart';
 
-class ProfileTab extends StatelessWidget {
+class ProfileTab extends ConsumerStatefulWidget {
   const ProfileTab({super.key});
 
   @override
+  ConsumerState<ProfileTab> createState() => _ProfileTabState();
+}
+
+class _ProfileTabState extends ConsumerState<ProfileTab> {
+  @override
+  void initState() {
+    super.initState();
+    // Load user profile data when tab is initialized
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authState = ref.read(authProvider);
+      if (authState.user != null) {
+        ref.read(userProfileProvider.notifier).loadUserData(authState.user!.userId);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Get the student user (Jan Rosalijos - userId: 4)
-    final user = MockData.users.firstWhere((u) => u.userId == 4);
-    final student = MockData.students.firstWhere((s) => s.userId == 4);
+    final authState = ref.watch(authProvider);
+    final profileState = ref.watch(userProfileProvider);
+
+    // Show loading indicator while data is being fetched
+    if (profileState.isLoading || authState.user == null) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    // Show error if any
+    if (profileState.error != null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(
+                'Error loading profile',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                profileState.error!,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  ref.read(userProfileProvider.notifier).loadUserData(authState.user!.userId);
+                },
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final user = profileState.user ?? authState.user!;
+    final student = profileState.student;
 
     return Scaffold(
       body: SingleChildScrollView(
@@ -41,14 +109,15 @@ class ProfileTab extends StatelessWidget {
             const SizedBox(height: 8),
             
             // Student ID
-            Text(
-              'Student ID: ${student.studentId}',
-              style: TextStyle(
-                fontSize: 16,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                fontWeight: FontWeight.w500,
+            if (student != null)
+              Text(
+                'Student ID: ${student.studentId}',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
             const SizedBox(height: 4),
             
             // Email
@@ -89,12 +158,14 @@ class ProfileTab extends StatelessWidget {
                      ),
                    ),
                    const SizedBox(height: 16),
-                   _buildDetailRow(context, Icons.school_outlined, 'Degree Program', student.course ?? 'N/A'),
-                   const SizedBox(height: 12),
-                   _buildDetailRow(context, Icons.class_outlined, 'Year Level', 'Year ${student.yearLevel}'),
-                   const SizedBox(height: 12),
-                   _buildDetailRow(context, Icons.group_outlined, 'Section', student.section ?? 'N/A'),
-                   const SizedBox(height: 12),
+                   if (student != null) ...[
+                     _buildDetailRow(context, Icons.school_outlined, 'Degree Program', student.course ?? 'N/A'),
+                     const SizedBox(height: 12),
+                     _buildDetailRow(context, Icons.class_outlined, 'Year Level', student.yearLevel != null ? 'Year ${student.yearLevel}' : 'N/A'),
+                     const SizedBox(height: 12),
+                     _buildDetailRow(context, Icons.group_outlined, 'Section', student.section ?? 'N/A'),
+                     const SizedBox(height: 12),
+                   ],
                    _buildDetailRow(context, Icons.badge_outlined, 'Status', user.status),
                  ],
                ),

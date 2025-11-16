@@ -1,36 +1,92 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/course.dart';
-import '../../data/mock_data.dart';
-import '../../models/attempt.dart';
-import '../../models/user.dart';
 import '../../widgets/stat_card.dart';
 import '../../utils/app_theme.dart';
-import '../../providers/course_provider.dart';
-import '../../providers/quiz_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/user_profile_provider.dart';
 
-class HomeTab extends ConsumerWidget {
+class HomeTab extends ConsumerStatefulWidget {
   const HomeTab({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final user = MockData.users.firstWhere((u) => u.userId == 4); // Get first student for demo
-    
-    // Watch providers for reactive updates
-    final courseState = ref.watch(courseProvider);
-    
-    // Initialize providers if not already loaded
-    if (!courseState.isLoading && courseState.userCourses.isEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(courseProvider.notifier).initializeCourses(user.userId);
-        ref.read(quizProvider.notifier).initializeQuizzes(user.userId);
-      });
+  ConsumerState<HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends ConsumerState<HomeTab> {
+  @override
+  void initState() {
+    super.initState();
+    // Load user profile data when tab is initialized
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authState = ref.read(authProvider);
+      if (authState.user != null) {
+        ref.read(userProfileProvider.notifier).loadUserData(authState.user!.userId);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authState = ref.watch(authProvider);
+    final profileState = ref.watch(userProfileProvider);
+
+    // Show loading indicator
+    if (profileState.isLoading || authState.user == null) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
     }
-    
-    final userCourses = courseState.userCourses;
-    final completedAttempts = _getCompletedAttempts(user.userId);
-    final totalQuizzes = _getTotalQuizzes(userCourses);
-    final averageScore = _calculateAverageScore(completedAttempts);
+
+    // Show error if any
+    if (profileState.error != null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(
+                'Error loading data',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                profileState.error!,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  ref.read(userProfileProvider.notifier).loadUserData(authState.user!.userId);
+                },
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final user = profileState.user ?? authState.user!;
+    final stats = profileState.statistics ?? {};
+    final userCourses = profileState.enrolledCourses;
+    final courseProgress = profileState.courseProgress;
+
+    final totalQuizzes = stats['totalQuizzes'] as int? ?? 0;
+    final completedAttempts = stats['completedAttempts'] as int? ?? 0;
+    final averageScore = stats['averageScore'] as double? ?? 0.0;
+    final recentAttempts = stats['recentAttempts'] as List? ?? [];
     
     return Scaffold(
       body: SingleChildScrollView(
@@ -44,22 +100,22 @@ class HomeTab extends ConsumerWidget {
             const SizedBox(height: 30),
             
             // Statistics Cards
-            _buildStatsSection(context, totalQuizzes, completedAttempts.length, averageScore),
+            _buildStatsSection(context, totalQuizzes, completedAttempts, averageScore, userCourses.length),
             const SizedBox(height: 30),
             
             // Progress Chart Section
-            _buildProgressSection(context, userCourses),
+            _buildProgressSection(context, userCourses, courseProgress),
             const SizedBox(height: 30),
             
             // Recent Activity
-            _buildRecentActivity(context, completedAttempts),
+            _buildRecentActivity(context, recentAttempts),
           ],
         ),
       ),
     );
   }
   
-  Widget _buildWelcomeSection(BuildContext context, User user) {
+  Widget _buildWelcomeSection(BuildContext context, user) {
     final hour = DateTime.now().hour;
     String greeting;
     if (hour < 12) {
@@ -116,7 +172,7 @@ class HomeTab extends ConsumerWidget {
     );
   }
   
-  Widget _buildStatsSection(BuildContext context, int totalQuizzes, int completedQuizzes, double averageScore) {
+  Widget _buildStatsSection(BuildContext context, int totalQuizzes, int completedQuizzes, double averageScore, int totalCourses) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -166,7 +222,7 @@ class HomeTab extends ConsumerWidget {
               child: StatCard(
                 icon: Icons.school_outlined,
                 title: 'Courses',
-                value: MockData.enrollments.where((e) => e.userId == 4).length.toString(),
+                value: totalCourses.toString(),
                 color: Colors.purple,
               ),
             ),
@@ -177,8 +233,7 @@ class HomeTab extends ConsumerWidget {
   }
   
 
-  
-  Widget _buildProgressSection(BuildContext context, List<Course> userCourses) {
+  Widget _buildProgressSection(BuildContext context, List<Course> userCourses, Map<int, double> courseProgress) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -205,69 +260,88 @@ class HomeTab extends ConsumerWidget {
               ),
             ],
           ),
-          child: Column(
-            children: userCourses.take(3).map((course) {
-              final courseQuizzes = MockData.quizzes.where((q) => q.courseId == course.courseId).toList();
-              final completedAttempts = MockData.attempts.where((a) => 
-                courseQuizzes.any((q) => q.quizId == a.quizId) && a.submittedAt != null
-              ).length;
-              final totalQuizzes = courseQuizzes.length;
-              final progress = totalQuizzes > 0 ? completedAttempts / totalQuizzes : 0.0;
-              
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: userCourses.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Column(
                       children: [
-                        Expanded(
-                          child: Text(
-                            course.name,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
+                        Icon(
+                          Icons.school_outlined,
+                          size: 48,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                         ),
+                        const SizedBox(height: 16),
                         Text(
-                          '${(progress * 100).toInt()}%',
+                          'No courses enrolled',
                           style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.primary,
+                            fontSize: 16,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    LinearProgressIndicator(
-                      value: progress,
-                      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                      valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
-                      minHeight: 6,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$completedAttempts of $totalQuizzes quizzes completed',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                )
+              : Column(
+                  children: userCourses.take(3).map((course) {
+                    final progress = courseProgress[course.courseId] ?? 0.0;
+                    final progressPercent = (progress * 100).toInt();
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  course.name,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                '$progressPercent%',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          LinearProgressIndicator(
+                            value: progress,
+                            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                            valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
+                            minHeight: 6,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$progressPercent% completed',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                    );
+                  }).toList(),
                 ),
-              );
-            }).toList(),
-          ),
         ),
       ],
     );
   }
-  
-  Widget _buildRecentActivity(BuildContext context, List<Attempt> recentAttempts) {
+
+  Widget _buildRecentActivity(BuildContext context, List recentAttempts) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -294,103 +368,92 @@ class HomeTab extends ConsumerWidget {
               ),
             ],
           ),
-          child: Column(
-            children: recentAttempts.take(3).map((attempt) {
-              final quiz = MockData.quizzes.firstWhere((q) => q.quizId == attempt.quizId);
-              
-              // Calculate percentage score
-              final questions = MockData.getQuestionsByQuiz(attempt.quizId);
-              final totalPoints = questions.fold<double>(0.0, (sum, q) => sum + q.points);
-              final scorePercentage = totalPoints > 0 ? (attempt.score / totalPoints) * 100 : 0.0;
-              
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        Icons.quiz,
-                        color: Colors.green,
-                        size: 20,
-                      ),
+          child: recentAttempts.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.quiz_outlined,
+                          size: 48,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No recent activity',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  ),
+                )
+              : Column(
+                  children: recentAttempts.take(3).map((attempt) {
+                    final attemptMap = attempt as Map<String, dynamic>;
+                    final quizTitle = attemptMap['quizTitle'] as String;
+                    final score = attemptMap['score'] as double;
+                    final submittedAt = attemptMap['submittedAt'] as DateTime;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Row(
                         children: [
-                          Text(
-                            quiz.title,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.quiz,
+                              color: Colors.green,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  quizTitle,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                  ),
+                                ),
+                                Text(
+                                  'Score: ${score.toStringAsFixed(1)}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           Text(
-                            'Score: ${scorePercentage.toStringAsFixed(1)}%',
+                            _formatDate(submittedAt),
                             style: TextStyle(
-                              fontSize: 14,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    Text(
-                      _formatDate(attempt.submittedAt ?? DateTime.now()),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                      ),
-                    ),
-                  ],
+                    );
+                  }).toList(),
                 ),
-              );
-            }).toList(),
-          ),
         ),
       ],
     );
   }
-  
 
-  
-  List<Attempt> _getCompletedAttempts(int userId) {
-    return MockData.attempts.where((a) => 
-      a.userId == userId && a.submittedAt != null
-    ).toList();
-  }
-  
-  int _getTotalQuizzes(List<Course> userCourses) {
-    int total = 0;
-    for (var course in userCourses) {
-      total += MockData.quizzes.where((q) => q.courseId == course.courseId).length;
-    }
-    return total;
-  }
-  
-  double _calculateAverageScore(List<Attempt> completedAttempts) {
-    if (completedAttempts.isEmpty) return 0.0;
-    
-    double totalPercentage = 0;
-    for (var attempt in completedAttempts) {
-      // Get the questions for this quiz to calculate total points
-      final questions = MockData.getQuestionsByQuiz(attempt.quizId);
-      final totalPoints = questions.fold<double>(0.0, (sum, q) => sum + q.points);
-      
-      // Convert score to percentage
-      final percentage = totalPoints > 0 ? (attempt.score / totalPoints) * 100 : 0.0;
-      totalPercentage += percentage;
-    }
-    return totalPercentage / completedAttempts.length;
-  }
-  
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date).inDays;

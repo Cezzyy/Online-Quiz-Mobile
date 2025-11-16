@@ -1,76 +1,96 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user.dart';
 import '../models/student.dart';
-import '../data/mock_data.dart';
+import '../models/course.dart';
+import '../services/user_profile_service.dart';
 
 // State class to hold user profile data and UI state
 class UserProfileState {
   final User? user;
   final Student? student;
+  final List<Course> enrolledCourses;
+  final Map<String, dynamic>? statistics;
+  final Map<int, double> courseProgress;
   final bool isLoading;
   final String? error;
   final bool hasChanges;
   final String originalContactNumber;
   final String originalEmergencyContactNumber;
 
-
   const UserProfileState({
     this.user,
     this.student,
+    this.enrolledCourses = const [],
+    this.statistics,
+    this.courseProgress = const {},
     this.isLoading = false,
     this.error,
     this.hasChanges = false,
     this.originalContactNumber = '',
     this.originalEmergencyContactNumber = '',
-
   });
 
   UserProfileState copyWith({
     User? user,
     Student? student,
+    List<Course>? enrolledCourses,
+    Map<String, dynamic>? statistics,
+    Map<int, double>? courseProgress,
     bool? isLoading,
     String? error,
     bool? hasChanges,
     String? originalContactNumber,
     String? originalEmergencyContactNumber,
-
   }) {
     return UserProfileState(
       user: user ?? this.user,
       student: student ?? this.student,
+      enrolledCourses: enrolledCourses ?? this.enrolledCourses,
+      statistics: statistics ?? this.statistics,
+      courseProgress: courseProgress ?? this.courseProgress,
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
       hasChanges: hasChanges ?? this.hasChanges,
       originalContactNumber: originalContactNumber ?? this.originalContactNumber,
       originalEmergencyContactNumber: originalEmergencyContactNumber ?? this.originalEmergencyContactNumber,
-
     );
   }
 }
 
 // Notifier class to manage user profile state
 class UserProfileNotifier extends StateNotifier<UserProfileState> {
+  final UserProfileService _userProfileService = UserProfileService();
+
   UserProfileNotifier() : super(const UserProfileState());
 
   // Load user data and set original values
-  Future<void> loadUserData() async {
+  Future<void> loadUserData(int userId) async {
     state = state.copyWith(isLoading: true, error: null);
     
     try {
-      // This is all early development pa, will be changed once naa nay backend ug DB so mock data sa ta
-      await Future.delayed(const Duration(milliseconds: 500));
-      
-      // Get user with ID 4 (Jan Rosalijos)
-      final user = MockData.users.firstWhere((u) => u.userId == 4);
-      final student = MockData.students.firstWhere((s) => s.userId == 4);
+      // Fetch user profile from Supabase
+      final profileData = await _userProfileService.getUserProfile(userId);
+      final user = profileData['user'] as User;
+      final student = profileData['student'] as Student?;
+
+      // Fetch enrolled courses
+      final courses = await _userProfileService.getEnrolledCourses(userId);
+
+      // Fetch statistics
+      final stats = await _userProfileService.getQuizStatistics(userId);
+
+      // Fetch course progress
+      final progress = await _userProfileService.getCourseProgress(userId);
       
       state = state.copyWith(
         user: user,
         student: student,
+        enrolledCourses: courses,
+        statistics: stats,
+        courseProgress: progress,
         isLoading: false,
         originalContactNumber: user.contactNumber,
         originalEmergencyContactNumber: user.emergencyContactNumber,
-
         hasChanges: false,
       );
     } catch (e) {
@@ -134,14 +154,21 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
     state = state.copyWith(isLoading: true, error: null);
     
     try {
-      await Future.delayed(const Duration(seconds: 1));
+      // Update profile in Supabase
+      await _userProfileService.updateUserProfile(
+        userId: state.user!.userId,
+        contactNumber: state.user!.contactNumber,
+        emergencyContactNumber: state.user!.emergencyContactNumber,
+      );
+
+      // Reload user data to reflect changes
+      await loadUserData(state.user!.userId);
       
       state = state.copyWith(
         isLoading: false,
         hasChanges: false,
         originalContactNumber: state.user!.contactNumber,
         originalEmergencyContactNumber: state.user!.emergencyContactNumber,
-
       );
     } catch (e) {
       state = state.copyWith(
