@@ -1,10 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user.dart';
-import '../data/mock_data.dart';
+import '../services/auth_service.dart';
 
 // Authentication state class
 class AuthState {
   final User? user;
+  final String? role;
+  final Map<String, dynamic>? profile;
   final bool isAuthenticated;
   final bool isLoading;
   final String? error;
@@ -12,6 +14,8 @@ class AuthState {
 
   const AuthState({
     this.user,
+    this.role,
+    this.profile,
     this.isAuthenticated = false,
     this.isLoading = false,
     this.error,
@@ -20,14 +24,19 @@ class AuthState {
 
   AuthState copyWith({
     User? user,
+    String? role,
+    Map<String, dynamic>? profile,
     bool? isAuthenticated,
     bool? isLoading,
     String? error,
     bool? isInitialized,
     bool clearError = false,
+    bool clearUser = false,
   }) {
     return AuthState(
-      user: user ?? this.user,
+      user: clearUser ? null : (user ?? this.user),
+      role: clearUser ? null : (role ?? this.role),
+      profile: clearUser ? null : (profile ?? this.profile),
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
@@ -38,26 +47,36 @@ class AuthState {
 
 // Authentication notifier class
 class AuthNotifier extends StateNotifier<AuthState> {
+  final AuthService _authService = AuthService();
+
   AuthNotifier() : super(const AuthState()) {
     _initializeAuth();
   }
 
   // Initialize authentication state
   Future<void> _initializeAuth() async {
-
     state = state.copyWith(isLoading: true);
     
     try {
-      await Future.delayed(const Duration(milliseconds: 50));
+      // Check for existing session
+      final session = await _authService.getCurrentSession();
       
-      // For now, start with no authenticated user
-      state = state.copyWith(
-        isLoading: false,
-        isInitialized: true,
-      );
-
+      if (session != null) {
+        state = state.copyWith(
+          user: session['user'] as User?,
+          role: session['role'] as String?,
+          profile: session['profile'] as Map<String, dynamic>?,
+          isAuthenticated: true,
+          isLoading: false,
+          isInitialized: true,
+        );
+      } else {
+        state = state.copyWith(
+          isLoading: false,
+          isInitialized: true,
+        );
+      }
     } catch (e) {
-
       state = state.copyWith(
         isLoading: false,
         isInitialized: true,
@@ -67,40 +86,35 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   // Login method
-  Future<bool> login(String username, String password) async {
-
+  Future<bool> login(String email, String password) async {
     state = state.copyWith(isLoading: true, clearError: true);
     
     try {
-
-      await Future.delayed(const Duration(milliseconds: 200));
+      final result = await _authService.login(email, password);
       
-      // Validate credentials (mock data for early development)
-      final user = MockData.getUserByCredentials(username, password);
+      // Update state with authenticated user
+      state = state.copyWith(
+        user: result['user'] as User,
+        role: result['role'] as String,
+        profile: result['profile'] as Map<String, dynamic>?,
+        isAuthenticated: true,
+        isLoading: false,
+        clearError: true,
+      );
       
-      if (user != null) {
-        // Update state with authenticated user
-        state = state.copyWith(
-          user: user,
-          isAuthenticated: true,
-          isLoading: false,
-          clearError: true,
-        );
-        
-        return true;
-      } else {
-        // Invalid credentials
-        state = state.copyWith(
-          isLoading: false,
-          error: 'Invalid email or password',
-        );
-        return false;
-      }
+      return true;
     } catch (e) {
-
+      // Extract user-friendly error message
+      String errorMessage = 'Invalid email or password';
+      if (e.toString().contains('Database error')) {
+        errorMessage = 'Unable to connect to server. Please try again.';
+      } else if (e.toString().contains('Invalid email or password')) {
+        errorMessage = 'Invalid email or password';
+      }
+      
       state = state.copyWith(
         isLoading: false,
-        error: 'Login failed: $e',
+        error: errorMessage,
       );
       return false;
     }
@@ -111,17 +125,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, clearError: true);
     
     try {
-      await Future.delayed(const Duration(milliseconds: 100));
+      await _authService.logout();
       
       // Clear the auth state completely
       state = const AuthState(
         isInitialized: true,
         isAuthenticated: false,
         user: null,
+        role: null,
+        profile: null,
         isLoading: false,
         error: null,
       );
-
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -146,8 +161,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   // Get current user
   User? get currentUser => state.user;
 
-  // Get available mock credentials for development
-  static Map<String, Map<String, dynamic>> get mockCredentials => MockData.mockCredentials;
+  // Get current user role
+  String? get currentUserRole => state.role;
 }
 
 // Auth provider

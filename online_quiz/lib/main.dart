@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/onboarding/onboarding_screen.dart';
 import 'screens/onboarding/splash_screen.dart';
 import 'screens/auth/login_screen.dart';
@@ -10,7 +11,8 @@ import 'utils/app_routes.dart';
 import 'utils/app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/settings_provider.dart';
-import 'data/mock_data.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'config/supabase_config.dart';
 
 extension ColorExtension on Color {
   Color withValues({double? alpha}) {
@@ -23,11 +25,21 @@ extension ColorExtension on Color {
   }
 }
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Load environment variables from .env file
+  await dotenv.load(fileName: ".env");
+
+  await Supabase.initialize(
+    url: SupabaseConfig.supabaseUrl,
+    anonKey: SupabaseConfig.supabaseAnonKey,
+  );
+
   // Initialize and precompute themes at app startup for instant switching
   AppTheme.initialize();
   AppTheme.precomputeThemes();
-  
+
   runApp(
     const ProviderScope(
       child: ACLCQuizApp(),
@@ -92,10 +104,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     }
     
     // If authenticated, return the appropriate screen based on user role
-    if (authState.isAuthenticated && authState.user != null) {
-      final userRole = MockData.getUserRole(authState.user!.userId);
-      
-      switch (userRole?.toLowerCase()) {
+    if (authState.isAuthenticated && authState.user != null && authState.role != null) {
+      switch (authState.role?.toLowerCase()) {
         case 'teacher':
           return const TeacherMainScreen();
         case 'admin':
