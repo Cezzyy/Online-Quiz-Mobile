@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/quiz.dart';
 import '../../models/course.dart';
 import '../../models/attempt.dart';
-import '../../data/mock_data.dart';
 import '../../providers/quiz_provider.dart';
 import '../quizzes/quiz_result_screen.dart';
 import '../../widgets/empty_state_widget.dart';
@@ -82,68 +81,109 @@ class _ResultsTabState extends ConsumerState<ResultsTab> {
         ),
       );
     }
-    final allQuizResults = _getAllQuizResults();
-    final filteredResults = _getFilteredResults(allQuizResults);
-    final totalPages = (filteredResults.length / _itemsPerPage).ceil();
-
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                boxShadow: [
-                  BoxShadow(
-                    color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.analytics,
-                    color: Theme.of(context).colorScheme.primary,
-                    size: 24,
-                  ),
-                  const SizedBox(width: 10),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Quiz Results',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
+        child: FutureBuilder<List<QuizResultWithDetails>>(
+          future: _getAllQuizResults(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error loading results',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
-                      Text(
-                        'View your quiz performance and scores',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      snapshot.error.toString(),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            final allQuizResults = snapshot.data ?? [];
+            final filteredResults = _getFilteredResults(allQuizResults);
+            final totalPages = (filteredResults.length / _itemsPerPage).ceil();
+
+            return Column(
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            // Filter Tabs
-            _buildFilterTabs(),
-            // Stats Overview
-            _buildStatsOverview(allQuizResults),
-            // Results List
-            Expanded(
-              child: _buildResultsList(filteredResults, totalPages),
-            ),
-          ],
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.analytics,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 10),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Quiz Results',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                          Text(
+                            'View your quiz performance and scores',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                // Filter Tabs
+                _buildFilterTabs(),
+                // Stats Overview
+                _buildStatsOverview(allQuizResults),
+                // Results List
+                Expanded(
+                  child: _buildResultsList(filteredResults, totalPages),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -485,39 +525,37 @@ class _ResultsTabState extends ConsumerState<ResultsTab> {
     );
   }
 
-  List<QuizResultWithDetails> _getAllQuizResults() {
+  Future<List<QuizResultWithDetails>> _getAllQuizResults() async {
     final quizState = ref.read(quizProvider);
+    final quizNotifier = ref.read(quizProvider.notifier);
     final completedAttempts = quizState.userAttempts.where((attempt) => attempt.isCompleted).toList();
     
-    return completedAttempts.map((attempt) {
-      final quiz = quizState.allQuizzes.firstWhere(
-        (q) => q.quizId == attempt.quizId,
-        orElse: () => MockData.getQuizById(attempt.quizId)!,
-      );
-      final course = MockData.getCourseById(quiz.courseId);
-      
-      // Skip if course is null
-      if (course == null) return null;
-      
-      // Calculate quiz results
-      final questions = MockData.getQuestionsByQuiz(quiz.quizId);
-      final totalQuestions = questions.length;
-      final totalPoints = questions.fold<double>(0.0, (sum, q) => sum + q.points);
-      final percentage = totalPoints > 0 ? (attempt.score / totalPoints) * 100 : 0.0;
-      
-      // Calculate correct answers
-      final attemptAnswers = MockData.getAnswersByAttempt(attempt.attemptId);
-      final correctAnswers = attemptAnswers.where((answer) => answer.isCorrect == true).length;
-      
-      return QuizResultWithDetails(
-        attempt: attempt,
-        quiz: quiz,
-        course: course,
-        percentage: percentage,
-        correctAnswers: correctAnswers,
-        totalQuestions: totalQuestions,
-      );
-    }).where((result) => result != null).cast<QuizResultWithDetails>().toList()..sort((a, b) => b.attempt.submittedAt!.compareTo(a.attempt.submittedAt!));
+    final results = <QuizResultWithDetails>[];
+    
+    for (final attempt in completedAttempts) {
+      try {
+        // Get quiz result details from Supabase
+        final resultData = await quizNotifier.getQuizResultDetails(attempt);
+        
+        if (resultData != null) {
+          results.add(QuizResultWithDetails(
+            attempt: resultData['attempt'],
+            quiz: resultData['quiz'],
+            course: resultData['course'],
+            percentage: resultData['percentage'],
+            correctAnswers: resultData['correctAnswers'],
+            totalQuestions: resultData['totalQuestions'],
+          ));
+        }
+      } catch (e) {
+        // Skip this attempt if there's an error loading its details
+        continue;
+      }
+    }
+    
+    // Sort by submission date (newest first)
+    results.sort((a, b) => b.attempt.submittedAt!.compareTo(a.attempt.submittedAt!));
+    return results;
   }
 
   List<QuizResultWithDetails> _getFilteredResults(List<QuizResultWithDetails> allResults) {

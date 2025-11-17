@@ -7,6 +7,7 @@ import '../models/choice.dart';
 import '../models/course.dart';
 import '../services/quiz_service.dart';
 import '../services/teacher_quiz_service.dart';
+import '../services/course_service.dart';
 import 'course_provider.dart';
 
 // Quiz state class to hold all quiz-related data and UI state
@@ -390,6 +391,44 @@ class QuizNotifier extends StateNotifier<QuizState> {
       return await _quizService.getAttemptDetails(attemptId);
     } catch (e) {
       state = state.copyWith(error: 'Failed to load attempt details: $e');
+      return null;
+    }
+  }
+
+  // Get quiz result details with all related data (for results list)
+  Future<Map<String, dynamic>?> getQuizResultDetails(Attempt attempt) async {
+    try {
+      // Get quiz details
+      final quiz = await _quizService.getQuizById(attempt.quizId);
+      if (quiz == null) return null;
+
+      // Get course details
+      final courseService = CourseService();
+      final course = await courseService.getCourseById(quiz.courseId);
+      if (course == null) return null;
+
+      // Get questions and answers
+      final questions = await _quizService.getQuizQuestions(attempt.quizId);
+      final answers = await _quizService.getAttemptAnswers(attempt.attemptId);
+
+      // Calculate statistics
+      final totalQuestions = questions.length;
+      final totalPoints = questions.fold<double>(0.0, (sum, q) => sum + q.points);
+      final percentage = totalPoints > 0 ? (attempt.score / totalPoints) * 100 : 0.0;
+      final correctAnswers = answers.where((a) => a.isCorrect == true).length;
+
+      return {
+        'attempt': attempt,
+        'quiz': quiz,
+        'course': course,
+        'percentage': percentage,
+        'correctAnswers': correctAnswers,
+        'totalQuestions': totalQuestions,
+        'questions': questions,
+        'answers': answers,
+      };
+    } catch (e) {
+      state = state.copyWith(error: 'Failed to load quiz result details: $e');
       return null;
     }
   }
