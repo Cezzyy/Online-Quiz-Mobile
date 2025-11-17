@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/course_provider.dart';
-import '../../providers/quiz_provider.dart';
-import '../../data/mock_data.dart';
+import '../../providers/admin_provider.dart';
 import '../../utils/app_theme.dart';
 
 class AdminHomeTab extends ConsumerStatefulWidget {
@@ -20,8 +18,7 @@ class _AdminHomeTabState extends ConsumerState<AdminHomeTab> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = ref.read(currentUserProvider);
       if (user != null) {
-        ref.read(courseProvider.notifier).loadAllCourses();
-        ref.read(quizProvider.notifier).initializeQuizzes(user.userId);
+        ref.read(adminDashboardProvider.notifier).loadDashboardData();
       }
     });
   }
@@ -40,34 +37,45 @@ class _AdminHomeTabState extends ConsumerState<AdminHomeTab> {
     }
 
     // Watch providers for reactive updates
-    final courseState = ref.watch(courseProvider);
-    final quizState = ref.watch(quizProvider);
+    final dashboardState = ref.watch(adminDashboardProvider);
     
-    // Calculate admin statistics
-    final adminStats = _calculateAdminStats(courseState, quizState);
+    // If loading, show loading indicator
+    if (dashboardState.isLoading && dashboardState.statistics.isEmpty) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
 
     return Scaffold(
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 20),
-            // Welcome Section
-            _buildWelcomeSection(context, user),
-            const SizedBox(height: 30),
-            
-            // Statistics Cards
-            _buildStatsSection(context, adminStats),
-            const SizedBox(height: 30),
-            
-            // Quick Actions
-            _buildQuickActionsSection(context),
-            const SizedBox(height: 30),
-            
-            // System Overview
-            _buildSystemOverview(context),
-          ],
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await ref.read(adminDashboardProvider.notifier).refresh();
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 20),
+              // Welcome Section
+              _buildWelcomeSection(context, user),
+              const SizedBox(height: 30),
+              
+              // Statistics Cards
+              _buildStatsSection(context, dashboardState.statistics),
+              const SizedBox(height: 30),
+              
+              // System Health
+              _buildSystemHealth(context, dashboardState.systemHealth),
+              const SizedBox(height: 30),
+              
+              // System Overview
+              _buildSystemOverview(context),
+            ],
+          ),
         ),
       ),
     );
@@ -139,7 +147,7 @@ class _AdminHomeTabState extends ConsumerState<AdminHomeTab> {
     );
   }
   
-  Widget _buildStatsSection(BuildContext context, Map<String, dynamic> stats) {
+  Widget _buildStatsSection(BuildContext context, Map<String, int> stats) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -159,7 +167,7 @@ class _AdminHomeTabState extends ConsumerState<AdminHomeTab> {
                 context,
                 icon: Icons.people_outline,
                 title: 'Total Users',
-                value: stats['totalUsers'].toString(),
+                value: (stats['totalUsers'] ?? 0).toString(),
                 color: Colors.blue,
               ),
             ),
@@ -168,8 +176,8 @@ class _AdminHomeTabState extends ConsumerState<AdminHomeTab> {
               child: _buildStatCard(
                 context,
                 icon: Icons.class_outlined,
-                title: 'Active Courses',
-                value: stats['totalCourses'].toString(),
+                title: 'Total Courses',
+                value: (stats['totalCourses'] ?? 0).toString(),
                 color: Colors.green,
               ),
             ),
@@ -183,7 +191,7 @@ class _AdminHomeTabState extends ConsumerState<AdminHomeTab> {
                 context,
                 icon: Icons.quiz_outlined,
                 title: 'Total Quizzes',
-                value: stats['totalQuizzes'].toString(),
+                value: (stats['totalQuizzes'] ?? 0).toString(),
                 color: Colors.orange,
               ),
             ),
@@ -193,7 +201,97 @@ class _AdminHomeTabState extends ConsumerState<AdminHomeTab> {
                 context,
                 icon: Icons.analytics_outlined,
                 title: 'Quiz Attempts',
-                value: stats['totalAttempts'].toString(),
+                value: (stats['totalAttempts'] ?? 0).toString(),
+                color: Colors.purple,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                context,
+                icon: Icons.school_outlined,
+                title: 'Active Students',
+                value: (stats['activeStudents'] ?? 0).toString(),
+                color: Colors.teal,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildStatCard(
+                context,
+                icon: Icons.person_outline,
+                title: 'Active Teachers',
+                value: (stats['activeTeachers'] ?? 0).toString(),
+                color: Colors.indigo,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildSystemHealth(BuildContext context, Map<String, dynamic> health) {
+    if (health.isEmpty) return const SizedBox.shrink();
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'System Health',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.getTextColor(context),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                context,
+                icon: Icons.check_circle_outline,
+                title: 'Completion Rate',
+                value: '${health['completionRate'] ?? 0}%',
+                color: Colors.green,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildStatCard(
+                context,
+                icon: Icons.star_outline,
+                title: 'Average Score',
+                value: '${health['averageScore'] ?? 0}%',
+                color: Colors.amber,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                context,
+                icon: Icons.trending_up,
+                title: 'Active Courses',
+                value: (health['activeCourses'] ?? 0).toString(),
+                color: Colors.blue,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildStatCard(
+                context,
+                icon: Icons.publish,
+                title: 'Published Quizzes',
+                value: (health['publishedQuizzes'] ?? 0).toString(),
                 color: Colors.purple,
               ),
             ),
@@ -262,129 +360,6 @@ class _AdminHomeTabState extends ConsumerState<AdminHomeTab> {
             ),
           ),
         ],
-      ),
-    );
-  }
-  
-  Widget _buildQuickActionsSection(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Quick Actions',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.getTextColor(context),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionCard(
-                icon: Icons.person_add,
-                title: 'Add User',
-                color: Colors.blue,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Add User - Coming Soon!')),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildActionCard(
-                icon: Icons.add_circle,
-                title: 'Create Course',
-                color: Colors.green,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Create Course - Coming Soon!')),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionCard(
-                icon: Icons.backup,
-                title: 'System Backup',
-                color: Colors.orange,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('System Backup - Coming Soon!')),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildActionCard(
-                icon: Icons.settings,
-                title: 'System Settings',
-                color: Colors.purple,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('System Settings - Coming Soon!')),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-  
-  Widget _buildActionCard({
-    required IconData icon,
-    required String title,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  icon,
-                  size: 32,
-                  color: color,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -480,24 +455,4 @@ class _AdminHomeTabState extends ConsumerState<AdminHomeTab> {
     );
   }
   
-  Map<String, dynamic> _calculateAdminStats(CourseState courseState, QuizState quizState) {
-    // Get all users from mock data
-    final totalUsers = MockData.users.length;
-    
-    // Get all courses
-    final totalCourses = courseState.allCourses.length;
-    
-    // Get all quizzes
-    final totalQuizzes = quizState.allQuizzes.length;
-    
-    // Get all quiz attempts
-    final totalAttempts = MockData.attempts.length;
-    
-    return {
-      'totalUsers': totalUsers,
-      'totalCourses': totalCourses,
-      'totalQuizzes': totalQuizzes,
-      'totalAttempts': totalAttempts,
-    };
-  }
 }
