@@ -138,21 +138,6 @@ class _AdminNotificationsTabState extends ConsumerState<AdminNotificationsTab> {
                   ),
                 ),
               ),
-              
-              const SizedBox(width: 12),
-              
-              // Mark All Read Button
-              if (state.unreadCount > 0)
-                ElevatedButton.icon(
-                  onPressed: () => _showMarkAllReadDialog(context, notifier),
-                  icon: const Icon(Icons.mark_email_read, size: 16),
-                  label: const Text('Mark All Read'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                ),
             ],
           ),
         ],
@@ -749,33 +734,6 @@ class _AdminNotificationsTabState extends ConsumerState<AdminNotificationsTab> {
                         : '${notification.title} has been deleted',
                   ),
                   backgroundColor: Colors.red,
-                ),
-              );
-            }
-          },
-        ),
-      ],
-    );
-  }
-
-  void _showMarkAllReadDialog(BuildContext context, NotificationNotifier notifier) {
-    AppDialog.show(
-      context: context,
-      title: 'Mark All as Read',
-      type: DialogType.warning,
-      content: const Text('Are you sure you want to mark all notifications as read?'),
-      actions: [
-        DialogAction.cancel(context: context),
-        DialogAction.confirm(
-          text: 'Mark All Read',
-          onPressed: () async {
-            Navigator.of(context).pop();
-            await notifier.markAllAsRead();
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('All notifications marked as read'),
-                  backgroundColor: Colors.green,
                 ),
               );
             }
