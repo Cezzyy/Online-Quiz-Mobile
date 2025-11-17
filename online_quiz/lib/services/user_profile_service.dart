@@ -1,10 +1,13 @@
+import 'package:flutter/widgets.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user.dart' as models;
 import '../models/student.dart';
 import '../models/course.dart';
+import 'activity_log_service.dart';
 
 class UserProfileService {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final ActivityLogService _activityLog = ActivityLogService();
 
   /// Fetch complete user profile with student details
   Future<Map<String, dynamic>> getUserProfile(int userId) async {
@@ -227,6 +230,18 @@ class UserProfileService {
           .from('User')
           .update(updates)
           .eq('UserId', userId);
+
+      // Log profile update
+      try {
+        await _activityLog.logUserUpdate(
+          updatedBy: userId,
+          updatedUserId: userId,
+          oldData: {},
+          newData: updates,
+        );
+      } catch (e) {
+        debugPrint('Failed to log profile update: $e');
+      }
     } on PostgrestException catch (e) {
       throw Exception('Failed to update profile: ${e.message}');
     } catch (e) {

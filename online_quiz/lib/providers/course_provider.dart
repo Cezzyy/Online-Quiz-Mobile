@@ -390,6 +390,7 @@ class CourseNotifier extends StateNotifier<CourseState> {
     String? category,
     String? section,
     required String status,
+    int? updatedBy,
   }) async {
     try {
       await _courseService.updateCourse(
@@ -400,6 +401,7 @@ class CourseNotifier extends StateNotifier<CourseState> {
         category: category,
         section: section,
         status: status,
+        updatedBy: updatedBy,
       );
 
       // Update in state
@@ -429,9 +431,9 @@ class CourseNotifier extends StateNotifier<CourseState> {
     }
   }
 
-  Future<bool> deleteCourse(int courseId) async {
+  Future<bool> deleteCourse(int courseId, {int? deletedBy}) async {
     try {
-      await _courseService.deleteCourse(courseId);
+      await _courseService.deleteCourse(courseId, deletedBy: deletedBy);
 
       // Remove from state
       final updatedCourses = state.allCourses.where((course) => course.courseId != courseId).toList();

@@ -37,19 +37,26 @@ mixin LoginScreenAnimations<T extends StatefulWidget> on State<T>, TickerProvide
 
   /// Run the actual staggered animation sequence
   void _runStaggeredAnimations() async {
+    // Check if widget is still mounted before starting animations
+    if (!mounted) return;
+    
     // Start animations with minimal delays for better performance
     logoController.forward();
     
     await Future.delayed(const Duration(milliseconds: 100));
+    if (!mounted) return;
     titleController.forward();
     
     await Future.delayed(const Duration(milliseconds: 100));
+    if (!mounted) return;
     subtitleController.forward();
     
     await Future.delayed(const Duration(milliseconds: 150));
+    if (!mounted) return;
     formController.forward();
     
     await Future.delayed(const Duration(milliseconds: 100));
+    if (!mounted) return;
     forgotPasswordController.forward();
   }
 

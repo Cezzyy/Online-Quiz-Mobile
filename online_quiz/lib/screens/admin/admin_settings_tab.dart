@@ -4,6 +4,7 @@ import '../../utils/app_theme.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/info_card.dart';
+import 'admin_activity_logs_screen.dart';
 
 class AdminSettingsTab extends ConsumerStatefulWidget {
   const AdminSettingsTab({super.key});
@@ -337,17 +338,9 @@ class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
   }
 
   void _showAuditLogsDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Audit Logs'),
-        content: const Text('Audit log viewing will be available in future updates.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const AdminActivityLogsScreen(),
       ),
     );
   }

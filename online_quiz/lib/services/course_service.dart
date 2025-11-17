@@ -1,11 +1,15 @@
+import 'package:flutter/widgets.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/course.dart';
 import '../models/enrollment.dart';
 import '../models/quiz.dart';
 import '../models/user.dart' as app_user;
+import '../models/activity_log.dart';
+import 'activity_log_service.dart';
 
 class CourseService {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final ActivityLogService _activityLog = ActivityLogService();
 
   // Get all courses a student is enrolled in
   Future<List<Course>> getEnrolledCourses(int userId) async {
@@ -422,7 +426,7 @@ class CourseService {
           .select()
           .single();
 
-      return Course(
+      final course = Course(
         courseId: response['CourseId'],
         code: response['Code'],
         name: response['Name'],
@@ -434,6 +438,22 @@ class CourseService {
         updatedAt: DateTime.parse(response['UpdatedAt']),
         createdBy: response['CreatedBy'],
       );
+
+      // Log course creation
+      try {
+        await _activityLog.logActivity(
+          userId: createdBy,
+          action: ActivityAction.create,
+          entity: EntityType.course,
+          entityId: course.courseId,
+          description: 'Created course "${course.name}" (${course.code})',
+          newValues: {'name': course.name, 'code': course.code, 'section': course.section},
+        );
+      } catch (e) {
+        debugPrint('Failed to log course creation: $e');
+      }
+
+      return course;
     } on PostgrestException catch (e) {
       throw Exception('Failed to create course: ${e.message}');
     } catch (e) {
@@ -450,8 +470,12 @@ class CourseService {
     String? category,
     String? section,
     required String status,
+    int? updatedBy,
   }) async {
     try {
+      // Get old values
+      final oldCourse = await getCourseById(courseId);
+      
       await _supabase
           .from('Course')
           .update({
@@ -464,6 +488,23 @@ class CourseService {
             'UpdatedAt': DateTime.now().toIso8601String(),
           })
           .eq('CourseId', courseId);
+
+      // Log course update
+      if (updatedBy != null) {
+        try {
+          await _activityLog.logActivity(
+            userId: updatedBy,
+            action: ActivityAction.update,
+            entity: EntityType.course,
+            entityId: courseId,
+            description: 'Updated course "$name"',
+            oldValues: oldCourse != null ? {'name': oldCourse.name, 'code': oldCourse.code} : null,
+            newValues: {'name': name, 'code': code, 'status': status},
+          );
+        } catch (e) {
+          debugPrint('Failed to log course update: $e');
+        }
+      }
     } on PostgrestException catch (e) {
       throw Exception('Failed to update course: ${e.message}');
     } catch (e) {
@@ -473,12 +514,31 @@ class CourseService {
 
   /// Delete a course (Admin only)
   /// Note: This will cascade delete all enrollments and quizzes
-  Future<void> deleteCourse(int courseId) async {
+  Future<void> deleteCourse(int courseId, {int? deletedBy}) async {
     try {
+      // Get course details before deletion
+      final course = await getCourseById(courseId);
+      
       await _supabase
           .from('Course')
           .delete()
           .eq('CourseId', courseId);
+
+      // Log course deletion
+      if (deletedBy != null && course != null) {
+        try {
+          await _activityLog.logActivity(
+            userId: deletedBy,
+            action: ActivityAction.delete,
+            entity: EntityType.course,
+            entityId: courseId,
+            description: 'Deleted course "${course.name}" (${course.code})',
+            oldValues: {'name': course.name, 'code': course.code},
+          );
+        } catch (e) {
+          debugPrint('Failed to log course deletion: $e');
+        }
+      }
     } on PostgrestException catch (e) {
       throw Exception('Failed to delete course: ${e.message}');
     } catch (e) {
@@ -573,7 +633,7 @@ class CourseService {
           .select()
           .single();
 
-      return Enrollment(
+      final enrollment = Enrollment(
         enrollmentId: response['EnrollmentId'],
         userId: response['UserId'],
         courseId: response['CourseId'],
@@ -581,6 +641,19 @@ class CourseService {
         enrolledAt: DateTime.parse(response['EnrolledAt']),
         enrolledBy: response['EnrolledBy'],
       );
+
+      // Log enrollment
+      try {
+        await _activityLog.logEnrollment(
+          userId: enrolledBy,
+          courseId: courseId,
+          enrollmentId: enrollment.enrollmentId,
+        );
+      } catch (e) {
+        debugPrint('Failed to log enrollment: $e');
+      }
+
+      return enrollment;
     } on PostgrestException catch (e) {
       if (e.code == '23505') {
         throw Exception('Student is already enrolled in this course');
@@ -592,12 +665,35 @@ class CourseService {
   }
 
   /// Remove a student from a course (Admin or Teacher)
-  Future<void> removeEnrollment(int enrollmentId) async {
+  Future<void> removeEnrollment(int enrollmentId, {int? removedBy}) async {
     try {
+      // Get enrollment details before deletion
+      final enrollmentResponse = await _supabase
+          .from('Enrollment')
+          .select()
+          .eq('EnrollmentId', enrollmentId)
+          .maybeSingle();
+
       await _supabase
           .from('Enrollment')
           .delete()
           .eq('EnrollmentId', enrollmentId);
+
+      // Log unenrollment
+      if (removedBy != null && enrollmentResponse != null) {
+        try {
+          await _activityLog.logActivity(
+            userId: removedBy,
+            action: ActivityAction.unenroll,
+            entity: EntityType.enrollment,
+            entityId: enrollmentId,
+            description: 'Removed student from course',
+            oldValues: {'courseId': enrollmentResponse['CourseId'], 'userId': enrollmentResponse['UserId']},
+          );
+        } catch (e) {
+          debugPrint('Failed to log unenrollment: $e');
+        }
+      }
     } on PostgrestException catch (e) {
       throw Exception('Failed to remove enrollment: ${e.message}');
     } catch (e) {

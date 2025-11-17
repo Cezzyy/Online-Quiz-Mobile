@@ -1,12 +1,15 @@
+import 'package:flutter/widgets.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/quiz.dart';
 import '../models/question.dart';
 import '../models/choice.dart';
 import '../models/attempt.dart';
 import '../models/attempt_answer.dart';
+import 'activity_log_service.dart';
 
 class QuizService {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final ActivityLogService _activityLog = ActivityLogService();
 
   // Get all published quizzes for a specific course
   Future<List<Quiz>> getQuizzesByCourse(int courseId) async {
@@ -378,6 +381,18 @@ class QuizService {
         await _supabase
             .from('AttemptAnswer')
             .insert(attemptAnswersToInsert);
+      }
+
+      // Log quiz submission
+      try {
+        await _activityLog.logQuizSubmission(
+          userId: userId,
+          quizId: quizId,
+          attemptId: attemptId,
+          score: totalScore,
+        );
+      } catch (e) {
+        debugPrint('Failed to log quiz submission: $e');
       }
 
       return Attempt.fromJson(attemptResponse);

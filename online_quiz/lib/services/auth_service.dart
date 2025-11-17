@@ -1,10 +1,13 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/user.dart' as models;
+import 'activity_log_service.dart';
 
 class AuthService {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final ActivityLogService _activityLog = ActivityLogService();
   
   // SharedPreferences keys
   static const String _keyUserId = 'auth_user_id';
@@ -71,6 +74,14 @@ class AuthService {
       // Save session to SharedPreferences
       await _saveSession(result);
 
+      // Log successful login
+      try {
+        await _activityLog.logLogin(user.userId);
+      } catch (e) {
+        // Don't fail login if logging fails
+        debugPrint('Failed to log login activity: $e');
+      }
+
       return result;
     } on PostgrestException catch (e) {
       throw Exception('Database error: ${e.message}');
@@ -105,6 +116,17 @@ class AuthService {
   Future<void> logout() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      
+      // Log logout before clearing session
+      final userId = prefs.getInt(_keyUserId);
+      if (userId != null) {
+        try {
+          await _activityLog.logLogout(userId);
+        } catch (e) {
+          // Don't fail logout if logging fails
+          debugPrint('Failed to log logout activity: $e');
+        }
+      }
       
       // Clear all auth-related data
       await prefs.remove(_keyUserId);

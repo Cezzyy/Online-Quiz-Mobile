@@ -4,6 +4,7 @@ import '../../utils/app_theme.dart';
 import '../../models/course.dart';
 import '../../models/user.dart';
 import '../../providers/course_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/dialog.dart';
 import '../../widgets/empty_state_widget.dart';
@@ -1145,6 +1146,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                 );
               }
               
+              final currentUser = ref.read(authProvider).user;
               final success = await notifier.updateCourse(
                 courseId: course.courseId,
                 code: codeController.text,
@@ -1153,6 +1155,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                 category: categoryController.text.isNotEmpty ? categoryController.text : null,
                 section: course.section,
                 status: selectedStatus,
+                updatedBy: currentUser?.userId,
               );
               
               if (context.mounted) {
@@ -1744,7 +1747,8 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
           ),
         );
         
-        final success = await notifier.deleteCourse(course.courseId);
+        final currentUser = ref.read(authProvider).user;
+        final success = await notifier.deleteCourse(course.courseId, deletedBy: currentUser?.userId);
         
         if (context.mounted) {
           // Close loading dialog
