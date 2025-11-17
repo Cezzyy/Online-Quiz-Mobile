@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../utils/app_theme.dart';
-import '../../data/mock_data.dart';
 import '../../models/course.dart';
 import '../../models/user.dart';
 import '../../providers/course_provider.dart';
@@ -621,6 +620,24 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
         ],
       ),
     );
+  }
+
+  Future<Map<String, dynamic>> _loadCourseDetails(Course course) async {
+    try {
+      final courseNotifier = ref.read(courseProvider.notifier);
+      final instructor = await courseNotifier.getCourseInstructor(course.courseId);
+      final enrolledStudents = await courseNotifier.getEnrolledStudentsWithDetails(course.courseId);
+      
+      return {
+        'instructor': instructor,
+        'enrollmentCount': enrolledStudents.length,
+      };
+    } catch (e) {
+      return {
+        'instructor': null,
+        'enrollmentCount': 0,
+      };
+    }
   }
 
   Color _getStatusColor(String status) {
@@ -1291,66 +1308,71 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
           const SizedBox(height: 12),
           
           ...courses.map((course) {
-            final instructor = MockData.getUserById(course.instructorUserId);
-            final enrollments = MockData.getEnrollmentsByCourse(course.courseId);
-            
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.getCardColor(context),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppTheme.getDividerColor(context)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Section ${course.section ?? 'A'}',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.getTextColor(context),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Instructor: ${instructor?.fullName ?? 'Unknown'}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppTheme.getSecondaryTextColor(context),
-                          ),
-                        ),
-                        Text(
-                          'Students: ${enrollments.length}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppTheme.getSecondaryTextColor(context),
-                          ),
-                        ),
-                      ],
-                    ),
+            return FutureBuilder<Map<String, dynamic>>(
+              future: _loadCourseDetails(course),
+              builder: (context, snapshot) {
+                final instructor = snapshot.data?['instructor'] as User?;
+                final enrollmentCount = snapshot.data?['enrollmentCount'] as int? ?? 0;
+                
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.getCardColor(context),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppTheme.getDividerColor(context)),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(course.status).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      course.status,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: _getStatusColor(course.status),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Section ${course.section ?? 'A'}',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.getTextColor(context),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Instructor: ${instructor?.fullName ?? 'Loading...'}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppTheme.getSecondaryTextColor(context),
+                              ),
+                            ),
+                            Text(
+                              'Students: $enrollmentCount',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppTheme.getSecondaryTextColor(context),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _getStatusColor(course.status).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          course.status,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: _getStatusColor(course.status),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             );
           }),
         ],
@@ -1381,65 +1403,70 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
             const SizedBox(height: 16),
           
           ...courses.map((course) {
-            final instructor = MockData.getUserById(course.instructorUserId);
-            final enrollments = MockData.getEnrollmentsByCourse(course.courseId);
-            
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.getCardColor(context),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppTheme.getDividerColor(context)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-            Text(
-                          'Section ${course.section ?? 'A'}',
-              style: TextStyle(
-                fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.getTextColor(context),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Instructor: ${instructor?.fullName ?? 'Unknown'}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppTheme.getSecondaryTextColor(context),
-                          ),
-                        ),
-                        Text(
-                          'Students: ${enrollments.length}',
-                          style: TextStyle(
-                            fontSize: 14,
-                color: AppTheme.getSecondaryTextColor(context),
-              ),
-            ),
-          ],
-        ),
+            return FutureBuilder<Map<String, dynamic>>(
+              future: _loadCourseDetails(course),
+              builder: (context, snapshot) {
+                final instructor = snapshot.data?['instructor'] as User?;
+                final enrollmentCount = snapshot.data?['enrollmentCount'] as int? ?? 0;
+                
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.getCardColor(context),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppTheme.getDividerColor(context)),
                   ),
-                  Row(
+                  child: Row(
                     children: [
-                      IconButton(
-                        onPressed: () => _showEditCourseDialog(context, course, notifier),
-                        icon: Icon(Icons.edit, color: AppTheme.getSecondaryTextColor(context)),
-                        tooltip: 'Edit Section',
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Section ${course.section ?? 'A'}',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.getTextColor(context),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Instructor: ${instructor?.fullName ?? 'Loading...'}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppTheme.getSecondaryTextColor(context),
+                              ),
+                            ),
+                            Text(
+                              'Students: $enrollmentCount',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppTheme.getSecondaryTextColor(context),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      IconButton(
-                        onPressed: () => _showDeleteConfirmationDialog(context, course, notifier),
-                        icon: Icon(Icons.delete, color: Colors.red),
-                        tooltip: 'Delete Section',
+                      Row(
+                        children: [
+                          IconButton(
+                            onPressed: () => _showEditCourseDialog(context, course, notifier),
+                            icon: Icon(Icons.edit, color: AppTheme.getSecondaryTextColor(context)),
+                            tooltip: 'Edit Section',
+                          ),
+                          IconButton(
+                            onPressed: () => _showDeleteConfirmationDialog(context, course, notifier),
+                            icon: Icon(Icons.delete, color: Colors.red),
+                            tooltip: 'Delete Section',
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                );
+              },
             );
           }),
         ],

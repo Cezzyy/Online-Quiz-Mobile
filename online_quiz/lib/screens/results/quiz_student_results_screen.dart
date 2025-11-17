@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/mock_data.dart';
 import '../../models/attempt.dart';
 import '../../models/course.dart';
 import '../../models/enrollment.dart';
@@ -10,6 +9,9 @@ import '../../models/student.dart';
 import '../../models/user.dart';
 import '../../providers/export_import_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/course_provider.dart';
+import '../../services/quiz_service.dart';
+import '../../services/analytics_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/stat_card.dart';
@@ -30,16 +32,22 @@ class QuizStudentResultsScreen extends ConsumerStatefulWidget {
 
 class _QuizStudentResultsScreenState extends ConsumerState<QuizStudentResultsScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final QuizService _quizService = QuizService();
+  final AnalyticsService _analyticsService = AnalyticsService();
   String _searchQuery = '';
   String? _selectedSection;
   List<String> _sections = [];
   String _viewMode = 'all'; // 'all' or 'scores_only'
   bool _isTableView = false;
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _enrolledStudents = [];
+  List<Map<String, dynamic>> _quizAttempts = [];
+  double _totalPoints = 0.0;
 
   @override
   void initState() {
     super.initState();
-    _loadSections();
+    _loadData();
   }
 
   @override
@@ -48,72 +56,96 @@ class _QuizStudentResultsScreenState extends ConsumerState<QuizStudentResultsScr
     super.dispose();
   }
 
-  void _loadSections() {
-    // Get all enrollments for this course
-    final enrollments = MockData.enrollments
-        .where((e) => e.courseId == widget.course.courseId)
-        .toList();
-    
-    // Get students for these enrollments and extract unique sections
-    final sections = <String>{};
-    for (final enrollment in enrollments) {
-      final student = MockData.students
-          .where((s) => s.userId == enrollment.userId)
-          .firstOrNull;
-      if (student?.section != null && student!.section!.isNotEmpty) {
-        sections.add(student.section!);
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final courseNotifier = ref.read(courseProvider.notifier);
+      
+      // Load enrolled students with details
+      final enrolled = await courseNotifier.getEnrolledStudentsWithDetails(widget.course.courseId);
+      
+      // Load quiz attempts
+      final attempts = await _analyticsService.getAttemptsByQuiz(widget.quiz.quizId);
+      
+      // Load quiz questions and calculate total points
+      final questions = await _quizService.getQuizQuestions(widget.quiz.quizId);
+      final totalPoints = questions.fold(0.0, (sum, q) => sum + q.points);
+      
+      // Extract unique sections from enrolled students
+      final sections = <String>{};
+      for (final studentData in enrolled) {
+        final student = studentData['student'] as Student?;
+        if (student?.section != null && student!.section!.isNotEmpty) {
+          sections.add(student.section!);
+        }
+      }
+      
+      final sortedSections = sections.toList()..sort();
+      
+      if (mounted) {
+        setState(() {
+          _enrolledStudents = enrolled;
+          _quizAttempts = attempts;
+          _totalPoints = totalPoints;
+          _sections = sortedSections;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading data: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
-    
-    final sortedSections = sections.toList()..sort();
-    
-    setState(() {
-      _sections = sortedSections;
-    });
   }
 
   List<StudentQuizResult> _getFilteredResults() {
-    // Get all attempts for this quiz
-    final attempts = MockData.attempts
-        .where((a) => a.quizId == widget.quiz.quizId && a.submittedAt != null)
-        .toList();
-
-    // Get all enrollments for this course
-    final enrollments = MockData.enrollments
-        .where((e) => e.courseId == widget.course.courseId)
-        .toList();
-
-    // Create student results
+    // Create student results from loaded data
     List<StudentQuizResult> results = [];
     
-    for (final enrollment in enrollments) {
-      final student = MockData.students
-          .where((s) => s.userId == enrollment.userId)
-          .firstOrNull;
+    for (final studentData in _enrolledStudents) {
+      final student = studentData['student'] as Student;
+      final user = studentData['user'] as User;
+      final enrollment = studentData['enrollment'] as Enrollment;
       
-      final user = MockData.users
-          .where((u) => u.userId == enrollment.userId)
-          .firstOrNull;
+      // Find attempts for this student
+      final studentAttempts = _quizAttempts
+          .where((attemptData) {
+            final attempt = attemptData['attempt'] as Attempt;
+            return attempt.userId == student.userId;
+          })
+          .toList();
       
-      if (student != null && user != null) {
-        final studentAttempts = attempts
-            .where((a) => a.userId == student.userId)
-            .toList();
+      // Get the best attempt (highest score)
+      Attempt? bestAttempt;
+      if (studentAttempts.isNotEmpty) {
+        final bestAttemptData = studentAttempts.reduce((a, b) {
+          final attemptA = a['attempt'] as Attempt;
+          final attemptB = b['attempt'] as Attempt;
+          return attemptA.score > attemptB.score ? a : b;
+        });
         
-        // Get the best attempt (highest score)
-        Attempt? bestAttempt;
-        if (studentAttempts.isNotEmpty) {
-          bestAttempt = studentAttempts.reduce((a, b) => a.score > b.score ? a : b);
-        }
-
-        results.add(StudentQuizResult(
-          student: student,
-          user: user,
-          enrollment: enrollment,
-          attempt: bestAttempt,
-          quiz: widget.quiz,
-        ));
+        bestAttempt = bestAttemptData['attempt'] as Attempt;
       }
+
+      results.add(StudentQuizResult(
+        student: student,
+        user: user,
+        enrollment: enrollment,
+        attempt: bestAttempt,
+        quiz: widget.quiz,
+        totalPoints: _calculateTotalPoints(),
+      ));
     }
 
     // Apply filters
@@ -304,12 +336,31 @@ class _QuizStudentResultsScreenState extends ConsumerState<QuizStudentResultsScr
     );
   }
 
+  double _calculateTotalPoints() {
+    return _totalPoints;
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(
+            widget.quiz.title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          backgroundColor: AppTheme.primaryColor,
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final results = _getFilteredResults();
-    final totalStudents = MockData.enrollments
-        .where((e) => e.courseId == widget.course.courseId)
-        .length;
+    final totalStudents = _enrolledStudents.length;
     final completedStudents = results.where((r) => r.attempt != null).length;
     final averageScore = results.where((r) => r.attempt != null).isNotEmpty
         ? results
@@ -658,6 +709,7 @@ class StudentQuizResult {
   final Enrollment enrollment;
   final Attempt? attempt;
   final Quiz quiz;
+  final double totalPoints;
 
   StudentQuizResult({
     required this.student,
@@ -665,17 +717,16 @@ class StudentQuizResult {
     required this.enrollment,
     required this.attempt,
     required this.quiz,
+    required this.totalPoints,
   });
 
   double getPercentage() {
     if (attempt == null) return 0.0;
-    final totalPoints = getTotalPoints();
     return totalPoints > 0 ? (attempt!.score / totalPoints) * 100 : 0.0;
   }
 
   double getTotalPoints() {
-    final questions = MockData.questions.where((q) => q.quizId == quiz.quizId).toList();
-    return questions.fold(0.0, (sum, q) => sum + q.points);
+    return totalPoints;
   }
 }
 
