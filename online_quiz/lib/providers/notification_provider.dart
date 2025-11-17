@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/notification.dart' as model;
-import '../data/mock_data.dart';
+import '../models/user.dart';
+import '../services/notification_service.dart';
 
 // Notification state class to hold all notification-related data and UI state
 class NotificationState {
@@ -8,6 +9,7 @@ class NotificationState {
   final List<model.Notification> unreadNotifications;
   final List<model.Notification> readNotifications;
   final List<model.Notification> filteredNotifications;
+  final List<Map<String, dynamic>> groupedNotifications; // For admin view
   final bool isLoading;
   final String? error;
   final String selectedFilter; // 'All', 'Unread', 'Read', 'Quiz', 'Course', 'System', 'Reminder'
@@ -22,6 +24,7 @@ class NotificationState {
     this.unreadNotifications = const [],
     this.readNotifications = const [],
     this.filteredNotifications = const [],
+    this.groupedNotifications = const [],
     this.isLoading = false,
     this.error,
     this.selectedFilter = 'All',
@@ -37,6 +40,7 @@ class NotificationState {
     List<model.Notification>? unreadNotifications,
     List<model.Notification>? readNotifications,
     List<model.Notification>? filteredNotifications,
+    List<Map<String, dynamic>>? groupedNotifications,
     bool? isLoading,
     String? error,
     String? selectedFilter,
@@ -52,6 +56,7 @@ class NotificationState {
       unreadNotifications: unreadNotifications ?? this.unreadNotifications,
       readNotifications: readNotifications ?? this.readNotifications,
       filteredNotifications: filteredNotifications ?? this.filteredNotifications,
+      groupedNotifications: groupedNotifications ?? this.groupedNotifications,
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
       selectedFilter: selectedFilter ?? this.selectedFilter,
@@ -76,9 +81,16 @@ class NotificationState {
   bool get hasPreviousPage => currentPage > 0;
 }
 
+// Provider for notification service
+final notificationServiceProvider = Provider<NotificationService>((ref) {
+  return NotificationService();
+});
+
 // Notification notifier class
 class NotificationNotifier extends StateNotifier<NotificationState> {
-  NotificationNotifier() : super(const NotificationState()) {
+  final NotificationService _notificationService;
+
+  NotificationNotifier(this._notificationService) : super(const NotificationState()) {
     // Don't auto-load notifications - let each screen load appropriate notifications
     // This prevents interference between admin view (all notifications) and user view (user-specific)
   }
@@ -88,11 +100,14 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
     state = state.copyWith(isLoading: true, clearError: true);
     
     try {
-      // Use provided userId or current userId from state, or default to 4 for backward compatibility
-      final currentUserId = userId ?? state.currentUserId ?? 4;
+      // Use provided userId or current userId from state
+      final currentUserId = userId ?? state.currentUserId;
+      if (currentUserId == null) {
+        throw Exception('User ID is required to load notifications');
+      }
       
-      // Get all notifications for the user
-      final allNotifications = MockData.getNotificationsByUser(currentUserId);
+      // Get all notifications for the user from Supabase
+      final allNotifications = await _notificationService.getNotificationsByUser(currentUserId);
       
       // Sort notifications by creation date (newest first)
       allNotifications.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -134,8 +149,11 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
     state = state.copyWith(isLoading: true, clearError: true);
     
     try {
-      // Get all notifications from mock data
-      final allNotifications = List<model.Notification>.from(MockData.notifications);
+      // Get grouped notifications from Supabase (combines bulk notifications)
+      final groupedNotifications = await _notificationService.getGroupedNotifications();
+      
+      // Get all notifications from Supabase
+      final allNotifications = await _notificationService.getAllNotifications();
       
       // Sort notifications by creation date (newest first)
       allNotifications.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -158,11 +176,12 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
         unreadNotifications: unreadNotifications,
         readNotifications: readNotifications,
         filteredNotifications: filteredNotifications,
+        groupedNotifications: groupedNotifications,
         unreadCount: unreadNotifications.length,
         notificationReadStatus: readStatusMap,
         isLoading: false,
         currentPage: 0, // Reset to first page when loading
-        currentUserId: null, // Admin view - no specific user
+        currentUserId: null, // Clear current user ID for admin view
       );
     } catch (e) {
       state = state.copyWith(
@@ -177,11 +196,8 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
     if (notification.isRead) return; // Already read
     
     try {
-      // Update the notification in mock data
-      final index = MockData.notifications.indexWhere((n) => n.notificationId == notification.notificationId);
-      if (index != -1) {
-        MockData.notifications[index] = notification.markAsRead();
-      }
+      // Update the notification in Supabase
+      await _notificationService.markNotificationAsRead(notification.notificationId);
       
       // Update the state efficiently without full reload
       final updatedNotification = notification.markAsRead();
@@ -219,38 +235,177 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
   // Mark all notifications as read
   Future<void> markAllAsRead() async {
     try {
+      final unreadIds = state.unreadNotifications
+          .map((n) => n.notificationId)
+          .toList();
+      
+      if (unreadIds.isEmpty) return;
+      
+      // Mark all as read in Supabase
+      await _notificationService.bulkMarkAsRead(unreadIds);
+      
+      // Reload notifications to reflect changes
       if (state.currentUserId == null) {
-        // Admin view - mark all notifications as read
-        for (int i = 0; i < MockData.notifications.length; i++) {
-          final notification = MockData.notifications[i];
-          if (!notification.isRead) {
-            MockData.notifications[i] = notification.markAsRead();
-          }
-        }
-        
-        // Reset filter to 'All' to show all notifications after marking as read
-        // This prevents the admin view from showing empty list when filter was 'Unread'
+        // Admin view - reload all notifications
         state = state.copyWith(selectedFilter: 'All');
-        
-        // Reload all notifications from updated MockData to ensure state consistency
         await loadAllNotifications();
       } else {
-        // User view - mark only user-specific notifications as read
-        final currentUserId = state.currentUserId;
-        
-        // Update all unread notifications for the current user
-        for (int i = 0; i < MockData.notifications.length; i++) {
-          final notification = MockData.notifications[i];
-          if (notification.userId == currentUserId && !notification.isRead) {
-            MockData.notifications[i] = notification.markAsRead();
-          }
-        }
-        
-        // Reload notifications for the current user to ensure state consistency
-        await loadNotifications(userId: currentUserId);
+        // User view - reload user-specific notifications
+        await loadNotifications(userId: state.currentUserId);
       }
     } catch (e) {
       state = state.copyWith(error: 'Failed to mark all notifications as read: ${e.toString()}');
+    }
+  }
+  
+  // Create a new notification (admin only)
+  Future<void> createNotification({
+    int? userId, // Nullable - if null, create broadcast notification
+    required model.NotificationType type,
+    required String title,
+    required String message,
+  }) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    
+    try {
+      if (userId == null) {
+        // Broadcast to all users - get all user IDs
+        final allUsers = await _notificationService.getAllUsers();
+        final userIds = allUsers.map((u) => u.userId).toList();
+        
+        await _notificationService.createBulkNotifications(
+          userIds: userIds,
+          type: type,
+          title: title,
+          message: message,
+        );
+      } else {
+        // Single user notification
+        await _notificationService.createNotification(
+          userId: userId,
+          type: type,
+          title: title,
+          message: message,
+        );
+      }
+      
+      // Reload notifications
+      await loadAllNotifications();
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to create notification: ${e.toString()}',
+      );
+    }
+  }
+  
+  // Create bulk notifications (admin only)
+  Future<void> createBulkNotifications({
+    required List<int> userIds,
+    required model.NotificationType type,
+    required String title,
+    required String message,
+  }) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    
+    try {
+      await _notificationService.createBulkNotifications(
+        userIds: userIds,
+        type: type,
+        title: title,
+        message: message,
+      );
+      
+      // Reload notifications
+      await loadAllNotifications();
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to create bulk notifications: ${e.toString()}',
+      );
+    }
+  }
+  
+  // Update notification (admin only)
+  Future<void> updateNotification({
+    required int notificationId,
+    String? title,
+    String? message,
+    model.NotificationType? type,
+  }) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    
+    try {
+      await _notificationService.updateNotification(
+        notificationId: notificationId,
+        title: title,
+        message: message,
+        type: type,
+      );
+      
+      // Reload notifications
+      await loadAllNotifications();
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to update notification: ${e.toString()}',
+      );
+    }
+  }
+  
+  // Delete notification (admin only)
+  Future<void> deleteNotification(int notificationId) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    
+    try {
+      await _notificationService.deleteNotification(notificationId);
+      
+      // Reload notifications
+      await loadAllNotifications();
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to delete notification: ${e.toString()}',
+      );
+    }
+  }
+  
+  // Delete multiple notifications (admin only)
+  Future<void> deleteBulkNotifications(List<int> notificationIds) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    
+    try {
+      await _notificationService.deleteBulkNotifications(notificationIds);
+      
+      // Reload notifications
+      await loadAllNotifications();
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to delete notifications: ${e.toString()}',
+      );
+    }
+  }
+  
+  // Get all users for notification targeting
+  Future<List<User>> getAllUsers() async {
+    try {
+      final users = await _notificationService.getAllUsers();
+      return users;
+    } catch (e) {
+      state = state.copyWith(error: 'Failed to fetch users: ${e.toString()}');
+      return [];
+    }
+  }
+  
+  // Get users by role for targeted notifications
+  Future<List<User>> getUsersByRole(int roleId) async {
+    try {
+      final users = await _notificationService.getUsersByRole(roleId);
+      return users;
+    } catch (e) {
+      state = state.copyWith(error: 'Failed to fetch users by role: ${e.toString()}');
+      return [];
     }
   }
 
@@ -352,7 +507,8 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
 
 // Provider instances
 final notificationNotifierProvider = StateNotifierProvider<NotificationNotifier, NotificationState>((ref) {
-  return NotificationNotifier();
+  final notificationService = ref.watch(notificationServiceProvider);
+  return NotificationNotifier(notificationService);
 });
 
 // Computed providers for specific notification data

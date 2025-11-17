@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../utils/app_theme.dart';
-import '../../data/mock_data.dart';
 import '../../models/notification.dart' as model;
 import '../../providers/notification_provider.dart';
 import '../../widgets/custom_text_field.dart';
@@ -78,41 +77,23 @@ class _AdminNotificationsTabState extends ConsumerState<AdminNotificationsTab> {
       ),
       child: Column(
         children: [
-          // Title and Stats
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // Quick Stats
+          Row(
             children: [
-            Text(
-                'Notification Management',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.getTextColor(context),
+              Expanded(
+                child: _buildQuickStat(context, 'Total', state.allNotifications.length.toString(), Icons.notifications),
               ),
-            ),
-              const SizedBox(height: 8),
-            Text(
-                'Manage system notifications and announcements',
-              style: TextStyle(
-                fontSize: 16,
-                color: AppTheme.getSecondaryTextColor(context),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQuickStat(context, 'Unread', state.unreadCount.toString(), Icons.notifications_active),
               ),
-            ),
-              const SizedBox(height: 16),
-              // Quick Stats
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _buildQuickStat(context, 'Total', state.allNotifications.length.toString(), Icons.notifications),
-                    const SizedBox(width: 12),
-                    _buildQuickStat(context, 'Unread', state.unreadCount.toString(), Icons.notifications_active),
-                    const SizedBox(width: 12),
-                    _buildQuickStat(context, 'Read', state.readNotifications.length.toString(), Icons.mark_email_read),
-                    const SizedBox(width: 12),
-                    _buildQuickStat(context, 'System', state.allNotifications.where((n) => n.type == model.NotificationType.system).length.toString(), Icons.settings),
-                  ],
-                ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQuickStat(context, 'Read', state.readNotifications.length.toString(), Icons.mark_email_read),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQuickStat(context, 'System', state.allNotifications.where((n) => n.type == model.NotificationType.system).length.toString(), Icons.settings),
               ),
             ],
           ),
@@ -181,27 +162,36 @@ class _AdminNotificationsTabState extends ConsumerState<AdminNotificationsTab> {
 
   Widget _buildQuickStat(BuildContext context, String label, String value, IconData icon) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
         color: AppTheme.primaryColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             icon,
-            size: 14,
+            size: 16,
             color: AppTheme.primaryColor,
           ),
-          const SizedBox(width: 6),
+          const SizedBox(height: 4),
           Text(
-            '$value $label',
+            value,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.primaryColor,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
               fontWeight: FontWeight.w600,
               color: AppTheme.primaryColor,
             ),
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -209,9 +199,9 @@ class _AdminNotificationsTabState extends ConsumerState<AdminNotificationsTab> {
   }
 
   Widget _buildContent(BuildContext context, NotificationState state, NotificationNotifier notifier) {
-    final paginatedNotifications = state.paginatedNotifications;
+    final groupedNotifications = state.groupedNotifications;
     
-    if (paginatedNotifications.isEmpty) {
+    if (groupedNotifications.isEmpty) {
       return EmptyStateWidget(
         icon: state.selectedFilter != 'All' ? Icons.filter_list_off : Icons.notifications_off,
         title: state.selectedFilter != 'All' ? 'No Notifications Found' : 'No Notifications Available',
@@ -234,22 +224,23 @@ class _AdminNotificationsTabState extends ConsumerState<AdminNotificationsTab> {
             onRefresh: () => notifier.loadAllNotifications(),
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: paginatedNotifications.length,
+              itemCount: groupedNotifications.length,
               itemBuilder: (context, index) {
-                final notification = paginatedNotifications[index];
-                return _buildNotificationCard(context, notification, notifier);
+                final group = groupedNotifications[index];
+                return _buildGroupedNotificationCard(context, group, notifier);
               },
             ),
           ),
         ),
-        
-        // Pagination Controls
-        if (state.totalPages > 1) _buildPaginationControls(context, state, notifier),
       ],
     );
   }
 
-  Widget _buildNotificationCard(BuildContext context, model.Notification notification, NotificationNotifier notifier) {
+  Widget _buildGroupedNotificationCard(BuildContext context, Map<String, dynamic> group, NotificationNotifier notifier) {
+    final notification = group['notification'] as model.Notification;
+    final count = group['count'] as int;
+    final isBroadcast = group['isBroadcast'] as bool;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -271,7 +262,7 @@ class _AdminNotificationsTabState extends ConsumerState<AdminNotificationsTab> {
         ],
       ),
       child: InkWell(
-        onTap: () => _showNotificationDetailsDialog(context, notification, notifier),
+        onTap: () => _showGroupedNotificationDetailsDialog(context, group, notifier),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -311,52 +302,51 @@ class _AdminNotificationsTabState extends ConsumerState<AdminNotificationsTab> {
                           ),
                         ),
                         const SizedBox(height: 2),
-                        Text(
-                          _getNotificationTypeLabel(notification.type),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: _getNotificationTypeColor(notification.type),
-                            fontWeight: FontWeight.w600,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              _getNotificationTypeLabel(notification.type),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _getNotificationTypeColor(notification.type),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            if (isBroadcast) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  'BROADCAST • $count users',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: AppTheme.primaryColor,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ],
                     ),
                   ),
                   
-                  // Read Status and Actions
-                  Row(
-                    children: [
-                      // Read Status Indicator
-                      if (!notification.isRead)
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryColor,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      
-                      const SizedBox(width: 8),
-                      
-                      // Actions Menu
-                      PopupMenuButton<String>(
-                        onSelected: (value) => _handleNotificationAction(context, value, notification, notifier),
-                        itemBuilder: (context) => [
-                          if (!notification.isRead)
-                            const PopupMenuItem(value: 'mark_read', child: Text('Mark as Read')),
-                          if (notification.isRead)
-                            const PopupMenuItem(value: 'mark_unread', child: Text('Mark as Unread')),
-                          const PopupMenuItem(value: 'view', child: Text('View Details')),
-                          const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                          const PopupMenuItem(value: 'delete', child: Text('Delete')),
-                        ],
-                        child: Icon(
-                          Icons.more_vert,
-                          color: AppTheme.getSecondaryTextColor(context),
-                        ),
-                      ),
+                  // Actions Menu
+                  PopupMenuButton<String>(
+                    onSelected: (value) => _handleGroupedNotificationAction(context, value, group, notifier),
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(value: 'view', child: Text('View Details')),
+                      const PopupMenuItem(value: 'delete', child: Text('Delete')),
                     ],
+                    child: Icon(
+                      Icons.more_vert,
+                      color: AppTheme.getSecondaryTextColor(context),
+                    ),
                   ),
                 ],
               ),
@@ -395,6 +385,16 @@ class _AdminNotificationsTabState extends ConsumerState<AdminNotificationsTab> {
                   ),
                   
                   const Spacer(),
+                  
+                  // Target Info
+                  if (!isBroadcast)
+                    Text(
+                      'Target User ID: #${notification.userId}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.getSecondaryTextColor(context),
+                      ),
+                    ),
                 ],
               ),
             ],
@@ -404,139 +404,13 @@ class _AdminNotificationsTabState extends ConsumerState<AdminNotificationsTab> {
     );
   }
 
-  Widget _buildPaginationControls(BuildContext context, NotificationState state, NotificationNotifier notifier) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.getCardColor(context),
-        border: Border(
-          top: BorderSide(
-            color: AppTheme.getDividerColor(context),
-            width: 1,
-          ),
-        ),
-      ),
-      child: Column(
-        children: [
-          // Items info
-          Text(
-            'Showing ${state.currentPage * state.itemsPerPage + 1}-${(state.currentPage + 1) * state.itemsPerPage} of ${state.filteredNotifications.length} notifications',
-            style: TextStyle(
-              color: AppTheme.getSecondaryTextColor(context),
-              fontSize: 14,
-            ),
-          ),
-          
-          const SizedBox(height: 12),
-          
-          // Pagination controls
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Previous button
-              IconButton(
-                onPressed: state.hasPreviousPage ? notifier.previousPage : null,
-                icon: const Icon(Icons.chevron_left),
-                style: IconButton.styleFrom(
-                  backgroundColor: state.hasPreviousPage 
-                      ? AppTheme.primaryColor.withValues(alpha: 0.1)
-                      : null,
-                ),
-              ),
-              
-              // Page numbers
-              ...List.generate(
-                state.totalPages.clamp(0, 5), // Show max 5 page numbers
-                (index) {
-                  int pageNumber;
-                  if (state.totalPages <= 5) {
-                    pageNumber = index;
-                  } else {
-                    // Smart pagination: show current page and surrounding pages
-                    if (state.currentPage <= 2) {
-                      pageNumber = index;
-                    } else if (state.currentPage >= state.totalPages - 3) {
-                      pageNumber = state.totalPages - 5 + index;
-                    } else {
-                      pageNumber = state.currentPage - 2 + index;
-                    }
-                  }
-                  
-                  final isCurrentPage = pageNumber == state.currentPage;
-                  
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 1), // Reduced padding
-                    child: InkWell(
-                      onTap: () => notifier.setPage(pageNumber),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        width: 30, // Reduced width
-                        height: 30, // Reduced height
-                        decoration: BoxDecoration(
-                          color: isCurrentPage 
-                              ? AppTheme.primaryColor
-                              : AppTheme.getSurfaceColor(context),
-                          borderRadius: BorderRadius.circular(8),
-                          border: isCurrentPage 
-                              ? null
-                              : Border.all(
-                                  color: AppTheme.getDividerColor(context),
-                                  width: 1,
-                                ),
-                        ),
-                        child: Center(
-                          child: Text(
-                            (pageNumber + 1).toString(),
-                            style: TextStyle(
-                              color: isCurrentPage 
-                                  ? Colors.white
-                                  : AppTheme.getTextColor(context),
-                              fontWeight: isCurrentPage 
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                              fontSize: 12, // Reduced font size
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-              
-              // Next button
-              IconButton(
-                onPressed: state.hasNextPage ? notifier.nextPage : null,
-                icon: const Icon(Icons.chevron_right),
-                style: IconButton.styleFrom(
-                  backgroundColor: state.hasNextPage 
-                      ? AppTheme.primaryColor.withValues(alpha: 0.1)
-                      : null,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _handleNotificationAction(BuildContext context, String action, model.Notification notification, NotificationNotifier notifier) {
+  void _handleGroupedNotificationAction(BuildContext context, String action, Map<String, dynamic> group, NotificationNotifier notifier) {
     switch (action) {
-      case 'mark_read':
-        notifier.markAsRead(notification);
-        break;
-      case 'mark_unread':
-        // Note: This would require adding a markAsUnread method to the provider
-        break;
       case 'view':
-        _showNotificationDetailsDialog(context, notification, notifier);
-        break;
-      case 'edit':
-        _showEditNotificationDialog(context, notification, notifier);
+        _showGroupedNotificationDetailsDialog(context, group, notifier);
         break;
       case 'delete':
-        _showDeleteConfirmationDialog(context, notification, notifier);
+        _showGroupedDeleteConfirmationDialog(context, group, notifier);
         break;
     }
   }
@@ -544,20 +418,38 @@ class _AdminNotificationsTabState extends ConsumerState<AdminNotificationsTab> {
   void _showCreateNotificationDialog(BuildContext context, NotificationNotifier notifier) {
     final titleController = TextEditingController();
     final messageController = TextEditingController();
-    
-    model.NotificationType selectedType = model.NotificationType.system;
-    int? selectedUserId;
-    
     final formKey = GlobalKey<FormState>();
+
+    // Variables to hold the state
+    model.NotificationType? selectedTypeHolder;
+    int? selectedUserIdHolder;
 
     AppDialog.show(
       context: context,
       title: 'Create Notification',
       type: DialogType.custom,
       maxWidth: 600,
-      content: StatefulBuilder(
-        builder: (context, setState) {
-          return Form(
+      content: FutureBuilder(
+        future: notifier.getAllUsers(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(20.0),
+                child: CircularProgressIndicator(),
+              ),
+            );
+          }
+          
+          final users = snapshot.data!;
+          
+          return StatefulBuilder(
+            builder: (context, setState) {
+              // Initialize local state variables inside StatefulBuilder
+              model.NotificationType selectedType = selectedTypeHolder ?? model.NotificationType.system;
+              int? selectedUserId = selectedUserIdHolder;
+              
+              return Form(
             key: formKey,
             child: SingleChildScrollView(
               child: Column(
@@ -625,7 +517,7 @@ class _AdminNotificationsTabState extends ConsumerState<AdminNotificationsTab> {
                         )).toList(),
                     onChanged: (value) {
                       setState(() {
-                        selectedType = value!;
+                        selectedTypeHolder = value!;
                       });
                     },
                   ),
@@ -654,7 +546,7 @@ class _AdminNotificationsTabState extends ConsumerState<AdminNotificationsTab> {
                         value: null,
                         child: Text('All Users'),
                       ),
-                      ...MockData.users.map((user) => 
+                      ...users.map((user) => 
                           DropdownMenuItem(
                             value: user.userId,
                             child: Text(user.fullName),
@@ -662,7 +554,7 @@ class _AdminNotificationsTabState extends ConsumerState<AdminNotificationsTab> {
                     ],
                     onChanged: (value) {
                       setState(() {
-                        selectedUserId = value;
+                        selectedUserIdHolder = value;
                       });
                     },
                   ),
@@ -670,6 +562,8 @@ class _AdminNotificationsTabState extends ConsumerState<AdminNotificationsTab> {
               ),
             ),
           );
+        },
+      );
         },
       ),
       actions: [
@@ -680,23 +574,13 @@ class _AdminNotificationsTabState extends ConsumerState<AdminNotificationsTab> {
               Navigator.of(context).pop();
               
               // Create notification
-              final newNotification = model.Notification(
-                notificationId: MockData.notifications.isNotEmpty
-                    ? MockData.notifications.map((n) => n.notificationId).reduce((a, b) => a > b ? a : b) + 1
-                    : 1,
-                userId: selectedUserId ?? 0, // 0 means all users
+              // Pass null for "All Users" (broadcast) - will use admin ID
+              await notifier.createNotification(
+                userId: selectedUserIdHolder, // null = broadcast to all users
+                type: selectedTypeHolder ?? model.NotificationType.system,
                 title: titleController.text,
                 message: messageController.text,
-                type: selectedType,
-                isRead: false,
-                createdAt: DateTime.now(),
               );
-              
-              // Add to mock data
-              MockData.notifications.add(newNotification);
-              
-              // Refresh notifications
-              await notifier.loadAllNotifications();
               
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -713,113 +597,12 @@ class _AdminNotificationsTabState extends ConsumerState<AdminNotificationsTab> {
     );
   }
 
-  void _showEditNotificationDialog(BuildContext context, model.Notification notification, NotificationNotifier notifier) {
-    final titleController = TextEditingController(text: notification.title);
-    final messageController = TextEditingController(text: notification.message);
+  void _showGroupedNotificationDetailsDialog(BuildContext context, Map<String, dynamic> group, NotificationNotifier notifier) {
+    final notification = group['notification'] as model.Notification;
+    final userIds = group['userIds'] as List<int>;
+    final count = group['count'] as int;
+    final isBroadcast = group['isBroadcast'] as bool;
     
-    model.NotificationType selectedType = notification.type;
-    
-    final formKey = GlobalKey<FormState>();
-
-    AppDialog.show(
-      context: context,
-      title: 'Edit Notification',
-      type: DialogType.custom,
-      maxWidth: 600,
-      content: StatefulBuilder(
-        builder: (context, setState) {
-          return Form(
-            key: formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CustomTextField(
-                    controller: titleController,
-                    labelText: 'Title',
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Title is required';
-                      }
-                      return null;
-                    },
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  CustomTextField(
-                    controller: messageController,
-                    labelText: 'Message',
-                    maxLines: 4,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Message is required';
-                      }
-                      return null;
-                    },
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  DropdownButtonFormField<model.NotificationType>(
-                    initialValue: selectedType,
-                    decoration: const InputDecoration(
-                      labelText: 'Type',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: model.NotificationType.values.map((type) => 
-                        DropdownMenuItem(
-                          value: type,
-                          child: Text(_getNotificationTypeLabel(type)),
-                        )).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedType = value!;
-                      });
-                    },
-            ),
-          ],
-        ),
-      ),
-    );
-        },
-      ),
-      actions: [
-        DialogAction.cancel(context: context),
-        DialogAction.save(
-          onPressed: () async {
-            if (formKey.currentState!.validate()) {
-              Navigator.of(context).pop();
-              
-              // Update notification in mock data
-              final index = MockData.notifications.indexWhere((n) => n.notificationId == notification.notificationId);
-              if (index != -1) {
-                MockData.notifications[index] = notification.copyWith(
-                  title: titleController.text,
-                  message: messageController.text,
-                  type: selectedType,
-                );
-              }
-              
-              // Refresh notifications
-              await notifier.loadAllNotifications();
-              
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Notification updated successfully!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            }
-          },
-        ),
-      ],
-    );
-  }
-
-  void _showNotificationDetailsDialog(BuildContext context, model.Notification notification, NotificationNotifier notifier) {
     AppDialog.show(
       context: context,
       title: 'Notification Details',
@@ -857,13 +640,35 @@ class _AdminNotificationsTabState extends ConsumerState<AdminNotificationsTab> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      _getNotificationTypeLabel(notification.type),
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: _getNotificationTypeColor(notification.type),
-                        fontWeight: FontWeight.w600,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          _getNotificationTypeLabel(notification.type),
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: _getNotificationTypeColor(notification.type),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (isBroadcast) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'BROADCAST',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppTheme.primaryColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
@@ -894,14 +699,61 @@ class _AdminNotificationsTabState extends ConsumerState<AdminNotificationsTab> {
           const SizedBox(height: 20),
           
           // Details
-          _buildInfoRow(context, 'Status', notification.isRead ? 'Read' : 'Unread', Icons.mark_email_read),
+          _buildInfoRow(context, 'Recipients', isBroadcast ? '$count users (All Users)' : 'Single User (#${notification.userId})', Icons.people),
           _buildInfoRow(context, 'Created', _formatDate(notification.createdAt), Icons.schedule),
-          if (notification.userId != 0)
-            _buildInfoRow(context, 'Target User', MockData.getUserById(notification.userId)?.fullName ?? 'Unknown', Icons.person),
+          if (isBroadcast)
+            _buildInfoRow(context, 'Target User IDs', userIds.take(10).map((id) => '#$id').join(', ') + (userIds.length > 10 ? '...' : ''), Icons.group),
         ],
       ),
       actions: [
         DialogAction.ok(),
+      ],
+    );
+  }
+
+  void _showGroupedDeleteConfirmationDialog(BuildContext context, Map<String, dynamic> group, NotificationNotifier notifier) {
+    final notification = group['notification'] as model.Notification;
+    final count = group['count'] as int;
+    final isBroadcast = group['isBroadcast'] as bool;
+    final notificationIds = group['notificationIds'] as List<int>;
+    
+    AppDialog.show(
+      context: context,
+      title: 'Delete Notification',
+      type: DialogType.warning,
+      content: Text(
+        isBroadcast
+            ? 'Are you sure you want to delete "${notification.title}"? This will delete $count notification instances sent to all users. This action cannot be undone.'
+            : 'Are you sure you want to delete "${notification.title}"? This action cannot be undone.',
+      ),
+      actions: [
+        DialogAction.cancel(context: context),
+        DialogAction.confirm(
+          text: 'Delete',
+          onPressed: () async {
+            Navigator.of(context).pop();
+            
+            // Delete all notifications in the group
+            if (isBroadcast) {
+              await notifier.deleteBulkNotifications(notificationIds);
+            } else {
+              await notifier.deleteNotification(notificationIds.first);
+            }
+            
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    isBroadcast
+                        ? '${notification.title} has been deleted ($count instances)'
+                        : '${notification.title} has been deleted',
+                  ),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+        ),
       ],
     );
   }
@@ -924,39 +776,6 @@ class _AdminNotificationsTabState extends ConsumerState<AdminNotificationsTab> {
                 const SnackBar(
                   content: Text('All notifications marked as read'),
                   backgroundColor: Colors.green,
-                ),
-              );
-            }
-          },
-        ),
-      ],
-    );
-  }
-
-  void _showDeleteConfirmationDialog(BuildContext context, model.Notification notification, NotificationNotifier notifier) {
-    AppDialog.show(
-      context: context,
-      title: 'Delete Notification',
-      type: DialogType.warning,
-      content: Text('Are you sure you want to delete "${notification.title}"? This action cannot be undone.'),
-      actions: [
-        DialogAction.cancel(context: context),
-        DialogAction.confirm(
-          text: 'Delete',
-          onPressed: () async {
-            Navigator.of(context).pop();
-            
-            // Remove from mock data
-            MockData.notifications.removeWhere((n) => n.notificationId == notification.notificationId);
-            
-            // Refresh notifications
-            await notifier.loadAllNotifications();
-            
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${notification.title} has been deleted'),
-                  backgroundColor: Colors.red,
                 ),
               );
             }
