@@ -1,9 +1,12 @@
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:syncfusion_flutter_xlsio/xlsio.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import '../services/export_import_service.dart';
+import '../models/export_import_log.dart';
 
 // Provider for export/import functionality
 final exportImportProvider = StateNotifierProvider<ExportImportNotifier, ExportImportState>((ref) {
@@ -42,6 +45,8 @@ class ExportImportState {
 // Notifier class for handling export/import operations
 class ExportImportNotifier extends StateNotifier<ExportImportState> {
   ExportImportNotifier() : super(const ExportImportState());
+
+  final ExportImportService _exportImportService = ExportImportService();
 
   // Request storage permission
   Future<bool> _requestStoragePermission() async {
@@ -125,7 +130,10 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
     required List<Map<String, dynamic>> results,
     required String quizTitle,
     required String courseName,
+    required int userId,
   }) async {
+    String fileName = 'quiz_results_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+    
     try {
       state = state.copyWith(isExporting: true, errorMessage: null, successMessage: null);
 
@@ -218,10 +226,21 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
       final directory = await _getDownloadDirectory();
 
       if (directory != null) {
-        final String fileName = 'quiz_results_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+        fileName = 'quiz_results_${DateTime.now().millisecondsSinceEpoch}.xlsx';
         final String filePath = '${directory.path}/$fileName';
         final File file = File(filePath);
         await file.writeAsBytes(bytes);
+
+        // Log successful export to Supabase
+        try {
+          await _exportImportService.logExportOperation(
+            userId: userId,
+            fileName: fileName,
+          );
+        } catch (logError) {
+          // Don't fail the export if logging fails, just print error
+          debugPrint('Failed to log export operation: $logError');
+        }
 
         // Create user-friendly success message
         String locationMessage;
@@ -251,6 +270,18 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
         throw Exception('Could not access storage directory');
       }
     } catch (e) {
+      // Log failed export to Supabase
+      try {
+        await _exportImportService.logFailedExportOperation(
+          userId: userId,
+          fileName: fileName,
+          errorMessage: e.toString(),
+        );
+      } catch (logError) {
+        // Don't fail the export if logging fails, just print error
+        debugPrint('Failed to log failed export: $logError');
+      }
+      
       state = state.copyWith(
         isExporting: false,
         errorMessage: 'Failed to export Excel file: ${e.toString()}',
@@ -264,7 +295,10 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
     required List<Map<String, dynamic>> results,
     required String quizTitle,
     required String courseName,
+    required int userId,
   }) async {
+    String fileName = 'quiz_scores_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+    
     try {
       state = state.copyWith(isExporting: true, errorMessage: null, successMessage: null);
 
@@ -340,10 +374,21 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
       final directory = await _getDownloadDirectory();
 
       if (directory != null) {
-        final String fileName = 'quiz_scores_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+        fileName = 'quiz_scores_${DateTime.now().millisecondsSinceEpoch}.xlsx';
         final String filePath = '${directory.path}/$fileName';
         final File file = File(filePath);
         await file.writeAsBytes(bytes);
+
+        // Log successful export to Supabase
+        try {
+          await _exportImportService.logExportOperation(
+            userId: userId,
+            fileName: fileName,
+          );
+        } catch (logError) {
+          // Don't fail the export if logging fails, just print error
+          debugPrint('Failed to log export operation: $logError');
+        }
 
         // Create user-friendly success message
         String locationMessage;
@@ -373,6 +418,18 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
         throw Exception('Could not access storage directory');
       }
     } catch (e) {
+      // Log failed export to Supabase
+      try {
+        await _exportImportService.logFailedExportOperation(
+          userId: userId,
+          fileName: fileName,
+          errorMessage: e.toString(),
+        );
+      } catch (logError) {
+        // Don't fail the export if logging fails, just print error
+        debugPrint('Failed to log failed export: $logError');
+      }
+      
       state = state.copyWith(
         isExporting: false,
         errorMessage: 'Failed to export Excel file: ${e.toString()}',
@@ -384,6 +441,101 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
   // Clear messages
   void clearMessages() {
     state = state.copyWith(errorMessage: null, successMessage: null);
+  }
+
+  // Get export/import history for a user
+  Future<List<ExportImportLog>> getExportImportHistory({
+    required int userId,
+    LogType? type,
+    LogStatus? status,
+    int limit = 50,
+  }) async {
+    try {
+      return await _exportImportService.getExportImportHistory(
+        userId: userId,
+        type: type,
+        status: status,
+        limit: limit,
+      );
+    } catch (e) {
+      throw Exception('Failed to get export/import history: ${e.toString()}');
+    }
+  }
+
+  // Get export history for a user
+  Future<List<ExportImportLog>> getExportHistory({
+    required int userId,
+    int limit = 50,
+  }) async {
+    try {
+      return await _exportImportService.getExportHistory(
+        userId: userId,
+        limit: limit,
+      );
+    } catch (e) {
+      throw Exception('Failed to get export history: ${e.toString()}');
+    }
+  }
+
+  // Get import history for a user
+  Future<List<ExportImportLog>> getImportHistory({
+    required int userId,
+    int limit = 50,
+  }) async {
+    try {
+      return await _exportImportService.getImportHistory(
+        userId: userId,
+        limit: limit,
+      );
+    } catch (e) {
+      throw Exception('Failed to get import history: ${e.toString()}');
+    }
+  }
+
+  // Get recent export/import logs
+  Future<List<ExportImportLog>> getRecentLogs({
+    required int userId,
+  }) async {
+    try {
+      return await _exportImportService.getRecentLogs(userId: userId);
+    } catch (e) {
+      throw Exception('Failed to get recent logs: ${e.toString()}');
+    }
+  }
+
+  // Get export/import statistics
+  Future<Map<String, dynamic>> getExportImportStatistics({
+    required int userId,
+  }) async {
+    try {
+      return await _exportImportService.getExportImportStatistics(userId: userId);
+    } catch (e) {
+      throw Exception('Failed to get statistics: ${e.toString()}');
+    }
+  }
+
+  // Delete a log entry
+  Future<void> deleteLog(int logId) async {
+    try {
+      await _exportImportService.deleteLog(logId);
+    } catch (e) {
+      throw Exception('Failed to delete log: ${e.toString()}');
+    }
+  }
+
+  // Delete old logs
+  Future<int> deleteOldLogs({
+    required int userId,
+    int olderThanDays = 90,
+  }) async {
+    try {
+      return await _exportImportService.deleteOldLogs(
+        userId: userId,
+        olderThanDays: olderThanDays,
+      );
+    } catch (e) {
+      throw Exception('Failed to delete old logs: ${e.toString()}');
+    }
   }
 }
 

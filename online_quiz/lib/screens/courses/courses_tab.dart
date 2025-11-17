@@ -153,7 +153,6 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
     final courseState = ref.watch(courseProvider);
     final progress = courseState.getCourseProgress(course.courseId);
     final totalQuizzes = courseState.getCourseQuizCount(course.courseId);
-    // final completedQuizzes = courseState.getCompletedQuizCount(course.courseId); // TODO: Use when displaying completion stats
     
     return GestureDetector(
       onTap: () {

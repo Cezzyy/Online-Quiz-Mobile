@@ -9,6 +9,7 @@ import '../../models/quiz.dart';
 import '../../models/student.dart';
 import '../../models/user.dart';
 import '../../providers/export_import_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/stat_card.dart';
@@ -191,12 +192,21 @@ class _QuizStudentResultsScreenState extends ConsumerState<QuizStudentResultsScr
          'hasAttempt': true, // Since we're filtering for results with attempts
        }).toList();
 
+      // Get current user ID from auth provider
+      final authState = ref.read(authProvider);
+      final userId = authState.user?.userId;
+      
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
       // Use the export provider to create Excel file
       final exportProvider = ref.read(exportImportProvider.notifier);
       final filePath = await exportProvider.exportSimplifiedResultsToExcel(
           results: resultsData,
           quizTitle: widget.quiz.title,
           courseName: widget.course.name,
+          userId: userId,
         );
 
       // Close loading dialog
