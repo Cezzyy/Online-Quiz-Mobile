@@ -56,17 +56,24 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
       final enrolled = await courseNotifier.getEnrolledStudentsWithDetails(widget.course.courseId);
       
       // Load available students (not enrolled in this course) using course provider
-      final availableUsers = await courseNotifier.getAvailableStudents(widget.course.courseId);
+      final availableStudentsData = await courseNotifier.getAvailableStudents(widget.course.courseId);
       final students = <Map<String, dynamic>>[];
       
-      // Convert available users to the expected format
-      for (final user in availableUsers) {
-        // For now, create placeholder student data
-        final studentData = {
+      // Convert available students data to the expected format with Student objects
+      for (final studentData in availableStudentsData) {
+        final user = studentData['user'] as User;
+        final student = Student(
+          userId: user.userId,
+          studentId: studentData['studentId'] as String,
+          yearLevel: studentData['yearLevel'] as int?,
+          section: studentData['section'] as String?,
+          course: studentData['course'] as String?,
+        );
+        
+        students.add({
           'user': user,
-          'student': null, // TODO: Load student details from Supabase
-        };
-        students.add(studentData);
+          'student': student,
+        });
       }
       
       // Build sections and year levels sets
