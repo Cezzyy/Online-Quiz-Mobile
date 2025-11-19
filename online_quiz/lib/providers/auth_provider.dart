@@ -57,9 +57,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> _initializeAuth() async {
     state = state.copyWith(isLoading: true);
     
+    // Start a timer to ensure minimum splash screen display time
+    final minimumDisplayTime = Future.delayed(const Duration(seconds: 3));
+    
     try {
       // Check for existing session
       final session = await _authService.getCurrentSession();
+      
+      // Wait for minimum display time to complete
+      await minimumDisplayTime;
       
       if (session != null) {
         state = state.copyWith(
@@ -77,6 +83,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         );
       }
     } catch (e) {
+      // Wait for minimum display time even on error
+      await minimumDisplayTime;
+      
       state = state.copyWith(
         isLoading: false,
         isInitialized: true,

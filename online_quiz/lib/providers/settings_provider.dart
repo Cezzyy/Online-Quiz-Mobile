@@ -7,22 +7,26 @@ import 'package:shared_preferences/shared_preferences.dart';
 class SettingsState {
   final ThemeMode themeMode;
   final bool notificationsEnabled;
+  final bool hasSeenOnboarding;
   final bool isLoading;
 
   const SettingsState({
     this.themeMode = ThemeMode.system,
     this.notificationsEnabled = true,
+    this.hasSeenOnboarding = false,
     this.isLoading = false,
   });
 
   SettingsState copyWith({
     ThemeMode? themeMode,
     bool? notificationsEnabled,
+    bool? hasSeenOnboarding,
     bool? isLoading,
   }) {
     return SettingsState(
       themeMode: themeMode ?? this.themeMode,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      hasSeenOnboarding: hasSeenOnboarding ?? this.hasSeenOnboarding,
       isLoading: isLoading ?? this.isLoading,
     );
   }
@@ -42,6 +46,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
 
   static const String _themeModeKey = 'theme_mode';
   static const String _notificationsKey = 'notifications_enabled';
+  static const String _hasSeenOnboardingKey = 'has_seen_onboarding';
   
   // Debouncing timer for saving settings
   Timer? _saveTimer;
@@ -65,12 +70,16 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       
       // Load other settings
       final notificationsEnabled = prefs.getBool(_notificationsKey) ?? true;
+      final hasSeenOnboarding = prefs.getBool(_hasSeenOnboardingKey) ?? false;
       
       // Only update if values actually changed to avoid unnecessary rebuilds
-      if (state.themeMode != themeMode || state.notificationsEnabled != notificationsEnabled) {
+      if (state.themeMode != themeMode || 
+          state.notificationsEnabled != notificationsEnabled ||
+          state.hasSeenOnboarding != hasSeenOnboarding) {
         state = SettingsState(
           themeMode: themeMode,
           notificationsEnabled: notificationsEnabled,
+          hasSeenOnboarding: hasSeenOnboarding,
           isLoading: false,
         );
       }
@@ -94,6 +103,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_themeModeKey, state.themeMode.index);
       await prefs.setBool(_notificationsKey, state.notificationsEnabled);
+      await prefs.setBool(_hasSeenOnboardingKey, state.hasSeenOnboarding);
     } catch (e) {
       // Handle save error silently
     }
@@ -121,6 +131,12 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   void setNotificationsEnabled(bool enabled) {
     state = state.copyWith(notificationsEnabled: enabled);
     _debouncedSaveSettings();
+  }
+
+  // Mark onboarding as seen
+  void setHasSeenOnboarding(bool seen) {
+    state = state.copyWith(hasSeenOnboarding: seen);
+    _saveSettingsImmediately(); // Use immediate save for important state change
   }
 
   // Reset all settings to defaults

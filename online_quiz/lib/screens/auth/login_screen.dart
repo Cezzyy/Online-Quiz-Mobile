@@ -40,20 +40,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 40),
-              _buildAnimatedHeader(),
-              const SizedBox(height: 40),
-              _buildAnimatedLoginCard(_isLoggingIn),
-              const SizedBox(height: 24),
-              _buildAnimatedForgotPassword(),
-              const SizedBox(height: 40),
-            ],
-          ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight,
+                ),
+                child: IntrinsicHeight(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Spacer(flex: 2),
+                      _buildAnimatedHeader(),
+                      const Spacer(flex: 1),
+                      _buildAnimatedLoginCard(_isLoggingIn),
+                      const SizedBox(height: 16),
+                      _buildAnimatedForgotPassword(),
+                      const Spacer(flex: 2),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -61,6 +74,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
   Widget _buildAnimatedHeader() {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         // Animated Logo
         createAnimatedWidget(
@@ -68,19 +82,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           slideAnimation: logoSlideAnimation,
           child: Image.asset(
             'assets/images/aclclogo-nobg.png',
-            width: 180,
-            height: 180,
+            width: 120,
+            height: 120,
             fit: BoxFit.contain,
             errorBuilder: (context, error, stackTrace) {
               return Icon(
                 Icons.school,
-                size: 130,
+                size: 100,
                 color: AppTheme.primaryColor,
               );
             },
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         // Animated Title
         createAnimatedWidget(
           fadeAnimation: titleFadeAnimation,
@@ -90,21 +104,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: AppTheme.primaryColor,
-              fontSize: 28,
+              fontSize: 24,
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         // Animated Subtitle
         createAnimatedWidget(
           fadeAnimation: subtitleFadeAnimation,
           slideAnimation: subtitleSlideAnimation,
           child: Text(
             'Welcome back! Please sign in to continue',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-              fontSize: 16,
+              fontSize: 14,
             ),
+            textAlign: TextAlign.center,
           ),
         ),
       ],
@@ -116,7 +131,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       fadeAnimation: formFadeAnimation,
       slideAnimation: formSlideAnimation,
       child: Container(
-        padding: const EdgeInsets.all(32.0),
+        padding: const EdgeInsets.all(24.0),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
@@ -129,9 +144,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           ],
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             _buildLoginForm(),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
             _buildLoginButton(),
           ],
         ),
@@ -171,7 +187,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               );
             },
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Consumer(
             builder: (context, ref, child) {
               final authState = ref.watch(authProvider);

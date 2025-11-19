@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'screens/onboarding/onboarding_screen.dart';
 import 'screens/onboarding/splash_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home/main_screen.dart';
@@ -65,7 +64,6 @@ class ACLCQuizApp extends ConsumerWidget {
       themeAnimationCurve: Curves.linear,
       home: const AuthWrapper(),
       routes: {
-        AppRoutes.onboarding: (context) => const OnboardingScreen(),
         AppRoutes.login: (context) => const LoginScreen(),
         AppRoutes.main: (context) => const MainScreen(),
         AppRoutes.teacherHome: (context) => const TeacherMainScreen(),
@@ -98,7 +96,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     
-    // Show splash screen only during initial app startup (not during login)
+    // Show splash screen during initial app startup
     if (!authState.isInitialized) {
       return const SplashScreen();
     }
@@ -116,7 +114,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       }
     }
     
-    // For unauthenticated users, show login screen
+    // Show login screen for unauthenticated users
     return const LoginScreen();
   }
 }
