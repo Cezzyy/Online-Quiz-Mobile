@@ -47,35 +47,40 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
     _loadExistingQuestions();
   }
 
-  void _loadExistingQuestions() async {
-    try {
-      // Load quiz details which includes questions and choices
-      await ref.read(quizProvider.notifier).loadQuizDetails(widget.quiz.quizId);
-      
-      final quizState = ref.read(quizProvider);
-      final existingQuestions = quizState.selectedQuizQuestions;
-      final questionChoices = quizState.questionChoices;
-      
-      for (final question in existingQuestions) {
-        final choices = questionChoices[question.questionId] ?? [];
-        final choiceDataList = choices.map((choice) => ChoiceData(
-          text: choice.body,
-          isCorrect: choice.isCorrect,
-        )).toList();
+  void _loadExistingQuestions() {
+    // Delay the loading to avoid modifying provider during build
+    Future.microtask(() async {
+      try {
+        // Load quiz details which includes questions and choices
+        await ref.read(quizProvider.notifier).loadQuizDetails(widget.quiz.quizId);
         
-        setState(() {
-          _questions.add(QuestionData(
-            type: question.type,
-            body: question.body,
-            points: question.points,
-            choices: choiceDataList,
-          ));
-        });
+        final quizState = ref.read(quizProvider);
+        final existingQuestions = quizState.selectedQuizQuestions;
+        final questionChoices = quizState.questionChoices;
+        
+        for (final question in existingQuestions) {
+          final choices = questionChoices[question.questionId] ?? [];
+          final choiceDataList = choices.map((choice) => ChoiceData(
+            text: choice.body,
+            isCorrect: choice.isCorrect,
+          )).toList();
+          
+          if (mounted) {
+            setState(() {
+              _questions.add(QuestionData(
+                type: question.type,
+                body: question.body,
+                points: question.points,
+                choices: choiceDataList,
+              ));
+            });
+          }
+        }
+      } catch (e) {
+        // If loading fails, start with empty questions (new quiz)
+        // This is expected for newly created quizzes
       }
-    } catch (e) {
-      // If loading fails, start with empty questions (new quiz)
-      // This is expected for newly created quizzes
-    }
+    });
   }
 
   @override
@@ -522,11 +527,11 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
         
         final questionMap = {
           'type': questionData.type.toString().split('.').last,
-          'body': questionData.body,
+          'text': questionData.body,
           'points': questionData.points,
           'sortOrder': i + 1,
           'choices': questionData.choices.map((choice) => {
-            'body': choice.text,
+            'text': choice.text,
             'isCorrect': choice.isCorrect,
           }).toList(),
         };

@@ -20,7 +20,7 @@ class _TeacherNotificationScreenState extends ConsumerState<TeacherNotificationS
   void initState() {
     super.initState();
     // Load notifications when screen initializes
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.microtask(() {
       final currentUser = ref.read(currentUserProvider);
       if (currentUser != null) {
         ref.read(notificationNotifierProvider.notifier).loadNotifications(userId: currentUser.userId);

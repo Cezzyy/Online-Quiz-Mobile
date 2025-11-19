@@ -21,7 +21,7 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
   void initState() {
     super.initState();
     // Initialize courses when the tab is first loaded
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.microtask(() {
       final currentUser = ref.read(currentUserProvider);
       final userRole = ref.read(currentUserRoleProvider);
       if (currentUser != null) {

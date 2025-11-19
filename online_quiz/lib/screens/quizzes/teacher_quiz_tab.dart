@@ -40,7 +40,7 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.microtask(() {
       final currentUser = ref.read(currentUserProvider);
       final userRole = ref.read(currentUserRoleProvider);
       if (currentUser != null) {

@@ -20,7 +20,7 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
   void initState() {
     super.initState();
     // Initialize courses when the tab is first loaded
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.microtask(() {
       final currentUser = ref.read(currentUserProvider);
       final userRole = ref.read(currentUserRoleProvider);
       if (currentUser != null) {
@@ -242,7 +242,7 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         FutureBuilder<User?>(
-                          future: ref.read(courseProvider.notifier).getCourseInstructor(course.courseId),
+                          future: ref.read(courseProvider.notifier).getCourseInstructor(course.instructorUserId),
                           builder: (context, snapshot) {
                             return Text(
                               'Instructor: ${snapshot.data?.fullName ?? 'Loading...'}',

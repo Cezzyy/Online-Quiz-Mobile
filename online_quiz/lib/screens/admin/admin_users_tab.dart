@@ -22,7 +22,7 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.microtask(() {
       ref.read(userManagementProvider.notifier).loadUsers();
     });
   }

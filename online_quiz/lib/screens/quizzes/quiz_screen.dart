@@ -42,14 +42,16 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
     startTime = DateTime.now();
     
     // Load quiz details and initialize attempt through provider
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
+    Future.microtask(() async {
       await ref.read(quizProvider.notifier).loadQuizDetails(widget.quiz.quizId);
       
       // Get questions from provider after loading
       final quizState = ref.read(quizProvider);
-      setState(() {
-        questions = quizState.selectedQuizQuestions;
-      });
+      if (mounted) {
+        setState(() {
+          questions = quizState.selectedQuizQuestions;
+        });
+      }
       
       // Start quiz attempt and store attemptId
       final attempt = await ref.read(quizProvider.notifier).startQuizAttempt(

@@ -230,6 +230,24 @@ class CourseNotifier extends StateNotifier<CourseState> {
     }
   }
 
+  // Get course by ID without modifying state
+  Future<Course?> getCourseById(int courseId) async {
+    try {
+      // First check if course is already in state
+      final existingCourse = state.allCourses.where((c) => c.courseId == courseId).firstOrNull
+        ?? state.userCourses.where((c) => c.courseId == courseId).firstOrNull;
+      
+      if (existingCourse != null) {
+        return existingCourse;
+      }
+      
+      // If not in state, fetch from service without modifying state
+      return await _courseService.getCourseById(courseId);
+    } catch (e) {
+      return null;
+    }
+  }
+
   // Admin methods
   Future<void> initializeAdminCourses() async {
     state = state.copyWith(isLoading: true, clearError: true);

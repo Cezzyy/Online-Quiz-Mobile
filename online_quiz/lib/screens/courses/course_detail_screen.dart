@@ -24,7 +24,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   void initState() {
     super.initState();
     // Load course details when screen is opened
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.microtask(() {
       final authState = ref.read(authProvider);
       if (authState.user != null) {
         ref.read(courseProvider.notifier).loadCourseDetails(widget.course.courseId);
@@ -145,7 +145,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
             const SizedBox(height: 8),
             Flexible(
               child: FutureBuilder<User?>(
-                future: ref.read(courseProvider.notifier).getCourseInstructor(course.courseId),
+                future: ref.read(courseProvider.notifier).getCourseInstructor(course.instructorUserId),
                 builder: (context, snapshot) {
                   return Text(
                     'Instructor: ${snapshot.data?.fullName ?? 'Loading...'}',
@@ -162,7 +162,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Course ID: ${course.courseId}',
+              'Section: ${course.section ?? 'N/A'}',
               style: const TextStyle(
                 color: Colors.white70,
                 fontSize: 16,

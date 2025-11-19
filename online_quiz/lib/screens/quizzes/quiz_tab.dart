@@ -22,7 +22,7 @@ class _QuizTabState extends ConsumerState<QuizTab> {
   void initState() {
     super.initState();
     // Initialize quizzes when the widget is first created
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.microtask(() {
       final authState = ref.read(authProvider);
       if (authState.user != null) {
         ref.read(quizProvider.notifier).initializeQuizzes(authState.user!.userId);

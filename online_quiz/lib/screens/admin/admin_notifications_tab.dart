@@ -19,7 +19,7 @@ class _AdminNotificationsTabState extends ConsumerState<AdminNotificationsTab> {
   void initState() {
     super.initState();
     // Initialize notifications when the tab is first loaded
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.microtask(() {
       ref.read(notificationNotifierProvider.notifier).loadAllNotifications(); // Load all notifications for admin
     });
   }

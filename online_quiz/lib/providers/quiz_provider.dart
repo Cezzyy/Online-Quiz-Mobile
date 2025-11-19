@@ -324,9 +324,8 @@ class QuizNotifier extends StateNotifier<QuizState> {
     final quiz = state.allQuizzes.where((q) => q.quizId == quizId).firstOrNull;
     if (quiz == null) return null;
     
-    // Load course details to get the course
-    await ref.read(courseProvider.notifier).loadCourseDetails(quiz.courseId);
-    return ref.read(selectedCourseProvider);
+    // Get course without modifying state
+    return await ref.read(courseProvider.notifier).getCourseById(quiz.courseId);
   }
 
   // Start a quiz attempt

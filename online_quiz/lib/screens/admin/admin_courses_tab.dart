@@ -24,7 +24,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
   void initState() {
     super.initState();
     // Initialize courses when the tab is first loaded
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.microtask(() {
       final existing = ref.read(courseProvider);
       if (!existing.isLoading && existing.allCourses.isEmpty) {
         ref.read(courseProvider.notifier).loadAllCourses();

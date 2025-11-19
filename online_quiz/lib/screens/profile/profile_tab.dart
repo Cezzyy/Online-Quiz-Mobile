@@ -18,7 +18,7 @@ class _ProfileTabState extends ConsumerState<ProfileTab> {
   void initState() {
     super.initState();
     // Load user profile data when tab is initialized
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.microtask(() {
       final authState = ref.read(authProvider);
       if (authState.user != null) {
         ref.read(userProfileProvider.notifier).loadUserData(authState.user!.userId);

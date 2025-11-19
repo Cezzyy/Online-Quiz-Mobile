@@ -31,7 +31,7 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
   void initState() {
     super.initState();
     // Load quiz details and attempt details when screen opens
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
+    Future.microtask(() async {
       await ref.read(quizProvider.notifier).loadQuizDetails(widget.quiz.quizId);
       await ref.read(quizProvider.notifier).getAttemptDetails(widget.attempt.attemptId);
     });

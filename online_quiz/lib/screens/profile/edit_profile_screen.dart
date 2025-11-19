@@ -22,7 +22,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _emergencyContactController = TextEditingController();
     
     // Load user data when screen initializes
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.microtask(() {
       final authState = ref.read(authProvider);
       if (authState.user != null) {
         ref.read(userProfileProvider.notifier).loadUserData(authState.user!.userId);

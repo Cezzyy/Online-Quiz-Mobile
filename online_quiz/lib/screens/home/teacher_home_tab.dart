@@ -25,7 +25,7 @@ class _TeacherHomeTabState extends ConsumerState<TeacherHomeTab> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.microtask(() {
       final currentUser = ref.read(currentUserProvider);
       if (currentUser != null && mounted) {
         ref.read(teacherProfileProvider.notifier).loadTeacherData(currentUser.userId);

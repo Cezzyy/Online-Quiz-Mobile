@@ -23,7 +23,7 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.microtask(() {
       final user = ref.read(authProvider).user;
       if (user != null) {
         ref.read(courseProvider.notifier).initializeCourses(user.userId);

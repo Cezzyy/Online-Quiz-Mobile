@@ -33,7 +33,7 @@ class _QuizDetailScreenState extends ConsumerState<QuizDetailScreen> {
   void initState() {
     super.initState();
     // Load quiz details when screen opens
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.microtask(() {
       ref.read(quizProvider.notifier).loadQuizDetails(widget.quiz.quizId);
     });
   }

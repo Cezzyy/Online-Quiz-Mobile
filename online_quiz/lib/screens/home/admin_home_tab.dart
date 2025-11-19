@@ -15,7 +15,7 @@ class _AdminHomeTabState extends ConsumerState<AdminHomeTab> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.microtask(() {
       final user = ref.read(currentUserProvider);
       if (user != null) {
         ref.read(adminDashboardProvider.notifier).loadDashboardData();

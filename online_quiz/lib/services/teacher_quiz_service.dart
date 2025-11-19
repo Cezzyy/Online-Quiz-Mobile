@@ -147,9 +147,9 @@ class TeacherQuizService {
           .from('Question')
           .insert({
             'QuizId': quizId,
-            'Text': text,
-            'Type': type.toString().split('.').last,
-            'Order': order,
+            'Body': text,
+            'Type': type.value,
+            'Sort_Order': order,
             'Points': points,
           })
           .select()
@@ -243,9 +243,8 @@ class TeacherQuizService {
           .from('Choice')
           .insert({
             'QuestionId': questionId,
-            'Text': text,
-            'IsCorrect': isCorrect,
-            'Order': order,
+            'Body': text,
+            'Is_Correct': isCorrect,
           })
           .select()
           .single();
@@ -345,7 +344,7 @@ class TeacherQuizService {
         final question = await createQuestion(
           quizId: quiz.quizId,
           text: questionData['text'],
-          type: questionData['type'],
+          type: QuestionType.fromString(questionData['type']),
           order: i + 1,
           points: questionData['points'],
         );
@@ -421,7 +420,7 @@ class TeacherQuizService {
           final question = await createQuestion(
             quizId: quizId,
             text: questionData['text'],
-            type: questionData['type'],
+            type: QuestionType.fromString(questionData['type']),
             order: i + 1,
             points: questionData['points'],
           );

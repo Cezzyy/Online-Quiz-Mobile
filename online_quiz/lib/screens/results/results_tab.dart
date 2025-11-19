@@ -24,7 +24,7 @@ class _ResultsTabState extends ConsumerState<ResultsTab> {
   void initState() {
     super.initState();
     // Initialize quiz provider data when the screen loads
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.microtask(() {
       ref.read(quizProvider.notifier).initializeQuizzes(4); // Default student user ID
     });
   }
