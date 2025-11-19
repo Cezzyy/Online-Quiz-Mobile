@@ -117,8 +117,7 @@ class QuizService {
       final response = await _supabase
           .from('Choice')
           .select('*')
-          .eq('QuestionId', questionId)
-          .order('Order', ascending: true);
+          .eq('QuestionId', questionId);
 
       final List<Choice> choices = [];
       for (final choiceData in response) {
@@ -141,8 +140,7 @@ class QuizService {
       final response = await _supabase
           .from('Choice')
           .select('*')
-          .inFilter('QuestionId', questionIds)
-          .order('Order', ascending: true);
+          .inFilter('QuestionId', questionIds);
 
       final Map<int, List<Choice>> choicesByQuestion = {};
       for (final choiceData in response) {

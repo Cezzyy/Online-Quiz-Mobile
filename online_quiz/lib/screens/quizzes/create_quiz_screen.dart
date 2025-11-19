@@ -555,6 +555,11 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
       Navigator.pop(context);
 
       if (success) {
+        // Reload quiz details to ensure questions are loaded
+        await ref.read(quizProvider.notifier).loadQuizDetails(widget.quiz.quizId);
+        
+        if (!mounted) return;
+        
         // Close the quiz editor
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
