@@ -96,7 +96,7 @@ class QuizService {
           .from('Question')
           .select('*')
           .eq('QuizId', quizId)
-          .order('Order', ascending: true);
+          .order('Sort_Order', ascending: true);
 
       final List<Question> questions = [];
       for (final questionData in response) {
