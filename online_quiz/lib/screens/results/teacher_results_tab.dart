@@ -81,7 +81,8 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {
-                  ref.read(courseProvider.notifier).initializeCourses(authState.user!.userId);
+                  final userRole = ref.read(currentUserRoleProvider);
+                  ref.read(courseProvider.notifier).initializeCourses(authState.user!.userId, userRole: userRole);
                   ref.read(quizProvider.notifier).initializeQuizzes(authState.user!.userId);
                 },
                 child: const Text('Retry'),
@@ -172,8 +173,9 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
                       action: ElevatedButton(
                         onPressed: () async {
                           final user = ref.read(authProvider).user;
+                          final userRole = ref.read(currentUserRoleProvider);
                           if (user != null) {
-                            await ref.read(courseProvider.notifier).initializeCourses(user.userId);
+                            await ref.read(courseProvider.notifier).initializeCourses(user.userId, userRole: userRole);
                             if (mounted) {
                               setState(() {});
                             }

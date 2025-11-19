@@ -355,6 +355,7 @@ class QuizNotifier extends StateNotifier<QuizState> {
     required Map<int, dynamic> answers,
     required DateTime startTime,
     required bool autoSubmit,
+    String? userRole,
   }) async {
     try {
       state = state.copyWith(isLoading: true, clearError: true);
@@ -372,7 +373,7 @@ class QuizNotifier extends StateNotifier<QuizState> {
       await initializeQuizzes(userId);
       
       // Also refresh course provider to update progress
-      await ref.read(courseProvider.notifier).initializeCourses(userId);
+      await ref.read(courseProvider.notifier).initializeCourses(userId, userRole: userRole);
       
       state = state.copyWith(isLoading: false);
       return attempt;

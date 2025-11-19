@@ -4,6 +4,7 @@ import '../models/course.dart';
 import '../models/enrollment.dart';
 import '../models/quiz.dart';
 import '../models/user.dart' as app_user;
+import '../models/student.dart';
 import '../models/activity_log.dart';
 import 'activity_log_service.dart';
 
@@ -353,49 +354,116 @@ class CourseService {
   // Get students enrolled in a course (for teacher view)
   Future<List<Map<String, dynamic>>> getEnrolledStudents(int courseId) async {
     try {
+      debugPrint('========================================');
+      debugPrint('Fetching enrolled students for course: $courseId');
+      
+      // Query enrollments - get Student info which includes the User relationship
       final response = await _supabase
           .from('Enrollment')
           .select('''
-            *,
-            User:UserId (
-              UserId,
-              FullName,
-              Email,
-              ContactNumber,
-              Status
-            ),
-            Student:UserId (
+            EnrollmentId,
+            UserId,
+            CourseId,
+            Section,
+            EnrolledAt,
+            EnrolledBy,
+            Student!inner(
               StudentId,
               UserId,
               Year_Level,
               Section,
-              Course
+              Course,
+              User!inner(
+                UserId,
+                FullName,
+                Email,
+                PasswordHash,
+                ContactNumber,
+                EmergencyContactNumber,
+                Status,
+                CreatedAt,
+                UpdatedAt,
+                CreatedBy
+              )
             )
           ''')
           .eq('CourseId', courseId)
           .order('EnrolledAt', ascending: false);
 
+      debugPrint('Enrollment response received');
+      debugPrint('Response type: ${response.runtimeType}');
+      debugPrint('Enrollment response count: ${response.length}');
+      debugPrint('Raw response: $response');
+      
       final List<Map<String, dynamic>> students = [];
       for (final enrollment in response) {
-        if (enrollment['User'] != null) {
-          students.add({
-            'user': app_user.User.fromJson(enrollment['User']),
-            'student': enrollment['Student'],
-            'enrollment': Enrollment(
-              enrollmentId: enrollment['EnrollmentId'],
-              userId: enrollment['UserId'],
-              courseId: enrollment['CourseId'],
-              enrolledAt: DateTime.parse(enrollment['EnrolledAt']),
-              enrolledBy: enrollment['EnrolledBy'],
-            ),
-          });
+        debugPrint('---');
+        debugPrint('Processing enrollment: ${enrollment['EnrollmentId']}, UserId: ${enrollment['UserId']}');
+        debugPrint('Student data present: ${enrollment['Student'] != null}');
+        
+        if (enrollment['Student'] != null) {
+          final studentData = enrollment['Student'];
+          debugPrint('Student data: $studentData');
+          debugPrint('User data present: ${studentData['User'] != null}');
+          
+          if (studentData['User'] != null) {
+            debugPrint('User: ${studentData['User']}');
+            
+            // Convert Student JSON to Student object
+            Student? student;
+            try {
+              student = Student.fromJson(studentData);
+              debugPrint('Successfully parsed student: ${student.studentId}');
+            } catch (e) {
+              debugPrint('ERROR parsing student data: $e');
+              debugPrint('Student JSON: $studentData');
+            }
+            
+            try {
+              final user = app_user.User.fromJson(studentData['User']);
+              debugPrint('User parsed successfully: ${user.fullName}');
+              
+              final enrollmentObj = Enrollment(
+                enrollmentId: enrollment['EnrollmentId'] as int,
+                userId: enrollment['UserId'] as int,
+                courseId: enrollment['CourseId'] as int,
+                section: enrollment['Section'] as String?,
+                enrolledAt: DateTime.parse(enrollment['EnrolledAt'] as String),
+                enrolledBy: enrollment['EnrolledBy'] as int,
+              );
+              debugPrint('Enrollment parsed successfully');
+              
+              students.add({
+                'user': user,
+                'student': student,
+                'enrollment': enrollmentObj,
+              });
+              debugPrint('Student added to list. Total now: ${students.length}');
+            } catch (e) {
+              debugPrint('ERROR adding student to list: $e');
+              debugPrint('Enrollment data: $enrollment');
+              debugPrint('Student User data: ${studentData['User']}');
+            }
+          } else {
+            debugPrint('ERROR: Student record has no User data for enrollment ${enrollment['EnrollmentId']}');
+          }
+        } else {
+          debugPrint('ERROR: Enrollment ${enrollment['EnrollmentId']} has no Student data!');
         }
       }
 
+      debugPrint('========================================');
+      debugPrint('FINAL: Total students processed: ${students.length}');
+      debugPrint('========================================');
       return students;
     } on PostgrestException catch (e) {
+      debugPrint('PostgrestException in getEnrolledStudents: ${e.message}');
+      debugPrint('Error details: ${e.details}');
+      debugPrint('Error code: ${e.code}');
       throw Exception('Failed to fetch enrolled students: ${e.message}');
     } catch (e) {
+      debugPrint('Exception in getEnrolledStudents: $e');
+      debugPrint('Stack trace: ${StackTrace.current}');
       throw Exception('Failed to fetch enrolled students: $e');
     }
   }
@@ -622,6 +690,22 @@ class CourseService {
     required int enrolledBy,
   }) async {
     try {
+      debugPrint('Attempting to enroll student - UserId: $userId, CourseId: $courseId');
+      
+      // First check if student record exists
+      final studentCheck = await _supabase
+          .from('Student')
+          .select('UserId, StudentId')
+          .eq('UserId', userId)
+          .maybeSingle();
+      
+      if (studentCheck == null) {
+        debugPrint('WARNING: No Student record found for UserId: $userId');
+        throw Exception('Cannot enroll user without Student record. User must have Student role.');
+      }
+      
+      debugPrint('Student record exists: ${studentCheck['StudentId']}');
+      
       final response = await _supabase
           .from('Enrollment')
           .insert({
@@ -632,6 +716,8 @@ class CourseService {
           })
           .select()
           .single();
+
+      debugPrint('Enrollment successful: ${response['EnrollmentId']}');
 
       final enrollment = Enrollment(
         enrollmentId: response['EnrollmentId'],

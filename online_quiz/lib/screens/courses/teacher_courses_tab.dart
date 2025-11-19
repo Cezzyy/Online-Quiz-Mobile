@@ -23,8 +23,9 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
     // Initialize courses when the tab is first loaded
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final currentUser = ref.read(currentUserProvider);
+      final userRole = ref.read(currentUserRoleProvider);
       if (currentUser != null) {
-        ref.read(courseProvider.notifier).initializeCourses(currentUser.userId);
+        ref.read(courseProvider.notifier).initializeCourses(currentUser.userId, userRole: userRole);
       }
     });
   }
@@ -80,7 +81,8 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {
-                  ref.read(courseProvider.notifier).initializeCourses(currentUser.userId);
+                  final userRole = ref.read(currentUserRoleProvider);
+                  ref.read(courseProvider.notifier).initializeCourses(currentUser.userId, userRole: userRole);
                 },
                 child: const Text('Retry'),
               ),
@@ -145,8 +147,9 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
       action: ElevatedButton(
         onPressed: () {
           final currentUser = ref.read(currentUserProvider);
+          final userRole = ref.read(currentUserRoleProvider);
           if (currentUser != null) {
-            ref.read(courseProvider.notifier).initializeCourses(currentUser.userId);
+            ref.read(courseProvider.notifier).initializeCourses(currentUser.userId, userRole: userRole);
           }
         },
         child: const Text('Refresh'),

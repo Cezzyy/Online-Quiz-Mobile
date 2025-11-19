@@ -52,24 +52,24 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
     }
 
     try {
-      state = state.copyWith(isLoading: true, error: null);
-      
       final attempts = await _analyticsService.getAttemptsByQuiz(quizId);
       
-      final updatedAttempts = Map<int, List<Map<String, dynamic>>>.from(state.quizAttempts);
-      updatedAttempts[quizId] = attempts;
-      
-      state = state.copyWith(
-        quizAttempts: updatedAttempts,
-        isLoading: false,
-      );
+      // Update cache without modifying state during build
+      Future.microtask(() {
+        final updatedAttempts = Map<int, List<Map<String, dynamic>>>.from(state.quizAttempts);
+        updatedAttempts[quizId] = attempts;
+        
+        state = state.copyWith(
+          quizAttempts: updatedAttempts,
+        );
+      });
       
       return attempts;
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      // Schedule error update for after build
+      Future.microtask(() {
+        state = state.copyWith(error: e.toString());
+      });
       rethrow;
     }
   }
@@ -82,24 +82,24 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
     }
 
     try {
-      state = state.copyWith(isLoading: true, error: null);
-      
       final analytics = await _analyticsService.getQuizAnalytics(quizId);
       
-      final updatedAnalytics = Map<int, Map<String, dynamic>>.from(state.quizAnalytics);
-      updatedAnalytics[quizId] = analytics;
-      
-      state = state.copyWith(
-        quizAnalytics: updatedAnalytics,
-        isLoading: false,
-      );
+      // Update cache without modifying state during build
+      Future.microtask(() {
+        final updatedAnalytics = Map<int, Map<String, dynamic>>.from(state.quizAnalytics);
+        updatedAnalytics[quizId] = analytics;
+        
+        state = state.copyWith(
+          quizAnalytics: updatedAnalytics,
+        );
+      });
       
       return analytics;
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      // Schedule error update for after build
+      Future.microtask(() {
+        state = state.copyWith(error: e.toString());
+      });
       rethrow;
     }
   }
@@ -112,24 +112,24 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
     }
 
     try {
-      state = state.copyWith(isLoading: true, error: null);
-      
       final statistics = await _analyticsService.getCourseStatistics(courseId);
       
-      final updatedStatistics = Map<int, Map<String, dynamic>>.from(state.courseStatistics);
-      updatedStatistics[courseId] = statistics;
-      
-      state = state.copyWith(
-        courseStatistics: updatedStatistics,
-        isLoading: false,
-      );
+      // Update cache without modifying state during build
+      Future.microtask(() {
+        final updatedStatistics = Map<int, Map<String, dynamic>>.from(state.courseStatistics);
+        updatedStatistics[courseId] = statistics;
+        
+        state = state.copyWith(
+          courseStatistics: updatedStatistics,
+        );
+      });
       
       return statistics;
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      // Schedule error update for after build
+      Future.microtask(() {
+        state = state.copyWith(error: e.toString());
+      });
       rethrow;
     }
   }
@@ -146,24 +146,24 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
     }
 
     try {
-      state = state.copyWith(isLoading: true, error: null);
-      
       final results = await _analyticsService.getStudentQuizResults(quizId, courseId);
       
-      final updatedResults = Map<int, List<Map<String, dynamic>>>.from(state.studentResults);
-      updatedResults[quizId] = results;
-      
-      state = state.copyWith(
-        studentResults: updatedResults,
-        isLoading: false,
-      );
+      // Update cache without modifying state during build
+      Future.microtask(() {
+        final updatedResults = Map<int, List<Map<String, dynamic>>>.from(state.studentResults);
+        updatedResults[quizId] = results;
+        
+        state = state.copyWith(
+          studentResults: updatedResults,
+        );
+      });
       
       return results;
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      // Schedule error update for after build
+      Future.microtask(() {
+        state = state.copyWith(error: e.toString());
+      });
       rethrow;
     }
   }
@@ -173,7 +173,10 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
     try {
       return await _analyticsService.getQuizSections(courseId);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // Schedule error update for after build
+      Future.microtask(() {
+        state = state.copyWith(error: e.toString());
+      });
       rethrow;
     }
   }
@@ -181,18 +184,13 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
   /// Get attempt details (no caching for individual attempts)
   Future<Map<String, dynamic>> getAttemptDetails(int attemptId) async {
     try {
-      state = state.copyWith(isLoading: true, error: null);
-      
       final details = await _analyticsService.getAttemptDetails(attemptId);
-      
-      state = state.copyWith(isLoading: false);
-      
       return details;
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      // Schedule error update for after build
+      Future.microtask(() {
+        state = state.copyWith(error: e.toString());
+      });
       rethrow;
     }
   }
@@ -202,7 +200,10 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
     try {
       return await _analyticsService.getQuizPerformanceTrends(quizId, limit: limit);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // Schedule error update for after build
+      Future.microtask(() {
+        state = state.copyWith(error: e.toString());
+      });
       rethrow;
     }
   }
@@ -210,18 +211,13 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
   /// Get comparative analytics across quizzes
   Future<List<Map<String, dynamic>>> getComparativeQuizAnalytics(List<int> quizIds) async {
     try {
-      state = state.copyWith(isLoading: true, error: null);
-      
       final analytics = await _analyticsService.getComparativeQuizAnalytics(quizIds);
-      
-      state = state.copyWith(isLoading: false);
-      
       return analytics;
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      // Schedule error update for after build
+      Future.microtask(() {
+        state = state.copyWith(error: e.toString());
+      });
       rethrow;
     }
   }

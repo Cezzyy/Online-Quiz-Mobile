@@ -124,16 +124,27 @@ class CourseNotifier extends StateNotifier<CourseState> {
   CourseNotifier() : super(const CourseState());
 
   // Initialize course data for a specific user
-  Future<void> initializeCourses(int userId) async {
+  Future<void> initializeCourses(int userId, {String? userRole}) async {
     state = state.copyWith(isLoading: true, clearError: true);
     
     try {
-      // Load user enrollments and courses from Supabase
-      final userEnrollments = await _courseService.getUserEnrollments(userId);
-      final userCourses = await _courseService.getEnrolledCourses(userId);
+      List<Course> userCourses = [];
+      List<Enrollment> userEnrollments = [];
+      
+      // Check if user is a teacher and load their assigned courses
+      if (userRole == 'Teacher') {
+        // For teachers, get courses they are assigned to as instructor
+        userCourses = await _courseService.getCoursesByInstructor(userId);
+        // Teachers don't have enrollments, so keep empty list
+        userEnrollments = [];
+      } else {
+        // For students, load user enrollments and courses from Supabase
+        userEnrollments = await _courseService.getUserEnrollments(userId);
+        userCourses = await _courseService.getEnrolledCourses(userId);
+      }
       
       // Get all courses for admin/teacher views
-      final allCourses = userCourses; // For students, only show enrolled courses
+      final allCourses = userCourses;
       
       // Calculate progress and quiz counts
       final courseIds = userCourses.map((c) => c.courseId).toList();
@@ -185,8 +196,8 @@ class CourseNotifier extends StateNotifier<CourseState> {
   }
 
   // Refresh course data
-  Future<void> refreshCourses(int userId) async {
-    await initializeCourses(userId);
+  Future<void> refreshCourses(int userId, {String? userRole}) async {
+    await initializeCourses(userId, userRole: userRole);
   }
 
   // Clear selected course

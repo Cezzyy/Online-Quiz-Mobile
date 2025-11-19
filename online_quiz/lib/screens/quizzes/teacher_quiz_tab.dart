@@ -42,8 +42,9 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final currentUser = ref.read(currentUserProvider);
+      final userRole = ref.read(currentUserRoleProvider);
       if (currentUser != null) {
-        ref.read(courseProvider.notifier).initializeCourses(currentUser.userId);
+        ref.read(courseProvider.notifier).initializeCourses(currentUser.userId, userRole: userRole);
       }
     });
   }

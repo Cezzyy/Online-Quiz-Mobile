@@ -22,8 +22,9 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
     // Initialize courses when the tab is first loaded
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final currentUser = ref.read(currentUserProvider);
+      final userRole = ref.read(currentUserRoleProvider);
       if (currentUser != null) {
-        ref.read(courseProvider.notifier).initializeCourses(currentUser.userId);
+        ref.read(courseProvider.notifier).initializeCourses(currentUser.userId, userRole: userRole);
       }
     });
   }

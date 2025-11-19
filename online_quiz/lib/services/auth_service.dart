@@ -364,7 +364,7 @@ class AuthService {
               'UserId': user.userId,
               'StudentId': studentId ?? '',
               'Section': section ?? '',
-              'YearLevel': yearLevel ?? 1,
+              'Year_Level': yearLevel ?? 1,
             });
       }
 
@@ -419,7 +419,7 @@ class AuthService {
         final studentUpdateData = <String, dynamic>{};
         if (studentId != null) studentUpdateData['StudentId'] = studentId;
         if (section != null) studentUpdateData['Section'] = section;
-        if (yearLevel != null) studentUpdateData['YearLevel'] = yearLevel;
+        if (yearLevel != null) studentUpdateData['Year_Level'] = yearLevel;
 
         await _supabase
             .from('Student')

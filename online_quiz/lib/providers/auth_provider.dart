@@ -184,6 +184,10 @@ final currentUserProvider = Provider<User?>((ref) {
   return ref.watch(authProvider).user;
 });
 
+final currentUserRoleProvider = Provider<String?>((ref) {
+  return ref.watch(authProvider).role;
+});
+
 final isAuthenticatedProvider = Provider<bool>((ref) {
   return ref.watch(authProvider).isAuthenticated;
 });
