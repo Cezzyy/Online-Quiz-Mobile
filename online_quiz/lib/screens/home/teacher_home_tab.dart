@@ -420,7 +420,7 @@ class _TeacherHomeTabState extends ConsumerState<TeacherHomeTab> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        scorePercentage.toStringAsFixed(1),
+                        scorePercentage.round().toString(),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

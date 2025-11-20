@@ -213,7 +213,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
               child: StatCard(
                 icon: Icons.trending_up,
                 title: 'Average Score',
-                value: '${averageScore.toStringAsFixed(1)}%',
+                value: '${averageScore.round()}%',
                 color: Colors.blue,
               ),
             ),

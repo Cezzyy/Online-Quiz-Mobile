@@ -230,7 +230,7 @@ class _ResultsTabState extends ConsumerState<ResultsTab> {
       child: Row(
         children: [
           _buildStatItem(context, totalQuizzes.toString(), 'Total', Theme.of(context).colorScheme.primary),
-          _buildStatItem(context, '${averageScore.toStringAsFixed(1)}%', 'Average', Colors.green),
+          _buildStatItem(context, '${averageScore.round()}%', 'Average', Colors.green),
           _buildStatItem(context, excellentCount.toString(), 'Excellent', Colors.purple),
           _buildStatItem(context, goodCount.toString(), 'Good', Colors.orange),
         ],

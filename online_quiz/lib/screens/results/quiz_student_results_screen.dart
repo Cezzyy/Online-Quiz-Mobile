@@ -413,7 +413,7 @@ class _QuizStudentResultsScreenState extends ConsumerState<QuizStudentResultsScr
                 Expanded(
                   child: StatCard(
                     title: 'Avg Score',
-                    value: '${averageScore.toStringAsFixed(1)}%',
+                    value: '${averageScore.round()}%',
                     icon: Icons.analytics_outlined,
                     color: Colors.orange,
                   ),

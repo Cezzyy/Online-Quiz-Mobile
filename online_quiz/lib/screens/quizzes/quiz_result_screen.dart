@@ -123,7 +123,7 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            '${percentage.toStringAsFixed(1)}%',
+            '${percentage.round()}%',
             style: const TextStyle(
               fontSize: 48,
               fontWeight: FontWeight.bold,
@@ -284,7 +284,7 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
                   ),
                 ),
                 Text(
-                  '${accuracy.toStringAsFixed(1)}%',
+                  '${accuracy.round()}%',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,

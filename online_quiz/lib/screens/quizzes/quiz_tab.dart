@@ -425,7 +425,7 @@ class _QuizTabState extends ConsumerState<QuizTab> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Score: ${completedAttempt.score.toInt()} points (${quizState.quizScores[quiz.quizId]?.toStringAsFixed(1) ?? '0.0'}%)',
+                          'Score: ${completedAttempt.score.toInt()} points (${quizState.quizScores[quiz.quizId]?.round() ?? 0}%)',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,

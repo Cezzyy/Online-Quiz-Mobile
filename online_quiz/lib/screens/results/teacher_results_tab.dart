@@ -349,7 +349,7 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
                 child: _buildStatItem(
                   icon: Icons.trending_up,
                   label: 'Avg Score',
-                  value: '${averageScore.toStringAsFixed(1)}%',
+                  value: '${averageScore.round()}%',
                 ),
               ),
             ],
@@ -462,7 +462,7 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
               children: [
                 const SizedBox(height: 4),
                 Text('$completedAttempts attempts'),
-                Text('Avg Score: ${averagePercentage.toStringAsFixed(1)}%'),
+                Text('Avg Score: ${averagePercentage.round()}%'),
                 Text('Completion: ${completionRate.toStringAsFixed(1)}%'),
                 if (quiz.dueAt != null)
                   Text(

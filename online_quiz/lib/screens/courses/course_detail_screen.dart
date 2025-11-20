@@ -389,7 +389,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    '${score.toStringAsFixed(1)}%',
+                    '${score.round()}%',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
