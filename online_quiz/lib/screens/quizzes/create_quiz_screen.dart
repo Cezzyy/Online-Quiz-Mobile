@@ -726,7 +726,7 @@ class _QuestionDialogState extends State<_QuestionDialog> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<double>(
-                  value: _selectedPoints,
+                  initialValue: _selectedPoints,
                   decoration: const InputDecoration(
                     labelText: 'Points',
                     border: OutlineInputBorder(),
