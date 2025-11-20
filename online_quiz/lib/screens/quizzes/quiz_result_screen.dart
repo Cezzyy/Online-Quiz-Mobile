@@ -356,8 +356,40 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
 
   int _getCorrectAnswersCount(WidgetRef ref) {
     final quizState = ref.watch(quizProvider);
+    final questions = quizState.selectedQuizQuestions;
     final attemptAnswers = quizState.attemptAnswers[widget.attempt.attemptId] ?? [];
-    return attemptAnswers.where((answer) => answer.isCorrect == true).length;
+    
+    int correctQuestionsCount = 0;
+    
+    for (final question in questions) {
+      final questionAnswers = attemptAnswers.where(
+        (answer) => answer.questionId == question.questionId,
+      ).toList();
+      
+      if (questionAnswers.isEmpty) continue;
+      
+      bool isQuestionCorrect = false;
+      
+      if (question.type == QuestionType.multiple) {
+        // For multiple choice, check if all correct answers are selected and no incorrect ones
+        final choices = quizState.questionChoices[question.questionId] ?? [];
+        final correctChoices = choices.where((c) => c.isCorrect).toList();
+        final selectedCorrectChoices = questionAnswers.where((a) => a.isCorrect == true).toList();
+        final selectedIncorrectChoices = questionAnswers.where((a) => a.isCorrect == false).toList();
+        
+        isQuestionCorrect = selectedCorrectChoices.length == correctChoices.length && 
+                           selectedIncorrectChoices.isEmpty;
+      } else {
+        // For single choice and text questions, check if any answer is correct
+        isQuestionCorrect = questionAnswers.any((answer) => answer.isCorrect == true);
+      }
+      
+      if (isQuestionCorrect) {
+        correctQuestionsCount++;
+      }
+    }
+    
+    return correctQuestionsCount;
   }
 
   int _getTimeSpentMinutes() {
