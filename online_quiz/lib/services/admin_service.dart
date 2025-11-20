@@ -71,67 +71,32 @@ class AdminService {
   /// Get recent activity across the system
   Future<Map<String, dynamic>> getRecentActivity() async {
     try {
-      // Get recent quiz attempts (last 10) with user details
+      // Get recent quiz attempts using the "QuizAttemptSummary" VIEW
+      // This view already joins Attempt -> Student -> User
       final attemptsData = await _supabase
-          .from('Attempt')
-          .select('*, Quiz:QuizId (Title)')
+          .from('QuizAttemptSummary')
+          .select('*')
           .order('SubmittedAt', ascending: false)
           .limit(10);
 
-      final recentAttempts = <Map<String, dynamic>>[];
-      for (final attempt in attemptsData) {
-        final userId = attempt['UserId'] as int;
-        
-        // Get user details directly from User table
-        final userData = await _supabase
-            .from('User')
-            .select('UserId, FullName, Email')
-            .eq('UserId', userId)
-            .maybeSingle();
-        
-        recentAttempts.add({
-          ...attempt,
-          'User': userData,
-        });
-      }
-
-      // Get recently created courses (last 5) with instructor details
+      // Get recently created courses using the "ActiveCoursesWithInstructor" VIEW
+      // This view correctly joins Course -> Teacher -> User
       final coursesData = await _supabase
-          .from('Course')
+          .from('ActiveCoursesWithInstructor')
           .select('*')
           .order('CreatedAt', ascending: false)
           .limit(5);
 
-      final recentCourses = <Map<String, dynamic>>[];
-      for (final course in coursesData) {
-        final instructorId = course['Instructor_UserId'] as int;
-        
-        // Get instructor details from User table
-        final instructorData = await _supabase
-            .from('User')
-            .select('UserId, FullName')
-            .eq('UserId', instructorId)
-            .maybeSingle();
-        
-        recentCourses.add({
-          ...course,
-          'User': instructorData,
-        });
-      }
-
       // Get recently created quizzes (last 5) with course details
       final recentQuizzes = await _supabase
           .from('Quiz')
-          .select('''
-            *,
-            Course:CourseId (Name, Code)
-          ''')
+          .select('*, Course:CourseId (Name, Code)')
           .order('CreatedAt', ascending: false)
           .limit(5);
 
       return {
-        'recentAttempts': recentAttempts,
-        'recentCourses': recentCourses,
+        'recentAttempts': attemptsData,
+        'recentCourses': coursesData,
         'recentQuizzes': recentQuizzes,
       };
     } on PostgrestException catch (e) {

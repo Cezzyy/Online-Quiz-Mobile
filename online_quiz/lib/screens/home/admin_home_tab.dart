@@ -242,7 +242,7 @@ class _AdminHomeTabState extends ConsumerState<AdminHomeTab> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'System Health',
+          'Recent Quiz Activity',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
