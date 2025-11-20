@@ -214,7 +214,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
           ),
           const SizedBox(height: 12),
           LinearProgressIndicator(
-            value: (currentQuestionIndex + 1) / questions.length,
+            value: questions.isEmpty ? 0.0 : (currentQuestionIndex + 1) / questions.length,
             backgroundColor: Colors.white.withValues(alpha: 0.3),
             valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
             minHeight: 6,
