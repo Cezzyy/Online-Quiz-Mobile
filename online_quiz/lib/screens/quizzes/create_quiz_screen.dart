@@ -643,9 +643,11 @@ class _QuestionDialog extends StatefulWidget {
 class _QuestionDialogState extends State<_QuestionDialog> {
   final _formKey = GlobalKey<FormState>();
   final _bodyController = TextEditingController();
-  final _pointsController = TextEditingController();
+  double _selectedPoints = 1.0;
   QuestionType _selectedType = QuestionType.single;
   List<ChoiceController> _choiceControllers = [];
+  
+  static const List<double> _availablePoints = [1.0, 3.0, 5.0, 10.0];
 
   @override
   void initState() {
@@ -653,7 +655,7 @@ class _QuestionDialogState extends State<_QuestionDialog> {
     
     if (widget.questionData != null) {
       _bodyController.text = widget.questionData!.body;
-      _pointsController.text = widget.questionData!.points.toString();
+      _selectedPoints = widget.questionData!.points;
       _selectedType = widget.questionData!.type;
       
       _choiceControllers = widget.questionData!.choices.map((choice) {
@@ -663,7 +665,7 @@ class _QuestionDialogState extends State<_QuestionDialog> {
         );
       }).toList();
     } else {
-      _pointsController.text = '1.0';
+      _selectedPoints = 1.0;
       if (_selectedType != QuestionType.text) {
         _addChoice();
         _addChoice();
@@ -723,20 +725,26 @@ class _QuestionDialogState extends State<_QuestionDialog> {
                   },
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  controller: _pointsController,
+                DropdownButtonFormField<double>(
+                  value: _selectedPoints,
                   decoration: const InputDecoration(
                     labelText: 'Points',
                     border: OutlineInputBorder(),
                   ),
-                  keyboardType: TextInputType.number,
+                  items: _availablePoints.map((points) {
+                    return DropdownMenuItem<double>(
+                      value: points,
+                      child: Text('${points.round()} pt${points > 1 ? 's' : ''}'),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedPoints = value!;
+                    });
+                  },
                   validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter points';
-                    }
-                    final points = double.tryParse(value);
-                    if (points == null || points <= 0) {
-                      return 'Please enter a valid number';
+                    if (value == null) {
+                      return 'Please select points';
                     }
                     return null;
                   },
@@ -873,19 +881,34 @@ class _QuestionDialogState extends State<_QuestionDialog> {
         return;
       }
 
-      final hasCorrectAnswer = _choiceControllers.any((c) => c.isCorrect);
-      if (!hasCorrectAnswer) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please mark at least one correct answer')),
-        );
-        return;
+      final correctAnswersCount = _choiceControllers.where((c) => c.isCorrect).length;
+      
+      if (_selectedType == QuestionType.multiple) {
+        // Multiple choice must have at least 2 correct answers
+        if (correctAnswersCount < 2) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Multiple choice questions must have at least 2 correct answers'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+          return;
+        }
+      } else {
+        // Single choice must have exactly 1 correct answer
+        if (correctAnswersCount == 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please mark at least one correct answer')),
+          );
+          return;
+        }
       }
     }
 
     final questionData = QuestionData(
       type: _selectedType,
       body: _bodyController.text.trim(),
-      points: double.parse(_pointsController.text),
+      points: _selectedPoints,
       choices: _choiceControllers.map((controller) {
         return ChoiceData(
           text: controller.controller.text.trim(),
@@ -901,7 +924,6 @@ class _QuestionDialogState extends State<_QuestionDialog> {
   @override
   void dispose() {
     _bodyController.dispose();
-    _pointsController.dispose();
     for (var controller in _choiceControllers) {
       controller.controller.dispose();
     }
