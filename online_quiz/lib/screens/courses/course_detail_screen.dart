@@ -299,9 +299,6 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     final isCompleted = completedAttempt != null && completedAttempt.submittedAt != null;
     final score = quizState.quizScores[quiz.quizId] ?? 0.0;
     
-    // For now, use placeholder for question count until quiz details are loaded
-    const totalQuestions = 'View';
-    
     return GestureDetector(
       onTap: () {
         final authState = ref.read(authProvider);
@@ -408,10 +405,16 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
           Row(
             children: [
               Expanded(
-                child: _buildQuizDetail(
-                  icon: Icons.quiz_outlined,
-                  label: 'Questions',
-                  value: totalQuestions.toString(),
+                child: FutureBuilder<int>(
+                  future: ref.read(quizProvider.notifier).getQuestionCount(quiz.quizId),
+                  builder: (context, snapshot) {
+                    final questionCount = snapshot.data ?? 0;
+                    return _buildQuizDetail(
+                      icon: Icons.quiz_outlined,
+                      label: 'Questions',
+                      value: questionCount.toString(),
+                    );
+                  },
                 ),
               ),
               Expanded(
