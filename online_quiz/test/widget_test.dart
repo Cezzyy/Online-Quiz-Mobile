@@ -36,7 +36,13 @@ void main() {
       ),
     );
 
-    // Wait for any animations to complete
+    // Pump one frame to start the build
+    await tester.pump();
+    
+    // Fast-forward through the auth initialization timer (2 seconds)
+    await tester.pump(const Duration(seconds: 2));
+    
+    // Wait for any remaining animations to complete
     await tester.pumpAndSettle();
 
     // Verify that the app loads and shows onboarding content
