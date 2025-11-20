@@ -154,13 +154,19 @@ class TeacherService {
   /// Get recent activity for teacher (recent quiz attempts)
   Future<List<Map<String, dynamic>>> getRecentActivity(int userId, {int limit = 10}) async {
     try {
-      // First get teacher's course IDs
+      // First get teacher's courses with course codes
       final coursesResponse = await _supabase
           .from('Course')
-          .select('CourseId')
+          .select('CourseId, Code')
           .eq('Instructor_UserId', userId);
 
       final List<int> courseIds = coursesResponse.map((c) => c['CourseId'] as int).toList();
+      
+      // Build course code map
+      final Map<int, String> courseCodeMap = {};
+      for (final course in coursesResponse) {
+        courseCodeMap[course['CourseId'] as int] = course['Code'] as String;
+      }
 
       if (courseIds.isEmpty) {
         return [];
@@ -203,18 +209,18 @@ class TeacherService {
       for (final attempt in attemptsResponse) {
         final quizId = attempt['QuizId'] as int;
         final quizInfo = quizMap[quizId];
+        final courseId = quizInfo?['courseId'] as int?;
         
         activities.add({
-          'attemptId': attempt['AttemptId'],
-          'quizId': quizId,
-          'quizTitle': quizInfo?['title'] ?? attempt['QuizTitle'] ?? 'Unknown Quiz',
-          'courseId': quizInfo?['courseId'],
-          'userId': attempt['UserId'],
-          'studentName': attempt['StudentName'] ?? 'Unknown Student',
-          'score': attempt['Score'],
-          'submittedAt': attempt['SubmittedAt'] != null 
-              ? DateTime.parse(attempt['SubmittedAt']) 
-              : null,
+          'AttemptId': attempt['AttemptId'],
+          'QuizId': quizId,
+          'QuizName': attempt['QuizTitle'] ?? 'Unknown Quiz',
+          'CourseId': courseId,
+          'CourseCode': courseId != null ? (courseCodeMap[courseId] ?? '') : '',
+          'UserId': attempt['UserId'],
+          'StudentName': attempt['StudentName'] ?? 'Unknown Student',
+          'TotalScore': attempt['Score'] ?? 0.0,
+          'SubmittedAt': attempt['SubmittedAt'],
         });
       }
 
