@@ -58,7 +58,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true);
     
     // Start a timer to ensure minimum splash screen display time
-    final minimumDisplayTime = Future.delayed(const Duration(seconds: 3));
+    final minimumDisplayTime = Future.delayed(const Duration(seconds: 2));
     
     try {
       // Check for existing session

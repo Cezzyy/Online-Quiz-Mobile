@@ -81,23 +81,24 @@ class AuthWrapper extends ConsumerStatefulWidget {
 }
 
 class _AuthWrapperState extends ConsumerState<AuthWrapper> {
+  bool _hasShownSplash = false;
+
   @override
   void initState() {
     super.initState();
     // Initialize auth and check for existing session
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.microtask(() {
       ref.read(authProvider.notifier).initialize();
     });
   }
-  
-
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     
-    // Show splash screen during initial app startup
-    if (!authState.isInitialized) {
+    // Show splash screen only once on initial app startup
+    if (!authState.isInitialized && !_hasShownSplash) {
+      _hasShownSplash = true;
       return const SplashScreen();
     }
     
