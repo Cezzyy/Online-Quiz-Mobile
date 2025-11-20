@@ -353,48 +353,6 @@ class TeacherProfileTab extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              
-              // Notifications Toggle
-              Row(
-                children: [
-                  Icon(
-                    Icons.notifications_outlined,
-                    color: Theme.of(context).colorScheme.primary,
-                    size: 24,
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Notifications',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                        Text(
-                          settingsState.notificationsEnabled ? 'Enabled' : 'Disabled',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Switch(
-                    value: settingsState.notificationsEnabled,
-                    onChanged: (value) {
-                      ref.read(settingsProvider.notifier).setNotificationsEnabled(value);
-                    },
-                    activeThumbColor: AppTheme.primaryColor,
-                  ),
-                ],
-              ),
             ],
           ),
         ),
