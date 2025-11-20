@@ -366,6 +366,11 @@ class QuizNotifier extends StateNotifier<QuizState> {
         answers: answers,
         startTime: startTime,
         autoSubmit: autoSubmit,
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('Quiz submission timed out. Please check your connection and try again.');
+        },
       );
       
       // Refresh quiz data to reflect the new attempt

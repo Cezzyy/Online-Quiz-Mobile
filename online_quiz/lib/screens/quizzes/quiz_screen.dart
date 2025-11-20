@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/quiz.dart';
 import '../../models/question.dart';
+import '../../models/attempt.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/dialog.dart';
 import '../../providers/quiz_provider.dart';
@@ -63,6 +64,19 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
         setState(() {
           attemptId = attempt.attemptId;
         });
+      } else {
+        // Failed to create attempt - show error
+        if (mounted) {
+          final quizState = ref.read(quizProvider);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to start quiz: ${quizState.error ?? "Unknown error"}'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+          Navigator.of(context).pop(); // Exit quiz screen
+        }
       }
     });
     
@@ -227,9 +241,18 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
   Widget _buildTimerSection() {
     if (widget.quiz.timeLimitMinutes == null) return const SizedBox.shrink();
 
-    final minutes = timeRemainingSeconds ~/ 60;
+    final hours = timeRemainingSeconds ~/ 3600;
+    final minutes = (timeRemainingSeconds % 3600) ~/ 60;
     final seconds = timeRemainingSeconds % 60;
     final isLowTime = timeRemainingSeconds <= 300; // 5 minutes
+
+    // Format time string based on duration
+    String timeString;
+    if (hours > 0) {
+      timeString = '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    } else {
+      timeString = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -252,7 +275,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
           ),
           const SizedBox(width: 8),
           Text(
-            'Time Remaining: ${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
+            'Time Remaining: $timeString',
             style: TextStyle(
               color: isLowTime ? Colors.red : Colors.blue,
               fontSize: 16,
@@ -745,14 +768,16 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
       ),
     );
 
+    Attempt? attempt;
+    
     try {
       // Check if we have an attemptId
       if (attemptId == null) {
-        throw Exception('No attempt ID found');
+        throw Exception('Failed to submit: Quiz attempt was not properly initialized. Please try restarting the quiz.');
       }
       
       // Submit quiz through provider
-      final attempt = await ref.read(quizProvider.notifier).submitQuizAttempt(
+      attempt = await ref.read(quizProvider.notifier).submitQuizAttempt(
         attemptId: attemptId!,
         quizId: widget.quiz.quizId,
         userId: widget.currentUserId,
@@ -761,26 +786,43 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
         autoSubmit: autoSubmit,
       );
 
-      if (context.mounted && attempt != null) {
-        navigator.pop(); // Close loading dialog
-        
+      if (!context.mounted) return;
+      
+      navigator.pop(); // Close loading dialog
+      
+      if (attempt == null) {
         scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              autoSubmit 
-                  ? 'Quiz auto-submitted due to time limit'
-                  : 'Quiz submitted successfully!',
-            ),
-            backgroundColor: autoSubmit ? Colors.orange : Colors.green,
+          const SnackBar(
+            content: Text('Quiz submitted but result is unavailable'),
+            backgroundColor: Colors.orange,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
           ),
         );
+        navigator.pop(); // Exit quiz screen
+        return;
+      }
+      
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            autoSubmit 
+                ? 'Quiz auto-submitted due to time limit'
+                : 'Quiz submitted successfully!',
+          ),
+          backgroundColor: autoSubmit ? Colors.orange : Colors.green,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      );
+      
+      // Get course from provider with timeout
+      try {
+        final course = await ref.read(quizProvider.notifier).getCourseForQuiz(widget.quiz.quizId)
+            .timeout(const Duration(seconds: 10));
         
-        // Get course from provider
-        final course = await ref.read(quizProvider.notifier).getCourseForQuiz(widget.quiz.quizId);
+        if (!context.mounted) return;
         
         // Navigate to quiz result screen
         navigator.pushReplacement(
@@ -788,7 +830,20 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
             builder: (context) => QuizResultScreen(
               quiz: widget.quiz,
               course: course,
-              attempt: attempt,
+              attempt: attempt!,
+            ),
+          ),
+        );
+      } catch (e) {
+        if (!context.mounted) return;
+        
+        // Navigate without course info if it fails to load
+        navigator.pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => QuizResultScreen(
+              quiz: widget.quiz,
+              course: null,
+              attempt: attempt!,
             ),
           ),
         );

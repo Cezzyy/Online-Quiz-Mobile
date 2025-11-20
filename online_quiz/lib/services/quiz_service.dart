@@ -235,14 +235,14 @@ class QuizService {
             'QuizId': quizId,
             'StartedAt': DateTime.now().toIso8601String(),
             'Score': 0.0,
-            'TimeSpentSeconds': 0,
+            'Time_Spent_Seconds': 0,
           })
           .select()
           .single();
 
       return Attempt.fromJson(response);
     } on PostgrestException catch (e) {
-      throw Exception('Failed to start attempt: ${e.message}');
+      throw Exception('Failed to start attempt: ${e.message} (Code: ${e.code}, Details: ${e.details})');
     } catch (e) {
       throw Exception('Failed to start attempt: $e');
     }
@@ -368,7 +368,7 @@ class QuizService {
           .update({
             'SubmittedAt': endTime.toIso8601String(),
             'Score': totalScore,
-            'TimeSpentSeconds': timeSpentSeconds,
+            'Time_Spent_Seconds': timeSpentSeconds,
           })
           .eq('AttemptId', attemptId)
           .select()
