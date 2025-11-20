@@ -354,9 +354,6 @@ class CourseService {
   // Get students enrolled in a course (for teacher view)
   Future<List<Map<String, dynamic>>> getEnrolledStudents(int courseId) async {
     try {
-      debugPrint('========================================');
-      debugPrint('Fetching enrolled students for course: $courseId');
-      
       // Query enrollments - get Student info which includes the User relationship
       final response = await _supabase
           .from('Enrollment')
@@ -389,39 +386,24 @@ class CourseService {
           ''')
           .eq('CourseId', courseId)
           .order('EnrolledAt', ascending: false);
-
-      debugPrint('Enrollment response received');
-      debugPrint('Response type: ${response.runtimeType}');
-      debugPrint('Enrollment response count: ${response.length}');
-      debugPrint('Raw response: $response');
       
       final List<Map<String, dynamic>> students = [];
       for (final enrollment in response) {
-        debugPrint('---');
-        debugPrint('Processing enrollment: ${enrollment['EnrollmentId']}, UserId: ${enrollment['UserId']}');
-        debugPrint('Student data present: ${enrollment['Student'] != null}');
-        
         if (enrollment['Student'] != null) {
           final studentData = enrollment['Student'];
-          debugPrint('Student data: $studentData');
-          debugPrint('User data present: ${studentData['User'] != null}');
           
           if (studentData['User'] != null) {
-            debugPrint('User: ${studentData['User']}');
-            
             // Convert Student JSON to Student object
             Student? student;
             try {
               student = Student.fromJson(studentData);
-              debugPrint('Successfully parsed student: ${student.studentId}');
             } catch (e) {
-              debugPrint('ERROR parsing student data: $e');
-              debugPrint('Student JSON: $studentData');
+              debugPrint('Error parsing student data: $e');
+              continue;
             }
             
             try {
               final user = app_user.User.fromJson(studentData['User']);
-              debugPrint('User parsed successfully: ${user.fullName}');
               
               final enrollmentObj = Enrollment(
                 enrollmentId: enrollment['EnrollmentId'] as int,
@@ -431,30 +413,19 @@ class CourseService {
                 enrolledAt: DateTime.parse(enrollment['EnrolledAt'] as String),
                 enrolledBy: enrollment['EnrolledBy'] as int,
               );
-              debugPrint('Enrollment parsed successfully');
               
               students.add({
                 'user': user,
                 'student': student,
                 'enrollment': enrollmentObj,
               });
-              debugPrint('Student added to list. Total now: ${students.length}');
             } catch (e) {
-              debugPrint('ERROR adding student to list: $e');
-              debugPrint('Enrollment data: $enrollment');
-              debugPrint('Student User data: ${studentData['User']}');
+              debugPrint('Error processing enrollment ${enrollment['EnrollmentId']}: $e');
             }
-          } else {
-            debugPrint('ERROR: Student record has no User data for enrollment ${enrollment['EnrollmentId']}');
           }
-        } else {
-          debugPrint('ERROR: Enrollment ${enrollment['EnrollmentId']} has no Student data!');
         }
       }
 
-      debugPrint('========================================');
-      debugPrint('FINAL: Total students processed: ${students.length}');
-      debugPrint('========================================');
       return students;
     } on PostgrestException catch (e) {
       debugPrint('PostgrestException in getEnrolledStudents: ${e.message}');

@@ -9,9 +9,12 @@ import '../../utils/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/teacher_profile_provider.dart';
 import '../../services/teacher_service.dart';
+import '../../services/quiz_service.dart';
 
 class TeacherHomeTab extends ConsumerStatefulWidget {
-  const TeacherHomeTab({super.key});
+  final Function(int)? onNavigateToTab;
+  
+  const TeacherHomeTab({super.key, this.onNavigateToTab});
 
   @override
   ConsumerState<TeacherHomeTab> createState() => _TeacherHomeTabState();
@@ -45,6 +48,25 @@ class _TeacherHomeTabState extends ConsumerState<TeacherHomeTab> {
     try {
       final teacherService = TeacherService();
       final activity = await teacherService.getRecentActivity(userId, limit: 5);
+      
+      // Calculate percentage for each activity by fetching quiz details
+      final quizService = QuizService();
+      for (final item in activity) {
+        try {
+          final quizId = item['QuizId'] as int;
+          final score = (item['TotalScore'] as num?)?.toDouble() ?? 0.0;
+          
+          // Get quiz questions to calculate total possible points
+          final questions = await quizService.getQuizQuestions(quizId);
+          final totalPoints = questions.fold<double>(0.0, (sum, q) => sum + q.points);
+          
+          // Calculate percentage
+          item['ScorePercentage'] = totalPoints > 0 ? (score / totalPoints) * 100 : 0.0;
+        } catch (e) {
+          // If we can't calculate percentage, default to 0
+          item['ScorePercentage'] = 0.0;
+        }
+      }
       
       if (mounted) {
         setState(() {
@@ -291,7 +313,8 @@ class _TeacherHomeTabState extends ConsumerState<TeacherHomeTab> {
             ),
             TextButton(
               onPressed: () {
-                // Navigate to courses tab
+                // Navigate to courses tab (index 1)
+                widget.onNavigateToTab?.call(1);
               },
               child: Text(
                 'View All',
@@ -327,14 +350,6 @@ class _TeacherHomeTabState extends ConsumerState<TeacherHomeTab> {
                   title: '${course.code} • ${courseQuizzes.length} Quizzes',
                   value: course.name,
                   iconColor: courseColor,
-                  trailing: Icon(
-                    Icons.arrow_forward_ios,
-                    size: 16,
-                    color: AppTheme.getSecondaryTextColor(context),
-                  ),
-                  onTap: () {
-                    // Navigate to course details
-                  },
                 ),
               );
             }).toList(),
@@ -403,42 +418,144 @@ class _TeacherHomeTabState extends ConsumerState<TeacherHomeTab> {
         else
           Column(
             children: _recentActivity.map((activity) {
-              final scorePercentage = (activity['TotalScore'] as num?)?.toDouble() ?? 0.0;
+              final scorePercentage = (activity['ScorePercentage'] as num?)?.toDouble() ?? 0.0;
               final submittedAt = activity['SubmittedAt'] != null 
                   ? DateTime.parse(activity['SubmittedAt'] as String)
                   : DateTime.now();
               
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: InfoCard(
-                  icon: Icons.assignment_turned_in,
-                  title: activity['StudentName'] as String? ?? 'Unknown Student',
-                  value: '${activity['QuizName'] as String? ?? 'Quiz'} • ${activity['CourseCode'] as String? ?? ''}',
-                  iconColor: AppTheme.getScoreColor(scorePercentage),
-                  trailing: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        scorePercentage.round().toString(),
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.getScoreColor(scorePercentage),
-                        ),
-                      ),
-                      Text(
-                        _formatDate(submittedAt),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.getSecondaryTextColor(context),
-                        ),
-                      ),
-                    ],
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: AppTheme.getCardColor(context),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppTheme.getDividerColor(context).withValues(alpha: 0.2),
                   ),
-                  onTap: () {
-                    // Navigate to attempt details
-                  },
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.getDividerColor(context).withValues(alpha: 0.05),
+                      spreadRadius: 0,
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () {
+                      // Navigate to attempt details
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          // Icon with score color
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppTheme.getScoreColor(scorePercentage).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              Icons.assignment_turned_in,
+                              color: AppTheme.getScoreColor(scorePercentage),
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          // Student and quiz info
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  activity['StudentName'] as String? ?? 'Unknown Student',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.getTextColor(context),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  activity['QuizName'] as String? ?? 'Quiz',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: AppTheme.getSecondaryTextColor(context),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.book_outlined,
+                                      size: 14,
+                                      color: AppTheme.getSecondaryTextColor(context),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      activity['CourseCode'] as String? ?? 'Course',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppTheme.getSecondaryTextColor(context),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Score and date
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.getScoreColor(scorePercentage).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  '${scorePercentage.round()}%',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.getScoreColor(scorePercentage),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.access_time,
+                                    size: 12,
+                                    color: AppTheme.getSecondaryTextColor(context),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _formatDate(submittedAt),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppTheme.getSecondaryTextColor(context),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               );
             }).toList(),

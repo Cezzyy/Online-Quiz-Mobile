@@ -19,7 +19,7 @@ class _TeacherMainScreenState extends ConsumerState<TeacherMainScreen> {
   int _currentIndex = 0;
 
   List<Widget> get _tabs => [
-    const TeacherHomeTab(),
+    TeacherHomeTab(onNavigateToTab: _navigateToTab),
     const TeacherCoursesTab(),
     const TeacherQuizTab(),
     const TeacherResultsTab(),
