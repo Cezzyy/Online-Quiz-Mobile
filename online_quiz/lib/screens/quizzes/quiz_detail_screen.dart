@@ -32,6 +32,17 @@ class _QuizDetailScreenState extends ConsumerState<QuizDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _loadQuizData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload quiz data when returning to this screen
+    _loadQuizData();
+  }
+
+  void _loadQuizData() {
     // Load quiz details when screen opens
     Future.microtask(() {
       ref.read(quizProvider.notifier).loadQuizDetails(widget.quiz.quizId);

@@ -793,12 +793,14 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
       if (attempt == null) {
         scaffoldMessenger.showSnackBar(
           const SnackBar(
-            content: Text('Quiz submitted but result is unavailable'),
+            content: Text('Quiz submitted but result is unavailable. Please check your results later.'),
             backgroundColor: Colors.orange,
             behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 4),
           ),
         );
-        navigator.pop(); // Exit quiz screen
+        // Pop back to quiz list/course screen, removing quiz detail and quiz screen
+        Navigator.of(context).popUntil((route) => route.isFirst || route.settings.name == '/courses');
         return;
       }
       
@@ -824,8 +826,8 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
         
         if (!context.mounted) return;
         
-        // Navigate to quiz result screen
-        navigator.pushReplacement(
+        // Navigate to quiz result screen, replacing both quiz screen and quiz detail screen
+        Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (context) => QuizResultScreen(
               quiz: widget.quiz,
@@ -838,7 +840,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
         if (!context.mounted) return;
         
         // Navigate without course info if it fails to load
-        navigator.pushReplacement(
+        Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (context) => QuizResultScreen(
               quiz: widget.quiz,
@@ -852,20 +854,21 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
       if (context.mounted) {
         navigator.pop(); // Close loading dialog
         
+        // Show error and exit quiz screen to prevent retaking
         scaffoldMessenger.showSnackBar(
           SnackBar(
-            content: Text('Failed to submit quiz: $e'),
+            content: Text('Failed to submit quiz: $e\nYour attempt has been recorded.'),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 5),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
           ),
         );
         
-        setState(() {
-          isSubmitting = false;
-        });
+        // Exit quiz screen back to previous screen
+        Navigator.of(context).pop();
       }
     }
   }
