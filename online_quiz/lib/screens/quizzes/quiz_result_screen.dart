@@ -27,6 +27,8 @@ class QuizResultScreen extends ConsumerStatefulWidget {
 }
 
 class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
+  bool _isLoading = true;
+  
   @override
   void initState() {
     super.initState();
@@ -34,6 +36,11 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
     Future.microtask(() async {
       await ref.read(quizProvider.notifier).loadQuizDetails(widget.quiz.quizId);
       await ref.read(quizProvider.notifier).getAttemptDetails(widget.attempt.attemptId);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     });
   }
 
@@ -78,16 +85,20 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildResultHeader(scoreColor, gradeText, percentage),
-            _buildQuizInfo(context, ref, totalQuestions),
-            _buildDetailedResults(context, ref, totalQuestions, totalPoints),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(),
+            )
+          : SingleChildScrollView(
+              child: Column(
+                children: [
+                  _buildResultHeader(scoreColor, gradeText, percentage),
+                  _buildQuizInfo(context, ref, totalQuestions),
+                  _buildDetailedResults(context, ref, totalQuestions, totalPoints),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
     );
   }
 
@@ -302,6 +313,8 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
   }
 
   Widget _buildResultBar(BuildContext context, String label, int value, int total, Color color) {
+    final progress = total > 0 ? value / total : 0.0;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -328,7 +341,7 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
         ),
         const SizedBox(height: 8),
         LinearProgressIndicator(
-          value: value / total,
+          value: progress,
           backgroundColor: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
           valueColor: AlwaysStoppedAnimation<Color>(color),
           minHeight: 8,

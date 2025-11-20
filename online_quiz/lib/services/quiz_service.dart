@@ -289,8 +289,8 @@ class QuizService {
                 'AttemptId': attemptId,
                 'QuestionId': question.questionId,
                 'ChoiceId': userAnswer as int,
-                'FreeText': null,
-                'IsCorrect': isCorrect,
+                'Free_Text': null,
+                'Is_Correct': isCorrect,
               });
               break;
 
@@ -322,8 +322,8 @@ class QuizService {
                   'AttemptId': attemptId,
                   'QuestionId': question.questionId,
                   'ChoiceId': choiceId,
-                  'FreeText': null,
-                  'IsCorrect': choice.isCorrect,
+                  'Free_Text': null,
+                  'Is_Correct': choice.isCorrect,
                 });
               }
               break;
@@ -339,8 +339,8 @@ class QuizService {
                 'AttemptId': attemptId,
                 'QuestionId': question.questionId,
                 'ChoiceId': null,
-                'FreeText': textAnswer,
-                'IsCorrect': isCorrect,
+                'Free_Text': textAnswer,
+                'Is_Correct': isCorrect,
               });
               break;
           }
@@ -350,8 +350,8 @@ class QuizService {
             'AttemptId': attemptId,
             'QuestionId': question.questionId,
             'ChoiceId': null,
-            'FreeText': null,
-            'IsCorrect': false,
+            'Free_Text': null,
+            'Is_Correct': false,
           });
         }
 

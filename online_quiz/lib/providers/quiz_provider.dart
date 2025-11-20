@@ -393,7 +393,25 @@ class QuizNotifier extends StateNotifier<QuizState> {
   // Get attempt details (for results screen)
   Future<Map<String, dynamic>?> getAttemptDetails(int attemptId) async {
     try {
-      return await _quizService.getAttemptDetails(attemptId);
+      final details = await _quizService.getAttemptDetails(attemptId);
+      
+      // Update state with the attempt answers
+      // The service returns answers grouped by question, but we need to flatten them
+      final answersByQuestion = details['answers'] as Map<int, List<AttemptAnswer>>;
+      final allAnswers = <AttemptAnswer>[];
+      answersByQuestion.forEach((questionId, answers) {
+        allAnswers.addAll(answers);
+      });
+      
+      // Store answers indexed by attemptId
+      final updatedAttemptAnswers = Map<int, List<AttemptAnswer>>.from(state.attemptAnswers);
+      updatedAttemptAnswers[attemptId] = allAnswers;
+      
+      state = state.copyWith(
+        attemptAnswers: updatedAttemptAnswers,
+      );
+      
+      return details;
     } catch (e) {
       state = state.copyWith(error: 'Failed to load attempt details: $e');
       return null;

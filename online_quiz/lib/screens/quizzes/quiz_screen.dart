@@ -786,7 +786,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
         autoSubmit: autoSubmit,
       );
 
-      if (!context.mounted) return;
+      if (!mounted) return;
       
       navigator.pop(); // Close loading dialog
       
@@ -800,7 +800,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
           ),
         );
         // Pop back to quiz list/course screen, removing quiz detail and quiz screen
-        Navigator.of(context).popUntil((route) => route.isFirst || route.settings.name == '/courses');
+        navigator.popUntil((route) => route.isFirst || route.settings.name == '/courses');
         return;
       }
       
@@ -824,10 +824,10 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
         final course = await ref.read(quizProvider.notifier).getCourseForQuiz(widget.quiz.quizId)
             .timeout(const Duration(seconds: 10));
         
-        if (!context.mounted) return;
+        if (!mounted) return;
         
         // Navigate to quiz result screen, replacing both quiz screen and quiz detail screen
-        Navigator.of(context).pushReplacement(
+        navigator.pushReplacement(
           MaterialPageRoute(
             builder: (context) => QuizResultScreen(
               quiz: widget.quiz,
@@ -837,10 +837,10 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
           ),
         );
       } catch (e) {
-        if (!context.mounted) return;
+        if (!mounted) return;
         
         // Navigate without course info if it fails to load
-        Navigator.of(context).pushReplacement(
+        navigator.pushReplacement(
           MaterialPageRoute(
             builder: (context) => QuizResultScreen(
               quiz: widget.quiz,
@@ -851,7 +851,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
         );
       }
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         navigator.pop(); // Close loading dialog
         
         // Show error and exit quiz screen to prevent retaking
@@ -868,7 +868,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
         );
         
         // Exit quiz screen back to previous screen
-        Navigator.of(context).pop();
+        navigator.pop();
       }
     }
   }
