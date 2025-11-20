@@ -526,7 +526,7 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
         final questionData = _questions[i];
         
         final questionMap = {
-          'type': questionData.type.toString().split('.').last,
+          'type': questionData.type.value,
           'text': questionData.body,
           'points': questionData.points,
           'sortOrder': i + 1,
