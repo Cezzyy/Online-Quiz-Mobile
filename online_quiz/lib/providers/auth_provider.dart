@@ -111,12 +111,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
       
       return true;
     } catch (e) {
-      // Extract user-friendly error message
-      String errorMessage = 'Invalid email or password';
-      if (e.toString().contains('Database error')) {
-        errorMessage = 'Unable to connect to server. Please try again.';
-      } else if (e.toString().contains('Invalid email or password')) {
-        errorMessage = 'Invalid email or password';
+      // Extract the actual error message from the exception
+      String errorMessage = e.toString();
+      if (errorMessage.startsWith('Exception: ')) {
+        errorMessage = errorMessage.substring('Exception: '.length);
       }
       
       state = state.copyWith(

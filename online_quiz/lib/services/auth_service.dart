@@ -28,7 +28,7 @@ class AuthService {
         },
       );
 
-      if (response == null) {
+      if (response == null || (response is List && response.isEmpty)) {
         throw Exception('Invalid email or password');
       }
 
@@ -84,11 +84,32 @@ class AuthService {
 
       return result;
     } on PostgrestException catch (e) {
-      throw Exception('Database error: ${e.message}');
-    } on FunctionException {
-      throw Exception('RPC function error: Function may not exist or has wrong parameters');
+      // Check if it's a connection/network error
+      if (e.code == null || e.code == 'PGRST301' || e.code == '08000' || e.code == '08003' || e.code == '08006') {
+        throw Exception('Unable to connect to server. Please check your internet connection.');
+      }
+      // Otherwise it's likely an authentication failure
+      throw Exception('Invalid email or password');
+    } on FunctionException catch (e) {
+      // RPC function returned an error - likely invalid credentials
+      if (e.toString().contains('verify_user_credentials') || e.details?.contains('No rows') == true) {
+        throw Exception('Invalid email or password');
+      }
+      throw Exception('Unable to connect to server. Please try again.');
     } catch (e) {
-      throw Exception('Login failed: ${e.toString()}');
+      // Check if the error message already indicates invalid credentials
+      if (e.toString().contains('Invalid email or password')) {
+        rethrow;
+      }
+      // Generic network/connection errors
+      if (e.toString().contains('SocketException') || 
+          e.toString().contains('TimeoutException') ||
+          e.toString().contains('Connection') ||
+          e.toString().contains('Network')) {
+        throw Exception('Unable to connect to server. Please check your internet connection.');
+      }
+      // Default to invalid credentials for other errors
+      throw Exception('Invalid email or password');
     }
   }
 
