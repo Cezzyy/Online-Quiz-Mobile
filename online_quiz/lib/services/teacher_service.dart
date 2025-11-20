@@ -189,18 +189,13 @@ class TeacherService {
         return [];
       }
 
-      // Get recent attempts
+      // Get recent attempts using QuizAttemptSummary view
+      // This view already handles the Attempt -> Student -> User joins
       final attemptsResponse = await _supabase
-          .from('Attempt')
-          .select('''
-            *,
-            User:UserId (
-              UserId,
-              FullName
-            )
-          ''')
+          .from('QuizAttemptSummary')
+          .select('*')
           .inFilter('QuizId', quizIds)
-          .not('SubmittedAt', 'is', null)
+          .eq('Status', 'Completed')
           .order('SubmittedAt', ascending: false)
           .limit(limit);
 
@@ -212,10 +207,10 @@ class TeacherService {
         activities.add({
           'attemptId': attempt['AttemptId'],
           'quizId': quizId,
-          'quizTitle': quizInfo?['title'] ?? 'Unknown Quiz',
+          'quizTitle': quizInfo?['title'] ?? attempt['QuizTitle'] ?? 'Unknown Quiz',
           'courseId': quizInfo?['courseId'],
           'userId': attempt['UserId'],
-          'studentName': attempt['User']?['FullName'] ?? 'Unknown Student',
+          'studentName': attempt['StudentName'] ?? 'Unknown Student',
           'score': attempt['Score'],
           'submittedAt': attempt['SubmittedAt'] != null 
               ? DateTime.parse(attempt['SubmittedAt']) 
