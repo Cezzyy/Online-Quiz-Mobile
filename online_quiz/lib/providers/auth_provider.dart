@@ -57,17 +57,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> _initializeAuth() async {
     state = state.copyWith(isLoading: true);
     
-    // Start a timer to ensure minimum splash screen display time
-    final minimumDisplayTime = Future.delayed(const Duration(seconds: 2));
-    
     try {
-      // Check for existing session
+      // Check for existing session first
       final session = await _authService.getCurrentSession();
       
-      // Wait for minimum display time to complete
-      await minimumDisplayTime;
-      
       if (session != null) {
+        // User is already authenticated - skip splash delay for faster navigation
         state = state.copyWith(
           user: session['user'] as User?,
           role: session['role'] as String?,
@@ -77,14 +72,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
           isInitialized: true,
         );
       } else {
+        // No existing session - show splash screen for minimum time
+        await Future.delayed(const Duration(seconds: 2));
+        
         state = state.copyWith(
           isLoading: false,
           isInitialized: true,
         );
       }
     } catch (e) {
-      // Wait for minimum display time even on error
-      await minimumDisplayTime;
+      // On error, still show splash briefly for UX consistency
+      await Future.delayed(const Duration(seconds: 1));
       
       state = state.copyWith(
         isLoading: false,
