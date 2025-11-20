@@ -23,13 +23,19 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
+    Future.microtask(() async {
       final user = ref.read(authProvider).user;
       if (user != null) {
-        ref.read(courseProvider.notifier).initializeCourses(user.userId);
-        ref.read(quizProvider.notifier).initializeQuizzes(user.userId);
+        await ref.read(courseProvider.notifier).initializeCourses(user.userId);
+        // Load quizzes for all teacher's courses
+        await _loadTeacherQuizzes();
       }
     });
+  }
+
+  Future<void> _loadTeacherQuizzes() async {
+    // For teacher results, we'll load quizzes on-demand when a course is selected
+    // This avoids loading all quizzes upfront
   }
 
   @override
@@ -146,11 +152,15 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
                             ),
                           );
                         }).toList(),
-                        onChanged: (course) {
+                        onChanged: (course) async {
                           if (course != null) {
                             setState(() {
                               _selectedCourse = course;
                             });
+                            // Load quizzes for this specific course
+                            await ref.read(quizProvider.notifier).loadQuizzesForCourse(course.courseId);
+                            // Trigger data load for the selected course
+                            ref.read(analyticsProvider.notifier).getCourseStatistics(course.courseId);
                           }
                         },
                       ),
@@ -200,6 +210,7 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
 
   Widget _buildCourseResults(Course course) {
     return FutureBuilder<Map<String, dynamic>>(
+      key: ValueKey(course.courseId), // Force rebuild when course changes
       future: ref.read(analyticsProvider.notifier).getCourseStatistics(course.courseId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {

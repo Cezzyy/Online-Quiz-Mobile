@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/attempt.dart';
 import '../models/user.dart' as models;
@@ -10,39 +11,48 @@ class AnalyticsService {
   /// Get all attempts for a specific quiz with student details
   Future<List<Map<String, dynamic>>> getAttemptsByQuiz(int quizId) async {
     try {
-      final response = await _supabase
+      // First, get all attempts for the quiz
+      final attemptResponse = await _supabase
           .from('Attempt')
-          .select('''
-            *,
-            User:UserId (
-              UserId,
-              FullName,
-              Email
-            )
-          ''')
+          .select('*')
           .eq('QuizId', quizId)
           .not('SubmittedAt', 'is', null)
           .order('SubmittedAt', ascending: false);
 
       final attempts = <Map<String, dynamic>>[];
-      for (final attemptData in response) {
+      
+      // For each attempt, fetch the user details separately
+      for (final attemptData in attemptResponse) {
         final attempt = Attempt.fromJson(attemptData);
-        final userData = attemptData['User'];
         
-        attempts.add({
-          'attempt': attempt,
-          'user': userData != null ? models.User(
-            userId: userData['UserId'] as int,
-            fullName: userData['FullName'] as String,
-            email: userData['Email'] as String,
-            passwordHash: '', // Not needed for display
+        // Fetch user details
+        models.User? user;
+        try {
+          final userResponse = await _supabase
+              .from('User')
+              .select('UserId, FullName, Email')
+              .eq('UserId', attempt.userId)
+              .single();
+          
+          user = models.User(
+            userId: userResponse['UserId'] as int,
+            fullName: userResponse['FullName'] as String,
+            email: userResponse['Email'] as String,
+            passwordHash: '',
             status: 'Active',
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
             createdBy: 0,
             contactNumber: '',
             emergencyContactNumber: '',
-          ) : null,
+          );
+        } catch (e) {
+          debugPrint('Error fetching user ${attempt.userId}: $e');
+        }
+        
+        attempts.add({
+          'attempt': attempt,
+          'user': user,
         });
       }
 
