@@ -22,33 +22,34 @@ class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
+          primary: false,
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Theme Settings Section
               _buildThemeSection(context, settingsState, settingsNotifier),
-              
+
               const SizedBox(height: 16),
-              
+
               // Data Management Section
               _buildDataManagementSection(context),
-              
+
               const SizedBox(height: 16),
-              
+
               // Audit Logs Section
               _buildAuditLogsSection(context),
-              
+
               const SizedBox(height: 16),
-              
+
               // System Information Section
               _buildSystemInformationSection(context),
-              
+
               const SizedBox(height: 16),
-              
+
               // Account Actions Section
               _buildAccountActionsSection(context),
-              
+
               const SizedBox(height: 100), // Extra space for bottom navigation
             ],
           ),
@@ -75,7 +76,11 @@ class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
     );
   }
 
-  Widget _buildThemeSection(BuildContext context, SettingsState settingsState, SettingsNotifier settingsNotifier) {
+  Widget _buildThemeSection(
+    BuildContext context,
+    SettingsState settingsState,
+    SettingsNotifier settingsNotifier,
+  ) {
     return _buildSection(
       context,
       title: 'Theme Settings',
@@ -90,18 +95,9 @@ class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
             value: settingsState.themeMode,
             underline: const SizedBox(),
             items: const [
-              DropdownMenuItem(
-                value: ThemeMode.system,
-                child: Text('System'),
-              ),
-              DropdownMenuItem(
-                value: ThemeMode.light,
-                child: Text('Light'),
-              ),
-              DropdownMenuItem(
-                value: ThemeMode.dark,
-                child: Text('Dark'),
-              ),
+              DropdownMenuItem(value: ThemeMode.system, child: Text('System')),
+              DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
+              DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
             ],
             onChanged: (ThemeMode? value) {
               if (value != null) {
@@ -113,8 +109,6 @@ class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
       ],
     );
   }
-
-
 
   Widget _buildDataManagementSection(BuildContext context) {
     return _buildSection(
@@ -194,9 +188,8 @@ class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
     );
   }
 
-
-
-  Widget _buildSection(BuildContext context, {
+  Widget _buildSection(
+    BuildContext context, {
     required String title,
     required IconData icon,
     required List<Widget> children,
@@ -227,11 +220,7 @@ class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
                     color: AppTheme.primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
-                    icon,
-                    color: AppTheme.primaryColor,
-                    size: 20,
-                  ),
+                  child: Icon(icon, color: AppTheme.primaryColor, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Text(
@@ -247,9 +236,7 @@ class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
           ),
           Padding(
             padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
-            child: Column(
-              children: children,
-            ),
+            child: Column(children: children),
           ),
         ],
       ),
@@ -289,15 +276,13 @@ class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
         ),
         subtitle: Text(
           subtitle,
-          style: TextStyle(
-            color: AppTheme.getSecondaryTextColor(context),
-          ),
+          style: TextStyle(color: AppTheme.getSecondaryTextColor(context)),
         ),
-        trailing: trailing ?? (onTap != null ? const Icon(Icons.chevron_right) : null),
+        trailing:
+            trailing ??
+            (onTap != null ? const Icon(Icons.chevron_right) : null),
         onTap: onTap,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       ),
     );
@@ -310,7 +295,9 @@ class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Data Backup'),
-        content: const Text('Data backup configuration will be available in future updates.'),
+        content: const Text(
+          'Data backup configuration will be available in future updates.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -326,7 +313,9 @@ class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Export Data'),
-        content: const Text('Data export functionality will be available in future updates.'),
+        content: const Text(
+          'Data export functionality will be available in future updates.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -339,9 +328,7 @@ class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
 
   void _showAuditLogsDialog(BuildContext context) {
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const AdminActivityLogsScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const AdminActivityLogsScreen()),
     );
   }
 
@@ -350,7 +337,9 @@ class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Export Audit Logs'),
-        content: const Text('Audit log export functionality will be available in future updates.'),
+        content: const Text(
+          'Audit log export functionality will be available in future updates.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -366,7 +355,9 @@ class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out of your admin account?'),
+        content: const Text(
+          'Are you sure you want to sign out of your admin account?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),

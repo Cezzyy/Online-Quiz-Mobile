@@ -53,7 +53,9 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
 
   Future<void> _loadAvailableSections() async {
     try {
-      final sections = await ref.read(courseProvider.notifier).getAvailableSections();
+      final sections = await ref
+          .read(courseProvider.notifier)
+          .getAvailableSections();
       if (mounted) {
         setState(() {
           _availableSections = sections;
@@ -75,7 +77,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
           children: [
             // Header Section
             _buildHeader(context, courseState, courseNotifier),
-            
+
             // Content Section
             Expanded(
               child: courseState.isLoading
@@ -95,7 +97,11 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, CourseState state, CourseNotifier notifier) {
+  Widget _buildHeader(
+    BuildContext context,
+    CourseState state,
+    CourseNotifier notifier,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -115,25 +121,45 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
           Row(
             children: [
               Expanded(
-                child: _buildQuickStat(context, 'Total', state.allCourses.length.toString(), Icons.book),
+                child: _buildQuickStat(
+                  context,
+                  'Total',
+                  state.allCourses.length.toString(),
+                  Icons.book,
+                ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _buildQuickStat(context, 'Active', state.allCourses.where((c) => c.isActive).length.toString(), Icons.check_circle),
+                child: _buildQuickStat(
+                  context,
+                  'Active',
+                  state.allCourses.where((c) => c.isActive).length.toString(),
+                  Icons.check_circle,
+                ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _buildQuickStat(context, 'Inactive', state.allCourses.where((c) => c.isInactive).length.toString(), Icons.pause_circle),
+                child: _buildQuickStat(
+                  context,
+                  'Inactive',
+                  state.allCourses.where((c) => c.isInactive).length.toString(),
+                  Icons.pause_circle,
+                ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _buildQuickStat(context, 'Archived', state.allCourses.where((c) => c.isArchived).length.toString(), Icons.archive),
+                child: _buildQuickStat(
+                  context,
+                  'Archived',
+                  state.allCourses.where((c) => c.isArchived).length.toString(),
+                  Icons.archive,
+                ),
               ),
             ],
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Search and Filter Section
           Column(
             children: [
@@ -150,9 +176,9 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                   fillColor: AppTheme.getSurfaceColor(context),
                 ),
               ),
-              
+
               const SizedBox(height: 12),
-              
+
               // Filter Row
               Row(
                 children: [
@@ -161,7 +187,9 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
-                        border: Border.all(color: AppTheme.getDividerColor(context)),
+                        border: Border.all(
+                          color: AppTheme.getDividerColor(context),
+                        ),
                         borderRadius: BorderRadius.circular(12),
                         color: AppTheme.getSurfaceColor(context),
                       ),
@@ -179,7 +207,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                           ),
                           items: [
                             DropdownMenuItem(
-                              value: null, 
+                              value: null,
                               child: Text(
                                 'All Status',
                                 style: TextStyle(fontSize: 12),
@@ -187,7 +215,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                               ),
                             ),
                             DropdownMenuItem(
-                              value: 'Active', 
+                              value: 'Active',
                               child: Text(
                                 'Active',
                                 style: TextStyle(fontSize: 12),
@@ -195,7 +223,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                               ),
                             ),
                             DropdownMenuItem(
-                              value: 'Inactive', 
+                              value: 'Inactive',
                               child: Text(
                                 'Inactive',
                                 style: TextStyle(fontSize: 12),
@@ -203,7 +231,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                               ),
                             ),
                             DropdownMenuItem(
-                              value: 'Archived', 
+                              value: 'Archived',
                               child: Text(
                                 'Archived',
                                 style: TextStyle(fontSize: 12),
@@ -211,20 +239,23 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                               ),
                             ),
                           ],
-                          onChanged: (value) => notifier.updateSelectedStatus(value),
+                          onChanged: (value) =>
+                              notifier.updateSelectedStatus(value),
                         ),
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(width: 12),
-                  
+
                   // Category Filter
                   Expanded(
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
-                        border: Border.all(color: AppTheme.getDividerColor(context)),
+                        border: Border.all(
+                          color: AppTheme.getDividerColor(context),
+                        ),
                         borderRadius: BorderRadius.circular(12),
                         color: AppTheme.getSurfaceColor(context),
                       ),
@@ -242,7 +273,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                           ),
                           items: [
                             DropdownMenuItem(
-                              value: null, 
+                              value: null,
                               child: Text(
                                 'All Categories',
                                 style: TextStyle(fontSize: 12),
@@ -253,29 +284,34 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                                 .where((course) => course.category != null)
                                 .map((course) => course.category!)
                                 .toSet()
-                                .map((category) => DropdownMenuItem(
-                                  value: category, 
-                                  child: Text(
-                                    category,
-                                    style: TextStyle(fontSize: 12),
-                                    overflow: TextOverflow.ellipsis,
+                                .map(
+                                  (category) => DropdownMenuItem(
+                                    value: category,
+                                    child: Text(
+                                      category,
+                                      style: TextStyle(fontSize: 12),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                )),
+                                ),
                           ],
-                          onChanged: (value) => notifier.updateSelectedCategory(value),
+                          onChanged: (value) =>
+                              notifier.updateSelectedCategory(value),
                         ),
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(width: 12),
-                  
+
                   // Instructor Filter
                   Expanded(
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
-                        border: Border.all(color: AppTheme.getDividerColor(context)),
+                        border: Border.all(
+                          color: AppTheme.getDividerColor(context),
+                        ),
                         borderRadius: BorderRadius.circular(12),
                         color: AppTheme.getSurfaceColor(context),
                       ),
@@ -293,24 +329,26 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                           ),
                           items: [
                             DropdownMenuItem(
-                              value: null, 
+                              value: null,
                               child: Text(
                                 'All Instructors',
                                 style: TextStyle(fontSize: 12),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            ..._teachers.map((teacher) => 
-                                DropdownMenuItem(
-                                  value: teacher.userId, 
-                                  child: Text(
-                                    teacher.fullName,
-                                    style: TextStyle(fontSize: 12),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                )),
+                            ..._teachers.map(
+                              (teacher) => DropdownMenuItem(
+                                value: teacher.userId,
+                                child: Text(
+                                  teacher.fullName,
+                                  style: TextStyle(fontSize: 12),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
                           ],
-                          onChanged: (value) => notifier.updateSelectedInstructor(value),
+                          onChanged: (value) =>
+                              notifier.updateSelectedInstructor(value),
                         ),
                       ),
                     ),
@@ -324,7 +362,12 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
     );
   }
 
-  Widget _buildQuickStat(BuildContext context, String label, String value, IconData icon) {
+  Widget _buildQuickStat(
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
@@ -334,11 +377,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 16,
-            color: AppTheme.primaryColor,
-          ),
+          Icon(icon, size: 16, color: AppTheme.primaryColor),
           const SizedBox(height: 4),
           Text(
             value,
@@ -362,15 +401,23 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
     );
   }
 
-  Widget _buildContent(BuildContext context, CourseState state, CourseNotifier notifier) {
+  Widget _buildContent(
+    BuildContext context,
+    CourseState state,
+    CourseNotifier notifier,
+  ) {
     final groupedCourses = notifier.getPaginatedGroupedCourses();
     final totalPages = notifier.getTotalGroupedPages();
-    
+
     if (groupedCourses.isEmpty) {
       return EmptyStateWidget(
-        icon: state.searchQuery.isNotEmpty ? Icons.search_off : Icons.book_outlined,
-        title: state.searchQuery.isNotEmpty ? 'No Courses Found' : 'No Courses Available',
-        message: state.searchQuery.isNotEmpty 
+        icon: state.searchQuery.isNotEmpty
+            ? Icons.search_off
+            : Icons.book_outlined,
+        title: state.searchQuery.isNotEmpty
+            ? 'No Courses Found'
+            : 'No Courses Available',
+        message: state.searchQuery.isNotEmpty
             ? 'No courses match your search criteria'
             : 'Start by adding your first course',
         action: ElevatedButton.icon(
@@ -381,143 +428,168 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
       );
     }
 
-  return Column(
-    children: [
-      // Table
-      Expanded(
-        child: SingleChildScrollView(
-          child: SizedBox(
-            width: double.infinity,
-            child: DataTable(
-              headingRowColor: WidgetStateProperty.all(
-                AppTheme.getDividerColor(context).withValues(alpha: 0.1),
-              ),
-              dataRowColor: WidgetStateProperty.all(
-                AppTheme.getCardColor(context),
-              ),
-              columnSpacing: 24,
-              columns: const [
-                DataColumn(
-                  label: Expanded(
-                    child: Text(
-                      'Course',
+    return Column(
+      children: [
+        // Table
+        Expanded(
+          child: SingleChildScrollView(
+            primary: false,
+            child: SizedBox(
+              width: double.infinity,
+              child: DataTable(
+                headingRowColor: WidgetStateProperty.all(
+                  AppTheme.getDividerColor(context).withValues(alpha: 0.1),
+                ),
+                dataRowColor: WidgetStateProperty.all(
+                  AppTheme.getCardColor(context),
+                ),
+                columnSpacing: 24,
+                columns: const [
+                  DataColumn(
+                    label: Expanded(
+                      child: Text(
+                        'Course',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                  DataColumn(
+                    label: Text(
+                      'Code',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Code',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Actions',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-              rows: groupedCourses.map((groupedCourse) {
-                final courseCode = groupedCourse['courseCode'] as String;
-                final courseName = groupedCourse['courseName'] as String;
-                
-                return DataRow(
-                  cells: [
-                    DataCell(
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 18,
-                            backgroundColor: _getCourseColor(courseCode).withValues(alpha: 0.1),
-                            child: Icon(
-                              Icons.book,
-                              size: 18,
-                              color: _getCourseColor(courseCode),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  courseName,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                    color: AppTheme.getTextColor(context),
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  courseCode,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppTheme.getSecondaryTextColor(context),
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                  DataColumn(
+                    label: Text(
+                      'Actions',
+                      style: TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    DataCell(
-                      Text(
-                        courseCode,
-                        style: TextStyle(
-                          color: AppTheme.getSecondaryTextColor(context),
-                          fontWeight: FontWeight.w500,
-                          fontSize: 12,
+                  ),
+                ],
+                rows: groupedCourses.map((groupedCourse) {
+                  final courseCode = groupedCourse['courseCode'] as String;
+                  final courseName = groupedCourse['courseName'] as String;
+
+                  return DataRow(
+                    cells: [
+                      DataCell(
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 18,
+                              backgroundColor: _getCourseColor(
+                                courseCode,
+                              ).withValues(alpha: 0.1),
+                              child: Icon(
+                                Icons.book,
+                                size: 18,
+                                color: _getCourseColor(courseCode),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    courseName,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      color: AppTheme.getTextColor(context),
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    courseCode,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppTheme.getSecondaryTextColor(
+                                        context,
+                                      ),
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    DataCell(
-                      PopupMenuButton<String>(
-                        onSelected: (value) => _handleGroupedCourseAction(context, value, groupedCourse, notifier),
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(value: 'view', child: Text('View Details')),
-                          const PopupMenuItem(value: 'sections', child: Text('Manage Sections')),
-                          const PopupMenuItem(value: 'add_section', child: Text('Add Section')),
-                        ],
-                        child: Icon(
-                          Icons.more_vert,
-                          color: AppTheme.getSecondaryTextColor(context),
+                      DataCell(
+                        Text(
+                          courseCode,
+                          style: TextStyle(
+                            color: AppTheme.getSecondaryTextColor(context),
+                            fontWeight: FontWeight.w500,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                );
-              }).toList(),
+                      DataCell(
+                        PopupMenuButton<String>(
+                          onSelected: (value) => _handleGroupedCourseAction(
+                            context,
+                            value,
+                            groupedCourse,
+                            notifier,
+                          ),
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'view',
+                              child: Text('View Details'),
+                            ),
+                            const PopupMenuItem(
+                              value: 'sections',
+                              child: Text('Manage Sections'),
+                            ),
+                            const PopupMenuItem(
+                              value: 'add_section',
+                              child: Text('Add Section'),
+                            ),
+                          ],
+                          child: Icon(
+                            Icons.more_vert,
+                            color: AppTheme.getSecondaryTextColor(context),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList(),
+              ),
             ),
           ),
         ),
-      ),
-        
-      // Pagination Controls
-      if (totalPages > 1) _buildPaginationControls(context, state, notifier, totalPages),
+
+        // Pagination Controls
+        if (totalPages > 1)
+          _buildPaginationControls(context, state, notifier, totalPages),
       ],
     );
   }
 
-  Widget _buildPaginationControls(BuildContext context, CourseState state, CourseNotifier notifier, int totalPages) {
+  Widget _buildPaginationControls(
+    BuildContext context,
+    CourseState state,
+    CourseNotifier notifier,
+    int totalPages,
+  ) {
     final startIndex = (state.currentPage - 1) * state.itemsPerPage + 1;
-    final endIndex = (startIndex + state.itemsPerPage - 1).clamp(0, notifier.getFilteredCourses().length);
+    final endIndex = (startIndex + state.itemsPerPage - 1).clamp(
+      0,
+      notifier.getFilteredCourses().length,
+    );
     final totalItems = notifier.getFilteredCourses().length;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.getCardColor(context),
         border: Border(
-          top: BorderSide(
-            color: AppTheme.getDividerColor(context),
-            width: 1,
-          ),
+          top: BorderSide(color: AppTheme.getDividerColor(context), width: 1),
         ),
       ),
       child: Row(
@@ -531,7 +603,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
               fontSize: 14,
             ),
           ),
-          
+
           // Pagination controls
           Row(
             children: [
@@ -540,12 +612,12 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                 onPressed: state.currentPage > 1 ? notifier.previousPage : null,
                 icon: const Icon(Icons.chevron_left),
                 style: IconButton.styleFrom(
-                  backgroundColor: state.currentPage > 1 
+                  backgroundColor: state.currentPage > 1
                       ? AppTheme.primaryColor.withValues(alpha: 0.1)
                       : null,
                 ),
               ),
-              
+
               // Page numbers
               ...List.generate(
                 totalPages.clamp(0, 5), // Show max 5 page numbers
@@ -563,9 +635,9 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                       pageNumber = state.currentPage - 2 + index;
                     }
                   }
-                  
+
                   final isCurrentPage = pageNumber == state.currentPage;
-                  
+
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 2),
                     child: InkWell(
@@ -575,11 +647,11 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                         width: 32,
                         height: 32,
                         decoration: BoxDecoration(
-                          color: isCurrentPage 
+                          color: isCurrentPage
                               ? AppTheme.primaryColor
                               : AppTheme.getSurfaceColor(context),
                           borderRadius: BorderRadius.circular(8),
-                          border: isCurrentPage 
+                          border: isCurrentPage
                               ? null
                               : Border.all(
                                   color: AppTheme.getDividerColor(context),
@@ -590,10 +662,10 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                           child: Text(
                             pageNumber.toString(),
                             style: TextStyle(
-                              color: isCurrentPage 
+                              color: isCurrentPage
                                   ? Colors.white
                                   : AppTheme.getTextColor(context),
-                              fontWeight: isCurrentPage 
+                              fontWeight: isCurrentPage
                                   ? FontWeight.bold
                                   : FontWeight.normal,
                               fontSize: 14,
@@ -605,13 +677,15 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                   );
                 },
               ),
-              
+
               // Next button
               IconButton(
-                onPressed: state.currentPage < totalPages ? notifier.nextPage : null,
+                onPressed: state.currentPage < totalPages
+                    ? notifier.nextPage
+                    : null,
                 icon: const Icon(Icons.chevron_right),
                 style: IconButton.styleFrom(
-                  backgroundColor: state.currentPage < totalPages 
+                  backgroundColor: state.currentPage < totalPages
                       ? AppTheme.primaryColor.withValues(alpha: 0.1)
                       : null,
                 ),
@@ -626,18 +700,18 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
   Future<Map<String, dynamic>> _loadCourseDetails(Course course) async {
     try {
       final courseNotifier = ref.read(courseProvider.notifier);
-      final instructor = await courseNotifier.getCourseInstructor(course.courseId);
-      final enrolledStudents = await courseNotifier.getEnrolledStudentsWithDetails(course.courseId);
-      
+      final instructor = await courseNotifier.getCourseInstructor(
+        course.courseId,
+      );
+      final enrolledStudents = await courseNotifier
+          .getEnrolledStudentsWithDetails(course.courseId);
+
       return {
         'instructor': instructor,
         'enrollmentCount': enrolledStudents.length,
       };
     } catch (e) {
-      return {
-        'instructor': null,
-        'enrollmentCount': 0,
-      };
+      return {'instructor': null, 'enrollmentCount': 0};
     }
   }
 
@@ -654,11 +728,16 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
     }
   }
 
-  void _handleGroupedCourseAction(BuildContext context, String action, Map<String, dynamic> groupedCourse, CourseNotifier notifier) {
+  void _handleGroupedCourseAction(
+    BuildContext context,
+    String action,
+    Map<String, dynamic> groupedCourse,
+    CourseNotifier notifier,
+  ) {
     final courseCode = groupedCourse['courseCode'] as String;
     final courses = groupedCourse['courses'] as List<Course>;
     final primaryCourse = groupedCourse['primaryCourse'] as Course;
-    
+
     switch (action) {
       case 'view':
         _showGroupedCourseDetailsDialog(context, groupedCourse);
@@ -677,10 +756,10 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
     final nameController = TextEditingController();
     final categoryController = TextEditingController();
     final sectionController = TextEditingController();
-    
+
     int? selectedInstructorId;
     String selectedStatus = 'Active';
-    
+
     final formKey = GlobalKey<FormState>();
 
     AppDialog.show(
@@ -706,7 +785,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  
+
                   CustomTextField(
                     controller: codeController,
                     labelText: 'Course Code',
@@ -717,9 +796,9 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                       return null;
                     },
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   CustomTextField(
                     controller: nameController,
                     labelText: 'Course Name',
@@ -730,16 +809,16 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                       return null;
                     },
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   CustomTextField(
                     controller: categoryController,
                     labelText: 'Category (Optional)',
                   ),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   // Instructor Assignment
                   Text(
                     'Instructor & Section Assignment',
@@ -750,21 +829,24 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  
+
                   DropdownButtonFormField<int>(
                     decoration: const InputDecoration(
                       labelText: 'Select Instructor',
                       border: OutlineInputBorder(),
                     ),
-                    items: _teachers.map((teacher) => 
-                        DropdownMenuItem(
-                          value: teacher.userId,
-                          child: Text(
-                            teacher.fullName,
-                            style: TextStyle(fontSize: 12),
-                            overflow: TextOverflow.ellipsis,
+                    items: _teachers
+                        .map(
+                          (teacher) => DropdownMenuItem(
+                            value: teacher.userId,
+                            child: Text(
+                              teacher.fullName,
+                              style: TextStyle(fontSize: 12),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        )).toList(),
+                        )
+                        .toList(),
                     onChanged: (value) {
                       setState(() {
                         selectedInstructorId = value;
@@ -777,53 +859,59 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                       return null;
                     },
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   _availableSections.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        child: Row(
-                          children: [
-                            SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                            SizedBox(width: 12),
-                            Text('Loading available sections...'),
-                          ],
-                        ),
-                      )
-                    : DropdownButtonFormField<String>(
-                        decoration: const InputDecoration(
-                          labelText: 'Section',
-                          border: OutlineInputBorder(),
-                          helperText: 'Sections from Student records',
-                        ),
-                        items: _availableSections.map((section) => DropdownMenuItem(
-                          value: section,
-                          child: Text(
-                            section,
-                            style: const TextStyle(fontSize: 12),
-                            overflow: TextOverflow.ellipsis,
+                      ? const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              Text('Loading available sections...'),
+                            ],
                           ),
-                        )).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            sectionController.text = value ?? '';
-                          });
-                        },
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Section is required';
-                          }
-                          return null;
-                        },
-                      ),
-                  
+                        )
+                      : DropdownButtonFormField<String>(
+                          decoration: const InputDecoration(
+                            labelText: 'Section',
+                            border: OutlineInputBorder(),
+                            helperText: 'Sections from Student records',
+                          ),
+                          items: _availableSections
+                              .map(
+                                (section) => DropdownMenuItem(
+                                  value: section,
+                                  child: Text(
+                                    section,
+                                    style: const TextStyle(fontSize: 12),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              sectionController.text = value ?? '';
+                            });
+                          },
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Section is required';
+                            }
+                            return null;
+                          },
+                        ),
+
                   const SizedBox(height: 20),
-                  
+
                   // Status Selection
                   Text(
                     'Status',
@@ -834,7 +922,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  
+
                   DropdownButtonFormField<String>(
                     initialValue: selectedStatus,
                     decoration: const InputDecoration(
@@ -843,7 +931,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                     ),
                     items: const [
                       DropdownMenuItem(
-                        value: 'Active', 
+                        value: 'Active',
                         child: Text(
                           'Active',
                           style: TextStyle(fontSize: 12),
@@ -851,7 +939,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                         ),
                       ),
                       DropdownMenuItem(
-                        value: 'Inactive', 
+                        value: 'Inactive',
                         child: Text(
                           'Inactive',
                           style: TextStyle(fontSize: 12),
@@ -859,7 +947,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                         ),
                       ),
                       DropdownMenuItem(
-                        value: 'Archived', 
+                        value: 'Archived',
                         child: Text(
                           'Archived',
                           style: TextStyle(fontSize: 12),
@@ -885,7 +973,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
           onPressed: () async {
             if (formKey.currentState!.validate()) {
               Navigator.of(context).pop();
-              
+
               // Show loading dialog
               showDialog(
                 context: context,
@@ -906,25 +994,27 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                   ),
                 ),
               );
-              
+
               final success = await notifier.createCourse(
                 code: codeController.text,
                 name: nameController.text,
                 instructorUserId: selectedInstructorId!,
-                category: categoryController.text.isNotEmpty ? categoryController.text : null,
+                category: categoryController.text.isNotEmpty
+                    ? categoryController.text
+                    : null,
                 section: sectionController.text.trim(),
                 status: selectedStatus,
                 createdBy: 1, // Admin user ID
               );
-              
+
               if (context.mounted) {
                 // Close loading dialog
                 Navigator.of(context).pop();
-                
+
                 if (success) {
                   // Reload courses
                   await notifier.loadAllCourses();
-                  
+
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -938,7 +1028,9 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(courseState.error ?? 'Failed to create course'),
+                        content: Text(
+                          courseState.error ?? 'Failed to create course',
+                        ),
                         backgroundColor: Colors.red,
                       ),
                     );
@@ -952,14 +1044,20 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
     );
   }
 
-  void _showEditCourseDialog(BuildContext context, Course course, CourseNotifier notifier) {
+  void _showEditCourseDialog(
+    BuildContext context,
+    Course course,
+    CourseNotifier notifier,
+  ) {
     final codeController = TextEditingController(text: course.code);
     final nameController = TextEditingController(text: course.name);
-    final categoryController = TextEditingController(text: course.category ?? '');
-    
+    final categoryController = TextEditingController(
+      text: course.category ?? '',
+    );
+
     int? selectedInstructorId = course.instructorUserId;
     String selectedStatus = course.status;
-    
+
     final formKey = GlobalKey<FormState>();
 
     AppDialog.show(
@@ -985,7 +1083,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  
+
                   CustomTextField(
                     controller: codeController,
                     labelText: 'Course Code',
@@ -996,9 +1094,9 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                       return null;
                     },
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   CustomTextField(
                     controller: nameController,
                     labelText: 'Course Name',
@@ -1009,16 +1107,16 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                       return null;
                     },
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   CustomTextField(
                     controller: categoryController,
                     labelText: 'Category (Optional)',
                   ),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   // Instructor Selection
                   Text(
                     'Instructor Assignment',
@@ -1029,22 +1127,25 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  
+
                   DropdownButtonFormField<int>(
                     initialValue: selectedInstructorId,
                     decoration: const InputDecoration(
                       labelText: 'Select Instructor',
                       border: OutlineInputBorder(),
                     ),
-                    items: _teachers.map((teacher) => 
-                        DropdownMenuItem(
-                          value: teacher.userId,
-                          child: Text(
-                            teacher.fullName,
-                            style: TextStyle(fontSize: 12),
-                            overflow: TextOverflow.ellipsis,
+                    items: _teachers
+                        .map(
+                          (teacher) => DropdownMenuItem(
+                            value: teacher.userId,
+                            child: Text(
+                              teacher.fullName,
+                              style: TextStyle(fontSize: 12),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        )).toList(),
+                        )
+                        .toList(),
                     onChanged: (value) {
                       setState(() {
                         selectedInstructorId = value;
@@ -1057,9 +1158,9 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                       return null;
                     },
                   ),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   // Status Selection
                   Text(
                     'Status',
@@ -1070,7 +1171,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  
+
                   DropdownButtonFormField<String>(
                     initialValue: selectedStatus,
                     decoration: const InputDecoration(
@@ -1079,7 +1180,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                     ),
                     items: const [
                       DropdownMenuItem(
-                        value: 'Active', 
+                        value: 'Active',
                         child: Text(
                           'Active',
                           style: TextStyle(fontSize: 12),
@@ -1087,7 +1188,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                         ),
                       ),
                       DropdownMenuItem(
-                        value: 'Inactive', 
+                        value: 'Inactive',
                         child: Text(
                           'Inactive',
                           style: TextStyle(fontSize: 12),
@@ -1095,7 +1196,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                         ),
                       ),
                       DropdownMenuItem(
-                        value: 'Archived', 
+                        value: 'Archived',
                         child: Text(
                           'Archived',
                           style: TextStyle(fontSize: 12),
@@ -1108,11 +1209,11 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                         selectedStatus = value!;
                       });
                     },
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
-      ),
-    );
+          );
         },
       ),
       actions: [
@@ -1122,7 +1223,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
             if (formKey.currentState!.validate()) {
               // Close the edit dialog first
               Navigator.of(context).pop();
-              
+
               // Show loading dialog
               if (context.mounted) {
                 showDialog(
@@ -1145,23 +1246,26 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                   ),
                 );
               }
-              
+
               final currentUser = ref.read(authProvider).user;
               final success = await notifier.updateCourse(
                 courseId: course.courseId,
                 code: codeController.text,
                 name: nameController.text,
-                instructorUserId: selectedInstructorId ?? course.instructorUserId,
-                category: categoryController.text.isNotEmpty ? categoryController.text : null,
+                instructorUserId:
+                    selectedInstructorId ?? course.instructorUserId,
+                category: categoryController.text.isNotEmpty
+                    ? categoryController.text
+                    : null,
                 section: course.section,
                 status: selectedStatus,
                 updatedBy: currentUser?.userId,
               );
-              
+
               if (context.mounted) {
                 // Close loading dialog
                 Navigator.of(context).pop();
-                
+
                 if (success) {
                   // Close any remaining dialogs (like manage sections dialog)
                   if (context.mounted && Navigator.of(context).canPop()) {
@@ -1172,10 +1276,10 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                       if (!context.mounted) break;
                     }
                   }
-                  
+
                   // Reload courses
                   await notifier.loadAllCourses();
-                  
+
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -1189,7 +1293,9 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(courseState.error ?? 'Failed to update course'),
+                        content: Text(
+                          courseState.error ?? 'Failed to update course',
+                        ),
                         backgroundColor: Colors.red,
                       ),
                     );
@@ -1202,7 +1308,11 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
       ],
     );
   }
-  void _showGroupedCourseDetailsDialog(BuildContext context, Map<String, dynamic> groupedCourse) {
+
+  void _showGroupedCourseDetailsDialog(
+    BuildContext context,
+    Map<String, dynamic> groupedCourse,
+  ) {
     final courseCode = groupedCourse['courseCode'] as String;
     final courseName = groupedCourse['courseName'] as String;
     final sections = groupedCourse['sections'] as List<String>;
@@ -1225,7 +1335,9 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
             children: [
               CircleAvatar(
                 radius: 30,
-                backgroundColor: _getCourseColor(courseCode).withValues(alpha: 0.1),
+                backgroundColor: _getCourseColor(
+                  courseCode,
+                ).withValues(alpha: 0.1),
                 child: Icon(
                   Icons.book,
                   color: _getCourseColor(courseCode),
@@ -1257,9 +1369,14 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
-                            color: _getStatusColor(status).withValues(alpha: 0.1),
+                            color: _getStatusColor(
+                              status,
+                            ).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Text(
@@ -1278,27 +1395,42 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
               ),
             ],
           ),
-          
-            const SizedBox(height: 24),
-          
+
+          const SizedBox(height: 24),
+
           // Course Information
-            Text(
+          Text(
             'Course Information',
-              style: TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: AppTheme.getTextColor(context),
             ),
           ),
           const SizedBox(height: 12),
-          
-          _buildInfoRow(context, 'Category', category ?? 'Not specified', Icons.category),
-          _buildInfoRow(context, 'Total Students', totalEnrollments.toString(), Icons.people),
+
+          _buildInfoRow(
+            context,
+            'Category',
+            category ?? 'Not specified',
+            Icons.category,
+          ),
+          _buildInfoRow(
+            context,
+            'Total Students',
+            totalEnrollments.toString(),
+            Icons.people,
+          ),
           _buildInfoRow(context, 'Sections', sections.join(', '), Icons.group),
-          _buildInfoRow(context, 'Instructors', instructors.join(', '), Icons.person),
-          
+          _buildInfoRow(
+            context,
+            'Instructors',
+            instructors.join(', '),
+            Icons.person,
+          ),
+
           const SizedBox(height: 24),
-          
+
           // Sections Breakdown
           Text(
             'Sections Breakdown',
@@ -1309,21 +1441,24 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
             ),
           ),
           const SizedBox(height: 12),
-          
+
           ...courses.map((course) {
             return FutureBuilder<Map<String, dynamic>>(
               future: _loadCourseDetails(course),
               builder: (context, snapshot) {
                 final instructor = snapshot.data?['instructor'] as User?;
-                final enrollmentCount = snapshot.data?['enrollmentCount'] as int? ?? 0;
-                
+                final enrollmentCount =
+                    snapshot.data?['enrollmentCount'] as int? ?? 0;
+
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: AppTheme.getCardColor(context),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppTheme.getDividerColor(context)),
+                    border: Border.all(
+                      color: AppTheme.getDividerColor(context),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -1358,9 +1493,14 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: _getStatusColor(course.status).withValues(alpha: 0.1),
+                          color: _getStatusColor(
+                            course.status,
+                          ).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -1380,13 +1520,16 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
           }),
         ],
       ),
-      actions: [
-        DialogAction.ok(),
-      ],
+      actions: [DialogAction.ok()],
     );
   }
 
-  void _showManageSectionsDialog(BuildContext context, String courseCode, List<Course> courses, CourseNotifier notifier) {
+  void _showManageSectionsDialog(
+    BuildContext context,
+    String courseCode,
+    List<Course> courses,
+    CourseNotifier notifier,
+  ) {
     AppDialog.show(
       context: context,
       title: 'Manage Sections - $courseCode',
@@ -1399,26 +1542,29 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
             'Sections for $courseCode',
             style: TextStyle(
               fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.getTextColor(context),
-              ),
+              fontWeight: FontWeight.bold,
+              color: AppTheme.getTextColor(context),
             ),
-            const SizedBox(height: 16),
-          
+          ),
+          const SizedBox(height: 16),
+
           ...courses.map((course) {
             return FutureBuilder<Map<String, dynamic>>(
               future: _loadCourseDetails(course),
               builder: (context, snapshot) {
                 final instructor = snapshot.data?['instructor'] as User?;
-                final enrollmentCount = snapshot.data?['enrollmentCount'] as int? ?? 0;
-                
+                final enrollmentCount =
+                    snapshot.data?['enrollmentCount'] as int? ?? 0;
+
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: AppTheme.getCardColor(context),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppTheme.getDividerColor(context)),
+                    border: Border.all(
+                      color: AppTheme.getDividerColor(context),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -1455,12 +1601,23 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                       Row(
                         children: [
                           IconButton(
-                            onPressed: () => _showEditCourseDialog(context, course, notifier),
-                            icon: Icon(Icons.edit, color: AppTheme.getSecondaryTextColor(context)),
+                            onPressed: () => _showEditCourseDialog(
+                              context,
+                              course,
+                              notifier,
+                            ),
+                            icon: Icon(
+                              Icons.edit,
+                              color: AppTheme.getSecondaryTextColor(context),
+                            ),
                             tooltip: 'Edit Section',
                           ),
                           IconButton(
-                            onPressed: () => _showDeleteConfirmationDialog(context, course, notifier),
+                            onPressed: () => _showDeleteConfirmationDialog(
+                              context,
+                              course,
+                              notifier,
+                            ),
                             icon: Icon(Icons.delete, color: Colors.red),
                             tooltip: 'Delete Section',
                           ),
@@ -1474,18 +1631,21 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
           }),
         ],
       ),
-      actions: [
-        DialogAction.ok(),
-      ],
+      actions: [DialogAction.ok()],
     );
   }
 
-  void _showAddSectionDialog(BuildContext context, String courseCode, Course primaryCourse, CourseNotifier notifier) {
+  void _showAddSectionDialog(
+    BuildContext context,
+    String courseCode,
+    Course primaryCourse,
+    CourseNotifier notifier,
+  ) {
     final sectionController = TextEditingController();
     int? selectedInstructorId;
-    
+
     final formKey = GlobalKey<FormState>();
-    
+
     AppDialog.show(
       context: context,
       title: 'Add New Section - $courseCode',
@@ -1504,57 +1664,61 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
               ),
             ),
             const SizedBox(height: 20),
-            
+
             _availableSections.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      SizedBox(width: 12),
-                      Text('Loading available sections...'),
-                    ],
-                  ),
-                )
-              : DropdownButtonFormField<String>(
-                  decoration: InputDecoration(
-                    labelText: 'Section',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        SizedBox(width: 12),
+                        Text('Loading available sections...'),
+                      ],
                     ),
-                    filled: true,
-                    fillColor: AppTheme.getCardColor(context),
-                    prefixIcon: const Icon(Icons.group),
-                    helperText: 'Sections from Student records',
-                  ),
-                  items: _availableSections.map((section) => DropdownMenuItem(
-                    value: section,
-                    child: Text(
-                      section,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.getTextColor(context),
+                  )
+                : DropdownButtonFormField<String>(
+                    decoration: InputDecoration(
+                      labelText: 'Section',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      overflow: TextOverflow.ellipsis,
+                      filled: true,
+                      fillColor: AppTheme.getCardColor(context),
+                      prefixIcon: const Icon(Icons.group),
+                      helperText: 'Sections from Student records',
                     ),
-                  )).toList(),
-                  onChanged: (value) {
-                    sectionController.text = value ?? '';
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Section is required';
-                    }
-                    return null;
-                  },
-                ),
-            
+                    items: _availableSections
+                        .map(
+                          (section) => DropdownMenuItem(
+                            value: section,
+                            child: Text(
+                              section,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.getTextColor(context),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      sectionController.text = value ?? '';
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Section is required';
+                      }
+                      return null;
+                    },
+                  ),
+
             const SizedBox(height: 16),
-            
+
             // Instructor Selection
             Text(
               'Assign Instructor',
@@ -1565,7 +1729,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
               ),
             ),
             const SizedBox(height: 8),
-            
+
             DropdownButtonFormField<int>(
               initialValue: selectedInstructorId,
               decoration: InputDecoration(
@@ -1607,9 +1771,10 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
         DialogAction.confirm(
           text: 'Add Section',
           onPressed: () async {
-            if (formKey.currentState!.validate() && selectedInstructorId != null) {
+            if (formKey.currentState!.validate() &&
+                selectedInstructorId != null) {
               Navigator.of(context).pop();
-              
+
               // Show loading dialog
               showDialog(
                 context: context,
@@ -1630,7 +1795,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                   ),
                 ),
               );
-              
+
               final success = await notifier.createCourse(
                 code: courseCode,
                 name: primaryCourse.name,
@@ -1640,21 +1805,23 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                 status: primaryCourse.status,
                 createdBy: 1, // Admin user ID
               );
-              
+
               if (context.mounted) {
                 // Close loading dialog
                 Navigator.of(context).pop();
-                
+
                 if (success) {
                   // Reload courses
                   await notifier.loadAllCourses();
-                  
+
                   if (context.mounted) {
                     AppDialog.show(
                       context: context,
                       title: 'Success',
                       type: DialogType.success,
-                      content: Text('Section ${sectionController.text} added successfully!'),
+                      content: Text(
+                        'Section ${sectionController.text} added successfully!',
+                      ),
                       actions: [DialogAction.ok()],
                     );
                   }
@@ -1663,7 +1830,9 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(courseState.error ?? 'Failed to add section'),
+                        content: Text(
+                          courseState.error ?? 'Failed to add section',
+                        ),
                         backgroundColor: Colors.red,
                       ),
                     );
@@ -1677,16 +1846,17 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
     );
   }
 
-  Widget _buildInfoRow(BuildContext context, String label, String value, IconData icon) {
+  Widget _buildInfoRow(
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          Icon(
-            icon,
-            size: 20,
-            color: AppTheme.getSecondaryTextColor(context),
-          ),
+          Icon(icon, size: 20, color: AppTheme.getSecondaryTextColor(context)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -1716,11 +1886,16 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
     );
   }
 
-  void _showDeleteConfirmationDialog(BuildContext context, Course course, CourseNotifier notifier) {
+  void _showDeleteConfirmationDialog(
+    BuildContext context,
+    Course course,
+    CourseNotifier notifier,
+  ) {
     DialogUtils.showConfirmation(
       context: context,
       title: 'Delete Course',
-      message: 'Are you sure you want to delete "${course.name}"? This action cannot be undone.',
+      message:
+          'Are you sure you want to delete "${course.name}"? This action cannot be undone.',
       confirmText: 'Delete',
       cancelText: 'Cancel',
       isDestructive: true,
@@ -1746,14 +1921,17 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
             ),
           ),
         );
-        
+
         final currentUser = ref.read(authProvider).user;
-        final success = await notifier.deleteCourse(course.courseId, deletedBy: currentUser?.userId);
-        
+        final success = await notifier.deleteCourse(
+          course.courseId,
+          deletedBy: currentUser?.userId,
+        );
+
         if (context.mounted) {
           // Close loading dialog
           Navigator.of(context).pop();
-          
+
           if (success) {
             // Close any remaining dialogs (like manage sections dialog)
             if (context.mounted && Navigator.of(context).canPop()) {
@@ -1764,10 +1942,10 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                 if (!context.mounted) break;
               }
             }
-            
+
             // Reload courses
             await notifier.loadAllCourses();
-            
+
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -1804,7 +1982,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
       Colors.pink,
       Colors.amber,
     ];
-    
+
     final hash = courseCode.hashCode;
     return colors[hash.abs() % colors.length];
   }

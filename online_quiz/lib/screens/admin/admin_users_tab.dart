@@ -38,7 +38,7 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
           children: [
             // Header Section
             _buildHeader(context, userState, userNotifier),
-            
+
             // Content Section
             Expanded(
               child: userState.isLoading
@@ -58,7 +58,11 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, UserManagementState state, UserManagementNotifier notifier) {
+  Widget _buildHeader(
+    BuildContext context,
+    UserManagementState state,
+    UserManagementNotifier notifier,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -78,30 +82,48 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
           Row(
             children: [
               Expanded(
-                child: _buildQuickStat(context, 'Total', state.users.length.toString(), Icons.people),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
                 child: _buildQuickStat(
-                  context, 
-                  'Admins', 
-                  (state.users.length - state.teachers.length - state.students.length).toString(), 
-                  Icons.admin_panel_settings
+                  context,
+                  'Total',
+                  state.users.length.toString(),
+                  Icons.people,
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _buildQuickStat(context, 'Teachers', state.teachers.length.toString(), Icons.school),
+                child: _buildQuickStat(
+                  context,
+                  'Admins',
+                  (state.users.length -
+                          state.teachers.length -
+                          state.students.length)
+                      .toString(),
+                  Icons.admin_panel_settings,
+                ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _buildQuickStat(context, 'Students', state.students.length.toString(), Icons.person),
+                child: _buildQuickStat(
+                  context,
+                  'Teachers',
+                  state.teachers.length.toString(),
+                  Icons.school,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQuickStat(
+                  context,
+                  'Students',
+                  state.students.length.toString(),
+                  Icons.person,
+                ),
               ),
             ],
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Search and Filter Section
           Column(
             children: [
@@ -118,9 +140,9 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                   fillColor: AppTheme.getSurfaceColor(context),
                 ),
               ),
-              
+
               const SizedBox(height: 12),
-              
+
               // User Type Filter
               Container(
                 width: double.infinity,
@@ -135,9 +157,18 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                     value: state.selectedUserType,
                     isExpanded: true,
                     items: const [
-                      DropdownMenuItem(value: UserType.all, child: Text('All Users')),
-                      DropdownMenuItem(value: UserType.teachers, child: Text('Teachers')),
-                      DropdownMenuItem(value: UserType.students, child: Text('Students')),
+                      DropdownMenuItem(
+                        value: UserType.all,
+                        child: Text('All Users'),
+                      ),
+                      DropdownMenuItem(
+                        value: UserType.teachers,
+                        child: Text('Teachers'),
+                      ),
+                      DropdownMenuItem(
+                        value: UserType.students,
+                        child: Text('Students'),
+                      ),
                     ],
                     onChanged: (value) {
                       if (value != null) {
@@ -154,7 +185,12 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
     );
   }
 
-  Widget _buildQuickStat(BuildContext context, String label, String value, IconData icon) {
+  Widget _buildQuickStat(
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
@@ -164,11 +200,7 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 16,
-            color: AppTheme.primaryColor,
-          ),
+          Icon(icon, size: 16, color: AppTheme.primaryColor),
           const SizedBox(height: 4),
           Text(
             value,
@@ -192,16 +224,24 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
     );
   }
 
-  Widget _buildContent(BuildContext context, UserManagementState state, UserManagementNotifier notifier) {
+  Widget _buildContent(
+    BuildContext context,
+    UserManagementState state,
+    UserManagementNotifier notifier,
+  ) {
     final paginatedUsers = notifier.getPaginatedUsers();
     final totalPages = notifier.getTotalPages();
     final userState = ref.watch(userManagementProvider);
-    
+
     if (paginatedUsers.isEmpty) {
       return EmptyStateWidget(
-        icon: state.searchQuery.isNotEmpty ? Icons.search_off : Icons.people_outline,
-        title: state.searchQuery.isNotEmpty ? 'No Users Found' : 'No Users Available',
-        message: state.searchQuery.isNotEmpty 
+        icon: state.searchQuery.isNotEmpty
+            ? Icons.search_off
+            : Icons.people_outline,
+        title: state.searchQuery.isNotEmpty
+            ? 'No Users Found'
+            : 'No Users Available',
+        message: state.searchQuery.isNotEmpty
             ? 'No users match your search criteria'
             : 'Start by adding your first user',
         action: ElevatedButton.icon(
@@ -217,6 +257,7 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
         // Table
         Expanded(
           child: SingleChildScrollView(
+            primary: false,
             child: DataTable(
               headingRowColor: WidgetStateProperty.all(
                 AppTheme.getDividerColor(context).withValues(alpha: 0.1),
@@ -252,10 +293,12 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                 String userRole = 'User';
                 if (userState.teachers.any((t) => t.userId == user.userId)) {
                   userRole = 'Teacher';
-                } else if (userState.students.any((s) => s.userId == user.userId)) {
+                } else if (userState.students.any(
+                  (s) => s.userId == user.userId,
+                )) {
                   userRole = 'Student';
                 }
-                
+
                 return DataRow(
                   cells: [
                     DataCell(
@@ -263,9 +306,13 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                         children: [
                           CircleAvatar(
                             radius: 18,
-                            backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
+                            backgroundColor: AppTheme.primaryColor.withValues(
+                              alpha: 0.1,
+                            ),
                             child: Text(
-                              user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : '?',
+                              user.fullName.isNotEmpty
+                                  ? user.fullName[0].toUpperCase()
+                                  : '?',
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
@@ -293,7 +340,9 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                                   user.email,
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: AppTheme.getSecondaryTextColor(context),
+                                    color: AppTheme.getSecondaryTextColor(
+                                      context,
+                                    ),
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -305,7 +354,10 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                     ),
                     DataCell(
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: _getRoleColor(userRole).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(16),
@@ -331,7 +383,11 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                               _showEditUserDialog(context, user, notifier);
                               break;
                             case 'delete':
-                              _showDeleteConfirmationDialog(context, user, notifier);
+                              _showDeleteConfirmationDialog(
+                                context,
+                                user,
+                                notifier,
+                              );
                               break;
                           }
                         },
@@ -379,27 +435,33 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
             ),
           ),
         ),
-        
+
         // Pagination Controls
-        if (totalPages > 1) _buildPaginationControls(context, state, notifier, totalPages),
+        if (totalPages > 1)
+          _buildPaginationControls(context, state, notifier, totalPages),
       ],
     );
   }
 
-  Widget _buildPaginationControls(BuildContext context, UserManagementState state, UserManagementNotifier notifier, int totalPages) {
+  Widget _buildPaginationControls(
+    BuildContext context,
+    UserManagementState state,
+    UserManagementNotifier notifier,
+    int totalPages,
+  ) {
     final startIndex = (state.currentPage - 1) * state.itemsPerPage + 1;
-    final endIndex = (startIndex + state.itemsPerPage - 1).clamp(0, notifier.getFilteredUsers().length);
+    final endIndex = (startIndex + state.itemsPerPage - 1).clamp(
+      0,
+      notifier.getFilteredUsers().length,
+    );
     final totalItems = notifier.getFilteredUsers().length;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.getCardColor(context),
         border: Border(
-          top: BorderSide(
-            color: AppTheme.getDividerColor(context),
-            width: 1,
-          ),
+          top: BorderSide(color: AppTheme.getDividerColor(context), width: 1),
         ),
       ),
       child: Row(
@@ -413,7 +475,7 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
               fontSize: 14,
             ),
           ),
-          
+
           // Pagination controls
           Row(
             children: [
@@ -422,12 +484,12 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                 onPressed: state.currentPage > 1 ? notifier.previousPage : null,
                 icon: const Icon(Icons.chevron_left),
                 style: IconButton.styleFrom(
-                  backgroundColor: state.currentPage > 1 
+                  backgroundColor: state.currentPage > 1
                       ? AppTheme.primaryColor.withValues(alpha: 0.1)
                       : null,
                 ),
               ),
-              
+
               // Page numbers
               ...List.generate(
                 totalPages.clamp(0, 5), // Show max 5 page numbers
@@ -445,9 +507,9 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                       pageNumber = state.currentPage - 2 + index;
                     }
                   }
-                  
+
                   final isCurrentPage = pageNumber == state.currentPage;
-                  
+
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 2),
                     child: InkWell(
@@ -457,11 +519,11 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                         width: 32,
                         height: 32,
                         decoration: BoxDecoration(
-                          color: isCurrentPage 
+                          color: isCurrentPage
                               ? AppTheme.primaryColor
                               : AppTheme.getSurfaceColor(context),
                           borderRadius: BorderRadius.circular(8),
-                          border: isCurrentPage 
+                          border: isCurrentPage
                               ? null
                               : Border.all(
                                   color: AppTheme.getDividerColor(context),
@@ -472,10 +534,10 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                           child: Text(
                             pageNumber.toString(),
                             style: TextStyle(
-                              color: isCurrentPage 
+                              color: isCurrentPage
                                   ? Colors.white
                                   : AppTheme.getTextColor(context),
-                              fontWeight: isCurrentPage 
+                              fontWeight: isCurrentPage
                                   ? FontWeight.bold
                                   : FontWeight.normal,
                               fontSize: 14,
@@ -487,13 +549,15 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                   );
                 },
               ),
-              
+
               // Next button
               IconButton(
-                onPressed: state.currentPage < totalPages ? notifier.nextPage : null,
+                onPressed: state.currentPage < totalPages
+                    ? notifier.nextPage
+                    : null,
                 icon: const Icon(Icons.chevron_right),
                 style: IconButton.styleFrom(
-                  backgroundColor: state.currentPage < totalPages 
+                  backgroundColor: state.currentPage < totalPages
                       ? AppTheme.primaryColor.withValues(alpha: 0.1)
                       : null,
                 ),
@@ -504,7 +568,6 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
       ),
     );
   }
-
 
   Color _getRoleColor(String? role) {
     switch (role?.toLowerCase()) {
@@ -519,7 +582,10 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
     }
   }
 
-  void _showCreateUserDialog(BuildContext context, UserManagementNotifier notifier) {
+  void _showCreateUserDialog(
+    BuildContext context,
+    UserManagementNotifier notifier,
+  ) {
     final emailController = TextEditingController();
     final passwordController = TextEditingController();
     final fullNameController = TextEditingController();
@@ -529,10 +595,10 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
     final studentIdController = TextEditingController();
     final sectionController = TextEditingController();
     final courseController = TextEditingController();
-    
+
     UserType selectedUserType = UserType.students;
     int? selectedYearLevel = 1;
-    
+
     final formKey = GlobalKey<FormState>();
 
     AppDialog.show(
@@ -577,9 +643,7 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                                 color: AppTheme.getTextColor(context),
                               ),
                             ),
-                            leading: Radio<UserType>(
-                              value: UserType.students,
-                            ),
+                            leading: Radio<UserType>(value: UserType.students),
                             onTap: () {
                               setState(() {
                                 selectedUserType = UserType.students;
@@ -597,9 +661,7 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                                 color: AppTheme.getTextColor(context),
                               ),
                             ),
-                            leading: Radio<UserType>(
-                              value: UserType.teachers,
-                            ),
+                            leading: Radio<UserType>(value: UserType.teachers),
                             onTap: () {
                               setState(() {
                                 selectedUserType = UserType.teachers;
@@ -610,9 +672,9 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Basic Information
                   Text(
                     'Basic Information',
@@ -623,7 +685,7 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  
+
                   CustomTextField(
                     controller: emailController,
                     labelText: 'Email',
@@ -632,15 +694,17 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                       if (value == null || value.isEmpty) {
                         return 'Email is required';
                       }
-                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                      if (!RegExp(
+                        r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                      ).hasMatch(value)) {
                         return 'Please enter a valid email';
                       }
                       return null;
                     },
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   CustomTextField(
                     controller: passwordController,
                     labelText: 'Password',
@@ -655,9 +719,9 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                       return null;
                     },
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   CustomTextField(
                     controller: fullNameController,
                     labelText: 'Full Name',
@@ -668,25 +732,25 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                       return null;
                     },
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   CustomTextField(
                     controller: contactController,
                     labelText: 'Contact Number',
                     keyboardType: TextInputType.phone,
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   CustomTextField(
                     controller: emergencyController,
                     labelText: 'Emergency Contact',
                     keyboardType: TextInputType.phone,
                   ),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   // Role-specific Information
                   if (selectedUserType == UserType.teachers) ...[
                     Text(
@@ -718,7 +782,7 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    
+
                     CustomTextField(
                       controller: studentIdController,
                       labelText: 'Student ID',
@@ -729,9 +793,9 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                         return null;
                       },
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     DropdownButtonFormField<int>(
                       initialValue: selectedYearLevel,
                       decoration: const InputDecoration(
@@ -739,10 +803,12 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                         border: OutlineInputBorder(),
                       ),
                       items: List.generate(4, (index) => index + 1)
-                          .map((level) => DropdownMenuItem(
-                                value: level,
-                                child: Text('Year $level'),
-                              ))
+                          .map(
+                            (level) => DropdownMenuItem(
+                              value: level,
+                              child: Text('Year $level'),
+                            ),
+                          )
                           .toList(),
                       onChanged: (value) {
                         setState(() {
@@ -750,16 +816,16 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                         });
                       },
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     CustomTextField(
                       controller: sectionController,
                       labelText: 'Section',
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     CustomTextField(
                       controller: courseController,
                       labelText: 'Course',
@@ -777,7 +843,7 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
           onPressed: () async {
             if (formKey.currentState!.validate()) {
               Navigator.of(context).pop();
-              
+
               final currentUser = ref.read(authProvider).user;
               if (currentUser == null) return;
 
@@ -789,12 +855,20 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                 emergencyContactNumber: emergencyController.text,
                 userType: selectedUserType,
                 createdBy: currentUser.userId,
-                department: selectedUserType == UserType.teachers ? departmentController.text : null,
-                studentId: selectedUserType == UserType.students ? studentIdController.text : null,
-                yearLevel: selectedUserType == UserType.students ? selectedYearLevel : null,
-                section: selectedUserType == UserType.students ? sectionController.text : null,
+                department: selectedUserType == UserType.teachers
+                    ? departmentController.text
+                    : null,
+                studentId: selectedUserType == UserType.students
+                    ? studentIdController.text
+                    : null,
+                yearLevel: selectedUserType == UserType.students
+                    ? selectedYearLevel
+                    : null,
+                section: selectedUserType == UserType.students
+                    ? sectionController.text
+                    : null,
               );
-              
+
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -810,25 +884,31 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
     );
   }
 
-  void _showEditUserDialog(BuildContext context, User user, UserManagementNotifier notifier) {
+  void _showEditUserDialog(
+    BuildContext context,
+    User user,
+    UserManagementNotifier notifier,
+  ) {
     final emailController = TextEditingController(text: user.email);
     final fullNameController = TextEditingController(text: user.fullName);
     final contactController = TextEditingController(text: user.contactNumber);
-    final emergencyController = TextEditingController(text: user.emergencyContactNumber);
+    final emergencyController = TextEditingController(
+      text: user.emergencyContactNumber,
+    );
     final departmentController = TextEditingController();
     final studentIdController = TextEditingController();
     final sectionController = TextEditingController();
     final courseController = TextEditingController();
-    
+
     String? selectedStatus = user.status;
     int? selectedYearLevel;
-    
+
     // Get existing role-specific data from state
     final userState = ref.read(userManagementProvider);
     String userRole = 'User';
     Teacher? teacher;
     Student? student;
-    
+
     if (userState.teachers.any((t) => t.userId == user.userId)) {
       userRole = 'Teacher';
       teacher = userState.teachers.firstWhere((t) => t.userId == user.userId);
@@ -836,7 +916,7 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
       userRole = 'Student';
       student = userState.students.firstWhere((s) => s.userId == user.userId);
     }
-    
+
     if (teacher != null) {
       departmentController.text = teacher.department ?? '';
     }
@@ -846,7 +926,7 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
       sectionController.text = student.section ?? '';
       courseController.text = student.course ?? '';
     }
-    
+
     final formKey = GlobalKey<FormState>();
 
     AppDialog.show(
@@ -884,9 +964,9 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                   selectedStatus = value;
                 },
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Basic Information
               Text(
                 'Basic Information',
@@ -897,7 +977,7 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                 ),
               ),
               const SizedBox(height: 12),
-              
+
               CustomTextField(
                 controller: emailController,
                 labelText: 'Email',
@@ -906,15 +986,17 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                   if (value == null || value.isEmpty) {
                     return 'Email is required';
                   }
-                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                  if (!RegExp(
+                    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                  ).hasMatch(value)) {
                     return 'Please enter a valid email';
                   }
                   return null;
                 },
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               CustomTextField(
                 controller: fullNameController,
                 labelText: 'Full Name',
@@ -925,25 +1007,25 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                   return null;
                 },
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               CustomTextField(
                 controller: contactController,
                 labelText: 'Contact Number',
                 keyboardType: TextInputType.phone,
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               CustomTextField(
                 controller: emergencyController,
                 labelText: 'Emergency Contact',
                 keyboardType: TextInputType.phone,
               ),
-              
+
               const SizedBox(height: 20),
-              
+
               // Role-specific Information
               if (userRole == 'Teacher') ...[
                 Text(
@@ -969,14 +1051,14 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                
+
                 CustomTextField(
                   controller: studentIdController,
                   labelText: 'Student ID',
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 DropdownButtonFormField<int>(
                   initialValue: selectedYearLevel,
                   decoration: const InputDecoration(
@@ -984,25 +1066,27 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                     border: OutlineInputBorder(),
                   ),
                   items: List.generate(4, (index) => index + 1)
-                      .map((level) => DropdownMenuItem(
-                            value: level,
-                            child: Text('Year $level'),
-                          ))
+                      .map(
+                        (level) => DropdownMenuItem(
+                          value: level,
+                          child: Text('Year $level'),
+                        ),
+                      )
                       .toList(),
                   onChanged: (value) {
                     selectedYearLevel = value;
                   },
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 CustomTextField(
                   controller: sectionController,
                   labelText: 'Section',
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 CustomTextField(
                   controller: courseController,
                   labelText: 'Course',
@@ -1018,7 +1102,7 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
           onPressed: () async {
             if (formKey.currentState!.validate()) {
               Navigator.of(context).pop();
-              
+
               await notifier.updateUser(
                 user,
                 email: emailController.text,
@@ -1026,12 +1110,16 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                 contactNumber: contactController.text,
                 emergencyContactNumber: emergencyController.text,
                 status: selectedStatus,
-                department: userRole == 'Teacher' ? departmentController.text : null,
-                studentId: userRole == 'Student' ? studentIdController.text : null,
+                department: userRole == 'Teacher'
+                    ? departmentController.text
+                    : null,
+                studentId: userRole == 'Student'
+                    ? studentIdController.text
+                    : null,
                 yearLevel: userRole == 'Student' ? selectedYearLevel : null,
                 section: userRole == 'Student' ? sectionController.text : null,
               );
-              
+
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -1052,7 +1140,7 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
     String userRole = 'User';
     Teacher? teacher;
     Student? student;
-    
+
     if (userState.teachers.any((t) => t.userId == user.userId)) {
       userRole = 'Teacher';
       teacher = userState.teachers.firstWhere((t) => t.userId == user.userId);
@@ -1076,7 +1164,9 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                 radius: 30,
                 backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
                 child: Text(
-                  user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : '?',
+                  user.fullName.isNotEmpty
+                      ? user.fullName[0].toUpperCase()
+                      : '?',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -1109,9 +1199,14 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
-                            color: _getRoleColor(userRole).withValues(alpha: 0.1),
+                            color: _getRoleColor(
+                              userRole,
+                            ).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Text(
@@ -1125,9 +1220,12 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                         ),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
-                            color: user.isActive 
+                            color: user.isActive
                                 ? Colors.green.withValues(alpha: 0.1)
                                 : Colors.red.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(16),
@@ -1148,9 +1246,9 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
               ),
             ],
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Contact Information
           Text(
             'Contact Information',
@@ -1161,25 +1259,29 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
             ),
           ),
           const SizedBox(height: 12),
-          
+
           InfoCardPresets.compact(
             icon: Icons.phone,
             title: 'Contact Number',
-            value: user.contactNumber.isNotEmpty ? user.contactNumber : 'Not provided',
+            value: user.contactNumber.isNotEmpty
+                ? user.contactNumber
+                : 'Not provided',
             color: Colors.indigo,
           ),
-          
+
           const SizedBox(height: 12),
-          
+
           InfoCardPresets.compact(
             icon: Icons.emergency,
             title: 'Emergency Contact',
-            value: user.emergencyContactNumber.isNotEmpty ? user.emergencyContactNumber : 'Not provided',
+            value: user.emergencyContactNumber.isNotEmpty
+                ? user.emergencyContactNumber
+                : 'Not provided',
             color: Colors.red,
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Role-specific Information
           if (userRole == 'Teacher' && teacher != null) ...[
             Text(
@@ -1207,34 +1309,34 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
               ),
             ),
             const SizedBox(height: 12),
-            
+
             InfoCardPresets.compact(
               icon: Icons.badge,
               title: 'Student ID',
               value: student.studentId,
               color: Colors.green,
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             InfoCardPresets.compact(
               icon: Icons.grade,
               title: 'Year Level',
               value: student.yearLevel.toString(),
               color: Colors.orange,
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             InfoCardPresets.compact(
               icon: Icons.group,
               title: 'Section',
               value: student.section ?? 'Not assigned',
               color: Colors.purple,
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             InfoCardPresets.compact(
               icon: Icons.book,
               title: 'Course',
@@ -1242,9 +1344,9 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
               color: Colors.teal,
             ),
           ],
-          
+
           const SizedBox(height: 24),
-          
+
           // Account Information
           Text(
             'Account Information',
@@ -1255,16 +1357,16 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
             ),
           ),
           const SizedBox(height: 12),
-          
+
           InfoCardPresets.compact(
             icon: Icons.calendar_today,
             title: 'Created At',
             value: _formatDate(user.createdAt),
             color: Colors.grey,
           ),
-          
+
           const SizedBox(height: 12),
-          
+
           InfoCardPresets.compact(
             icon: Icons.update,
             title: 'Last Updated',
@@ -1273,24 +1375,27 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
           ),
         ],
       ),
-      actions: [
-        DialogAction.ok(),
-      ],
+      actions: [DialogAction.ok()],
     );
   }
 
-  void _showDeleteConfirmationDialog(BuildContext context, User user, UserManagementNotifier notifier) {
+  void _showDeleteConfirmationDialog(
+    BuildContext context,
+    User user,
+    UserManagementNotifier notifier,
+  ) {
     DialogUtils.showConfirmation(
       context: context,
       title: 'Delete User',
-      message: 'Are you sure you want to delete ${user.fullName}? This action cannot be undone.',
+      message:
+          'Are you sure you want to delete ${user.fullName}? This action cannot be undone.',
       confirmText: 'Delete',
       cancelText: 'Cancel',
       isDestructive: true,
     ).then((confirmed) async {
       if (confirmed == true) {
         await notifier.deleteUser(user);
-        
+
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
