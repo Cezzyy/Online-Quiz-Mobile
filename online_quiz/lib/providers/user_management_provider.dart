@@ -68,7 +68,7 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
 
   Future<void> loadUsers() async {
     state = state.copyWith(isLoading: true, clearError: true);
-    
+
     try {
       final usersData = await _authService.getAllUsers();
       final teachersData = await _authService.getAllTeachers();
@@ -81,22 +81,26 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
       // Process teachers
       for (final data in teachersData) {
         final user = data['user'] as User;
-        teachers.add(Teacher(
-          userId: user.userId,
-          department: data['department'] as String? ?? '',
-        ));
+        teachers.add(
+          Teacher(
+            userId: user.userId,
+            department: data['department'] as String? ?? '',
+          ),
+        );
       }
 
       // Process students
       for (final data in studentsData) {
         final user = data['user'] as User;
-        students.add(Student(
-          userId: user.userId,
-          studentId: data['studentId'] as String? ?? '',
-          yearLevel: data['yearLevel'] as int?,
-          section: data['section'] as String?,
-          course: data['course'] as String?,
-        ));
+        students.add(
+          Student(
+            userId: user.userId,
+            studentId: data['studentId'] as String? ?? '',
+            yearLevel: data['yearLevel'] as int?,
+            section: data['section'] as String?,
+            course: data['course'] as String?,
+          ),
+        );
       }
 
       state = state.copyWith(
@@ -106,10 +110,7 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
         isLoading: false,
       );
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
@@ -154,13 +155,16 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
   List<User> getPaginatedUsers() {
     final filteredUsers = _getFilteredUsers();
     final startIndex = (state.currentPage - 1) * state.itemsPerPage;
-    final endIndex = (startIndex + state.itemsPerPage).clamp(0, filteredUsers.length);
+    final endIndex = (startIndex + state.itemsPerPage).clamp(
+      0,
+      filteredUsers.length,
+    );
     return filteredUsers.sublist(startIndex, endIndex);
   }
 
   List<User> _getFilteredUsers() {
     List<User> users = state.users;
-    
+
     // Filter by user type
     switch (state.selectedUserType) {
       case UserType.teachers:
@@ -175,17 +179,17 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
         // Show all users
         break;
     }
-    
+
     // Filter by search query
     if (state.searchQuery.isNotEmpty) {
       users = users.where((user) {
         final query = state.searchQuery.toLowerCase();
         return user.fullName.toLowerCase().contains(query) ||
-               user.email.toLowerCase().contains(query) ||
-               user.contactNumber.contains(query);
+            user.email.toLowerCase().contains(query) ||
+            user.contactNumber.contains(query);
       }).toList();
     }
-    
+
     return users;
   }
 
@@ -201,12 +205,13 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
     String? studentId,
     int? yearLevel,
     String? section,
+    String? course,
   }) async {
     state = state.copyWith(isLoading: true, clearError: true);
-    
+
     try {
       final roleName = userType == UserType.teachers ? 'Teacher' : 'Student';
-      
+
       await _authService.createUser(
         email: email,
         password: password,
@@ -219,11 +224,11 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
         studentId: studentId,
         section: section,
         yearLevel: yearLevel,
+        course: course,
       );
-      
+
       // Reload users after creation
       await loadUsers();
-      
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -232,7 +237,8 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
     }
   }
 
-  Future<void> updateUser(User user, {
+  Future<void> updateUser(
+    User user, {
     String? email,
     String? fullName,
     String? contactNumber,
@@ -242,9 +248,10 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
     String? studentId,
     int? yearLevel,
     String? section,
+    String? course,
   }) async {
     state = state.copyWith(isLoading: true, clearError: true);
-    
+
     try {
       await _authService.updateUser(
         userId: user.userId,
@@ -257,11 +264,11 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
         studentId: studentId,
         section: section,
         yearLevel: yearLevel,
+        course: course,
       );
-      
+
       // Reload users after update
       await loadUsers();
-      
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -272,17 +279,14 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
 
   Future<void> deleteUser(User user) async {
     state = state.copyWith(isLoading: true, clearError: true);
-    
+
     try {
       await _authService.deleteUser(user.userId);
-      
+
       // Reload users after deletion
       await loadUsers();
-      
-      state = state.copyWith(
-        selectedUser: null,
-      );
-      
+
+      state = state.copyWith(selectedUser: null);
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -297,6 +301,7 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
 }
 
 // Provider
-final userManagementProvider = StateNotifierProvider<UserManagementNotifier, UserManagementState>(
-  (ref) => UserManagementNotifier(),
-);
+final userManagementProvider =
+    StateNotifierProvider<UserManagementNotifier, UserManagementState>(
+      (ref) => UserManagementNotifier(),
+    );

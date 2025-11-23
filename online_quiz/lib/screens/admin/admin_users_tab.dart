@@ -867,6 +867,9 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                 section: selectedUserType == UserType.students
                     ? sectionController.text
                     : null,
+                course: selectedUserType == UserType.students
+                    ? courseController.text
+                    : null,
               );
 
               if (context.mounted) {

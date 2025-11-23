@@ -331,6 +331,7 @@ class AuthService {
     String? studentId, // For students
     String? section, // For students
     int? yearLevel, // For students
+    String? course, // For students
   }) async {
     try {
       final hashedPasswordResponse = await _supabase.rpc(
@@ -382,6 +383,7 @@ class AuthService {
           'StudentId': studentId ?? '',
           'Section': section ?? '',
           'Year_Level': yearLevel ?? 1,
+          'Course': course ?? '',
         });
       }
 
@@ -405,6 +407,7 @@ class AuthService {
     String? studentId, // For students
     String? section, // For students
     int? yearLevel, // For students
+    String? course, // For students
   }) async {
     try {
       // Update user record
@@ -431,11 +434,15 @@ class AuthService {
       }
 
       // Update student-specific fields if provided
-      if (studentId != null || section != null || yearLevel != null) {
+      if (studentId != null ||
+          section != null ||
+          yearLevel != null ||
+          course != null) {
         final studentUpdateData = <String, dynamic>{};
         if (studentId != null) studentUpdateData['StudentId'] = studentId;
         if (section != null) studentUpdateData['Section'] = section;
         if (yearLevel != null) studentUpdateData['Year_Level'] = yearLevel;
+        if (course != null) studentUpdateData['Course'] = course;
 
         await _supabase
             .from('Student')
