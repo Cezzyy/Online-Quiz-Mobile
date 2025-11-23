@@ -8,7 +8,7 @@ import 'activity_log_service.dart';
 class AuthService {
   final SupabaseClient _supabase = Supabase.instance.client;
   final ActivityLogService _activityLog = ActivityLogService();
-  
+
   // SharedPreferences keys
   static const String _keyUserId = 'auth_user_id';
   static const String _keyUserData = 'auth_user_data';
@@ -22,10 +22,7 @@ class AuthService {
       // Call Supabase RPC function to verify credentials and get user data
       final response = await _supabase.rpc(
         'verify_user_credentials',
-        params: {
-          'user_email': email,
-          'user_password': password,
-        },
+        params: {'user_email': email, 'user_password': password},
       );
 
       if (response == null || (response is List && response.isEmpty)) {
@@ -33,7 +30,9 @@ class AuthService {
       }
 
       // Parse user data from the first result (RPC returns array)
-      final userData = (response is List) ? response[0] as Map<String, dynamic> : response as Map<String, dynamic>;
+      final userData = (response is List)
+          ? response[0] as Map<String, dynamic>
+          : response as Map<String, dynamic>;
       final user = models.User.fromJson(userData);
 
       // Get user role
@@ -65,11 +64,7 @@ class AuthService {
             .maybeSingle();
       }
 
-      final result = {
-        'user': user,
-        'role': roleName,
-        'profile': profileData,
-      };
+      final result = {'user': user, 'role': roleName, 'profile': profileData};
 
       // Save session to SharedPreferences
       await _saveSession(result);
@@ -85,14 +80,21 @@ class AuthService {
       return result;
     } on PostgrestException catch (e) {
       // Check if it's a connection/network error
-      if (e.code == null || e.code == 'PGRST301' || e.code == '08000' || e.code == '08003' || e.code == '08006') {
-        throw Exception('Unable to connect to server. Please check your internet connection.');
+      if (e.code == null ||
+          e.code == 'PGRST301' ||
+          e.code == '08000' ||
+          e.code == '08003' ||
+          e.code == '08006') {
+        throw Exception(
+          'Unable to connect to server. Please check your internet connection.',
+        );
       }
       // Otherwise it's likely an authentication failure
       throw Exception('Invalid email or password');
     } on FunctionException catch (e) {
       // RPC function returned an error - likely invalid credentials
-      if (e.toString().contains('verify_user_credentials') || e.details?.contains('No rows') == true) {
+      if (e.toString().contains('verify_user_credentials') ||
+          e.details?.contains('No rows') == true) {
         throw Exception('Invalid email or password');
       }
       throw Exception('Unable to connect to server. Please try again.');
@@ -102,11 +104,13 @@ class AuthService {
         rethrow;
       }
       // Generic network/connection errors
-      if (e.toString().contains('SocketException') || 
+      if (e.toString().contains('SocketException') ||
           e.toString().contains('TimeoutException') ||
           e.toString().contains('Connection') ||
           e.toString().contains('Network')) {
-        throw Exception('Unable to connect to server. Please check your internet connection.');
+        throw Exception(
+          'Unable to connect to server. Please check your internet connection.',
+        );
       }
       // Default to invalid credentials for other errors
       throw Exception('Invalid email or password');
@@ -118,15 +122,18 @@ class AuthService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final user = sessionData['user'] as models.User;
-      
+
       await prefs.setInt(_keyUserId, user.userId);
       await prefs.setString(_keyUserData, jsonEncode(user.toJson()));
       await prefs.setString(_keyUserRole, sessionData['role'] as String);
-      
+
       if (sessionData['profile'] != null) {
-        await prefs.setString(_keyUserProfile, jsonEncode(sessionData['profile']));
+        await prefs.setString(
+          _keyUserProfile,
+          jsonEncode(sessionData['profile']),
+        );
       }
-      
+
       await prefs.setBool(_keyIsAuthenticated, true);
     } catch (e) {
       throw Exception('Failed to save session: ${e.toString()}');
@@ -137,7 +144,7 @@ class AuthService {
   Future<void> logout() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      
+
       // Log logout before clearing session
       final userId = prefs.getInt(_keyUserId);
       if (userId != null) {
@@ -148,14 +155,14 @@ class AuthService {
           debugPrint('Failed to log logout activity: $e');
         }
       }
-      
+
       // Clear all auth-related data
       await prefs.remove(_keyUserId);
       await prefs.remove(_keyUserData);
       await prefs.remove(_keyUserRole);
       await prefs.remove(_keyUserProfile);
       await prefs.remove(_keyIsAuthenticated);
-      
+
       // Optional: Clear all preferences if needed
       // await prefs.clear();
     } catch (e) {
@@ -177,7 +184,7 @@ class AuthService {
   Future<Map<String, dynamic>?> getCurrentSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      
+
       // Check if user is authenticated
       final isAuth = prefs.getBool(_keyIsAuthenticated) ?? false;
       if (!isAuth) {
@@ -206,11 +213,7 @@ class AuthService {
         profile = jsonDecode(profileJson) as Map<String, dynamic>;
       }
 
-      return {
-        'user': user,
-        'role': role,
-        'profile': profile,
-      };
+      return {'user': user, 'role': role, 'profile': profile};
     } catch (e) {
       // If there's any error reading session, return null
       return null;
@@ -238,14 +241,13 @@ class AuthService {
       for (final userData in response) {
         final user = models.User.fromJson(userData);
         final roleData = userData['UserRole'];
-        final roleName = roleData is List 
-            ? roleData.isNotEmpty ? roleData[0]['Role']['Name'] : 'Unknown'
+        final roleName = roleData is List
+            ? roleData.isNotEmpty
+                  ? roleData[0]['Role']['Name']
+                  : 'Unknown'
             : roleData['Role']['Name'];
 
-        users.add({
-          'user': user,
-          'role': roleName,
-        });
+        users.add({'user': user, 'role': roleName});
       }
 
       return users;
@@ -271,11 +273,8 @@ class AuthService {
       for (final teacherData in response) {
         final userData = teacherData['User'];
         final user = models.User.fromJson(userData);
-        
-        teachers.add({
-          'user': user,
-          'department': teacherData['Department'],
-        });
+
+        teachers.add({'user': user, 'department': teacherData['Department']});
       }
 
       return teachers;
@@ -301,7 +300,7 @@ class AuthService {
       for (final studentData in response) {
         final userData = studentData['User'];
         final user = models.User.fromJson(userData);
-        
+
         students.add({
           'user': user,
           'studentId': studentData['StudentId'],
@@ -334,12 +333,18 @@ class AuthService {
     int? yearLevel, // For students
   }) async {
     try {
-      // 1. Create user record
+      final hashedPasswordResponse = await _supabase.rpc(
+        'hash_password',
+        params: {'plain_password': password},
+      );
+
+      final hashedPassword = hashedPasswordResponse as String;
+
       final userResponse = await _supabase
           .from('User')
           .insert({
             'Email': email,
-            'PasswordHash': password, // Note: In production, hash the password
+            'PasswordHash': hashedPassword,
             'FullName': fullName,
             'ContactNumber': contactNumber ?? '',
             'EmergencyContactNumber': emergencyContactNumber ?? '',
@@ -353,7 +358,6 @@ class AuthService {
 
       final user = models.User.fromJson(userResponse);
 
-      // 2. Get role ID
       final roleResponse = await _supabase
           .from('Role')
           .select('RoleId')
@@ -362,31 +366,23 @@ class AuthService {
 
       final roleId = roleResponse['RoleId'] as int;
 
-      // 3. Assign user role
-      await _supabase
-          .from('UserRole')
-          .insert({
-            'UserId': user.userId,
-            'RoleId': roleId,
-          });
+      await _supabase.from('UserRole').insert({
+        'UserId': user.userId,
+        'RoleId': roleId,
+      });
 
-      // 4. Create role-specific record
       if (role == 'Teacher') {
-        await _supabase
-            .from('Teacher')
-            .insert({
-              'UserId': user.userId,
-              'Department': department ?? '',
-            });
+        await _supabase.from('Teacher').insert({
+          'UserId': user.userId,
+          'Department': department ?? '',
+        });
       } else if (role == 'Student') {
-        await _supabase
-            .from('Student')
-            .insert({
-              'UserId': user.userId,
-              'StudentId': studentId ?? '',
-              'Section': section ?? '',
-              'Year_Level': yearLevel ?? 1,
-            });
+        await _supabase.from('Student').insert({
+          'UserId': user.userId,
+          'StudentId': studentId ?? '',
+          'Section': section ?? '',
+          'Year_Level': yearLevel ?? 1,
+        });
       }
 
       return user;
@@ -419,13 +415,12 @@ class AuthService {
       if (email != null) updateData['Email'] = email;
       if (fullName != null) updateData['FullName'] = fullName;
       if (contactNumber != null) updateData['ContactNumber'] = contactNumber;
-      if (emergencyContactNumber != null) updateData['EmergencyContactNumber'] = emergencyContactNumber;
+      if (emergencyContactNumber != null) {
+        updateData['EmergencyContactNumber'] = emergencyContactNumber;
+      }
       if (status != null) updateData['Status'] = status;
 
-      await _supabase
-          .from('User')
-          .update(updateData)
-          .eq('UserId', userId);
+      await _supabase.from('User').update(updateData).eq('UserId', userId);
 
       // Update teacher-specific fields if provided
       if (department != null) {
@@ -524,11 +519,7 @@ class AuthService {
             .maybeSingle();
       }
 
-      return {
-        'user': user,
-        'role': role,
-        'profile': profileData,
-      };
+      return {'user': user, 'role': role, 'profile': profileData};
     } on PostgrestException catch (e) {
       throw Exception('Failed to get user details: ${e.message}');
     } catch (e) {
