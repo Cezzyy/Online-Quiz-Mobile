@@ -1,12 +1,11 @@
 class User {
   final int userId;
   final String email;
-  final String passwordHash;
+  final String? passwordHash;
   final String fullName;
-  final String status; // 'Active' or 'Inactive'  
+  final String status;
   final String contactNumber;
   final String emergencyContactNumber;
-
   final DateTime createdAt;
   final DateTime updatedAt;
   final int? createdBy;
@@ -14,7 +13,7 @@ class User {
   const User({
     required this.userId,
     required this.email,
-    required this.passwordHash,
+    this.passwordHash,
     required this.fullName,
     required this.status,
     this.contactNumber = '',
@@ -28,7 +27,7 @@ class User {
     return User(
       userId: json['UserId'] as int,
       email: json['Email'] as String,
-      passwordHash: json['PasswordHash'] as String,
+      passwordHash: json['PasswordHash'] as String?, 
       fullName: json['FullName'] as String,
       status: json['Status'] as String,
       createdAt: DateTime.parse(json['CreatedAt'] as String),
@@ -43,7 +42,7 @@ class User {
     return {
       'UserId': userId,
       'Email': email,
-      'PasswordHash': passwordHash,
+      'PasswordHash': passwordHash, 
       'FullName': fullName,
       'Status': status,
       'CreatedAt': createdAt.toIso8601String(),
