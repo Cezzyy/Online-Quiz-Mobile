@@ -66,7 +66,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   Widget build(BuildContext context) {
     final profileState = ref.watch(userProfileProvider);
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     // Update controllers when state changes
     _updateControllersFromState(profileState);
