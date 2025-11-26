@@ -21,7 +21,9 @@ class _HomeTabState extends ConsumerState<HomeTab> {
     Future.microtask(() {
       final authState = ref.read(authProvider);
       if (authState.user != null) {
-        ref.read(userProfileProvider.notifier).loadUserData(authState.user!.userId);
+        ref
+            .read(userProfileProvider.notifier)
+            .loadUserData(authState.user!.userId);
       }
     });
   }
@@ -33,11 +35,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
 
     // Show loading indicator
     if (profileState.isLoading || authState.user == null) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     // Show error if any
@@ -62,13 +60,17 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                 profileState.error!,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {
-                  ref.read(userProfileProvider.notifier).loadUserData(authState.user!.userId);
+                  ref
+                      .read(userProfileProvider.notifier)
+                      .loadUserData(authState.user!.userId);
                 },
                 child: const Text('Retry'),
               ),
@@ -87,7 +89,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
     final completedAttempts = stats['completedAttempts'] as int? ?? 0;
     final averageScore = stats['averageScore'] as double? ?? 0.0;
     final recentAttempts = stats['recentAttempts'] as List? ?? [];
-    
+
     return Scaffold(
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
@@ -98,15 +100,21 @@ class _HomeTabState extends ConsumerState<HomeTab> {
             // Welcome Section
             _buildWelcomeSection(context, user),
             const SizedBox(height: 30),
-            
+
             // Statistics Cards
-            _buildStatsSection(context, totalQuizzes, completedAttempts, averageScore, userCourses.length),
+            _buildStatsSection(
+              context,
+              totalQuizzes,
+              completedAttempts,
+              averageScore,
+              userCourses.length,
+            ),
             const SizedBox(height: 30),
-            
+
             // Progress Chart Section
             _buildProgressSection(context, userCourses, courseProgress),
             const SizedBox(height: 30),
-            
+
             // Recent Activity
             _buildRecentActivity(context, recentAttempts),
           ],
@@ -114,7 +122,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
       ),
     );
   }
-  
+
   Widget _buildWelcomeSection(BuildContext context, user) {
     final hour = DateTime.now().hour;
     String greeting;
@@ -125,7 +133,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
     } else {
       greeting = 'Good Evening';
     }
-    
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -145,10 +153,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
         children: [
           Text(
             '$greeting,',
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 16,
-            ),
+            style: const TextStyle(color: Colors.white70, fontSize: 16),
           ),
           const SizedBox(height: 4),
           Text(
@@ -171,8 +176,14 @@ class _HomeTabState extends ConsumerState<HomeTab> {
       ),
     );
   }
-  
-  Widget _buildStatsSection(BuildContext context, int totalQuizzes, int completedQuizzes, double averageScore, int totalCourses) {
+
+  Widget _buildStatsSection(
+    BuildContext context,
+    int totalQuizzes,
+    int completedQuizzes,
+    double averageScore,
+    int totalCourses,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -231,9 +242,12 @@ class _HomeTabState extends ConsumerState<HomeTab> {
       ],
     );
   }
-  
 
-  Widget _buildProgressSection(BuildContext context, List<Course> userCourses, Map<int, double> courseProgress) {
+  Widget _buildProgressSection(
+    BuildContext context,
+    List<Course> userCourses,
+    Map<int, double> courseProgress,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -269,14 +283,18 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                         Icon(
                           Icons.school_outlined,
                           size: 48,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.3),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           'No courses enrolled',
                           style: TextStyle(
                             fontSize: 16,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                       ],
@@ -302,7 +320,9 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
-                                    color: Theme.of(context).colorScheme.onSurface,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
                                   ),
                                 ),
                               ),
@@ -319,8 +339,12 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                           const SizedBox(height: 8),
                           LinearProgressIndicator(
                             value: progress,
-                            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                            valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Theme.of(context).colorScheme.primary,
+                            ),
                             minHeight: 6,
                           ),
                           const SizedBox(height: 4),
@@ -328,7 +352,9 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                             '$progressPercent% completed',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                           ),
                         ],
@@ -377,14 +403,18 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                         Icon(
                           Icons.quiz_outlined,
                           size: 48,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.3),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           'No recent activity',
                           style: TextStyle(
                             fontSize: 16,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                       ],
@@ -395,8 +425,21 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                   children: recentAttempts.take(3).map((attempt) {
                     final attemptMap = attempt as Map<String, dynamic>;
                     final quizTitle = attemptMap['quizTitle'] as String;
-                    final score = attemptMap['score'] as double;
                     final submittedAt = attemptMap['submittedAt'] as DateTime;
+
+                    // Get percentageScore, or calculate it if not available
+                    double? percentageScore =
+                        attemptMap['percentageScore'] as double?;
+                    if (percentageScore == null) {
+                      final rawScore = attemptMap['score'] as double?;
+                      final totalQuestions =
+                          attemptMap['totalQuestions'] as int?;
+                      if (rawScore != null &&
+                          totalQuestions != null &&
+                          totalQuestions > 0) {
+                        percentageScore = (rawScore / totalQuestions) * 100;
+                      }
+                    }
 
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 16),
@@ -424,14 +467,21 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
-                                    color: Theme.of(context).colorScheme.onSurface,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
                                   ),
                                 ),
                                 Text(
-                                  'Score: ${score.toStringAsFixed(1)}',
+                                  percentageScore != null
+                                      ? 'Score: ${percentageScore.toStringAsFixed(1)}%'
+                                      : 'Score: ${(attemptMap['score'] as double?)?.toStringAsFixed(1) ?? 'N/A'}',
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.6),
                                   ),
                                 ),
                               ],
@@ -441,7 +491,9 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                             _formatDate(submittedAt),
                             style: TextStyle(
                               fontSize: 12,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.5),
                             ),
                           ),
                         ],
@@ -457,7 +509,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date).inDays;
-    
+
     if (difference == 0) {
       return 'Today';
     } else if (difference == 1) {
