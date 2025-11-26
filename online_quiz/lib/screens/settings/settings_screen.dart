@@ -14,14 +14,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final settingsState = ref.watch(settingsProvider);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
           'Settings',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         leading: IconButton(
@@ -34,22 +32,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
-          // Profile Section
-          _buildSectionHeader('Profile'),
-          _buildSettingsTile(
-            icon: Icons.lock,
-            title: 'Change Password',
-            subtitle: 'Update your account password',
-            onTap: () {
-              // Navigate to change password screen
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Change Password feature coming soon')),
-              );
-            },
-          ),
-          
-          const SizedBox(height: 24),
-          
           // App Preferences Section
           _buildSectionHeader('App Preferences'),
           _buildSettingsTile(
@@ -60,9 +42,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _showThemeModeDialog();
             },
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Support Section
           _buildSectionHeader('Support'),
           _buildSettingsTile(
@@ -82,9 +64,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             },
             textColor: Colors.orange,
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Account Section
           _buildSectionHeader('Account'),
           _buildSettingsTile(
@@ -125,16 +107,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Card(
       margin: const EdgeInsets.only(bottom: 8.0),
       child: ListTile(
-        leading: Icon(
-          icon,
-          color: textColor ?? Colors.blue,
-        ),
+        leading: Icon(icon, color: textColor ?? Colors.blue),
         title: Text(
           title,
-          style: TextStyle(
-            fontWeight: FontWeight.w500,
-            color: textColor,
-          ),
+          style: TextStyle(fontWeight: FontWeight.w500, color: textColor),
         ),
         subtitle: Text(subtitle),
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
@@ -143,20 +119,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-
-
-
-
   void _showAboutDialog() {
     showAboutDialog(
       context: context,
       applicationName: 'ACLC Online Quiz',
       applicationVersion: '1.0.0',
-      applicationIcon: const Icon(
-        Icons.quiz,
-        size: 48,
-        color: Colors.blue,
-      ),
+      applicationIcon: const Icon(Icons.quiz, size: 48, color: Colors.blue),
       children: [
         const Text(
           'A comprehensive quiz application for ACLC students to practice and improve their knowledge across various subjects.',
@@ -183,7 +151,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         return Consumer(
           builder: (context, ref, child) {
             final settingsState = ref.watch(settingsProvider);
-            
+
             return AlertDialog(
               title: const Text('Choose Theme'),
               content: Column(
@@ -247,16 +215,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       margin: const EdgeInsets.symmetric(vertical: 2),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        color: isSelected 
-          ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3)
-          : Colors.transparent,
+        color: isSelected
+            ? Theme.of(
+                context,
+              ).colorScheme.primaryContainer.withValues(alpha: 0.3)
+            : Colors.transparent,
       ),
       child: ListTile(
         leading: Icon(
           icon,
-          color: isSelected 
-            ? Theme.of(context).colorScheme.primary
-            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         ),
         title: Row(
           children: [
@@ -268,7 +238,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   Text(
                     subtitle,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -277,13 +249,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
               child: Icon(
-                isSelected 
-                  ? Icons.radio_button_checked 
-                  : Icons.radio_button_unchecked,
+                isSelected
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_unchecked,
                 key: ValueKey(isSelected),
-                color: isSelected 
-                  ? Theme.of(context).colorScheme.primary 
-                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                color: isSelected
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
             ),
           ],
@@ -307,7 +281,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Reset Settings'),
-          content: const Text('Are you sure you want to reset all settings to their default values? This action cannot be undone.'),
+          content: const Text(
+            'Are you sure you want to reset all settings to their default values? This action cannot be undone.',
+          ),
           actions: [
             TextButton(
               onPressed: () {
@@ -357,17 +333,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               onPressed: () async {
                 final navigator = Navigator.of(context);
                 navigator.pop();
-                
+
                 // Perform logout
                 await ref.read(authProvider.notifier).logout();
-                
+
                 // Clear the entire navigation stack and go to root
                 // This ensures AuthWrapper can properly handle the auth state change
                 if (mounted) {
-                  navigator.pushNamedAndRemoveUntil(
-                    '/',
-                    (route) => false,
-                  );
+                  navigator.pushNamedAndRemoveUntil('/', (route) => false);
                 }
               },
               child: const Text(

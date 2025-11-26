@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/user_profile_provider.dart';
 import '../../utils/app_theme.dart';
@@ -21,7 +22,9 @@ class _ProfileTabState extends ConsumerState<ProfileTab> {
     Future.microtask(() {
       final authState = ref.read(authProvider);
       if (authState.user != null) {
-        ref.read(userProfileProvider.notifier).loadUserData(authState.user!.userId);
+        ref
+            .read(userProfileProvider.notifier)
+            .loadUserData(authState.user!.userId);
       }
     });
   }
@@ -30,14 +33,12 @@ class _ProfileTabState extends ConsumerState<ProfileTab> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final profileState = ref.watch(userProfileProvider);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     // Show loading indicator while data is being fetched
     if (profileState.isLoading || authState.user == null) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     // Show error if any
@@ -51,24 +52,24 @@ class _ProfileTabState extends ConsumerState<ProfileTab> {
               const SizedBox(height: 16),
               Text(
                 'Error loading profile',
-                style: TextStyle(
-                  fontSize: 18,
+                style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 profileState.error!,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {
-                  ref.read(userProfileProvider.notifier).loadUserData(authState.user!.userId);
+                  ref
+                      .read(userProfileProvider.notifier)
+                      .loadUserData(authState.user!.userId);
                 },
                 child: const Text('Retry'),
               ),
@@ -83,186 +84,374 @@ class _ProfileTabState extends ConsumerState<ProfileTab> {
 
     return Scaffold(
       body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-            const SizedBox(height: 40),
-            // Profile Picture
-            CircleAvatar(
-              radius: 60,
-              backgroundColor: Theme.of(context).colorScheme.surface,
-              backgroundImage: const AssetImage('assets/images/aclclogo-nobg.png'),
-            ),
-            const SizedBox(height: 24),
-            
-            // User Name
-            Text(
-              user.fullName,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            
-            // Student ID
-            if (student != null)
-              Text(
-                'Student ID: ${student.studentId}',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                  fontWeight: FontWeight.w500,
+        padding: EdgeInsets.zero,
+        child: Column(
+          children: [
+            // Header Section with Gradient and Profile Picture
+            Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                // Gradient Background
+                Container(
+                  height: 200,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(30),
+                      bottomRight: Radius.circular(30),
+                    ),
+                  ),
                 ),
+                // Decorative Circles
+                Positioned(
+                  top: -50,
+                  right: -50,
+                  child: Container(
+                    width: 150,
+                    height: 150,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.1),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 50,
+                  left: -30,
+                  child: Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.1),
+                    ),
+                  ),
+                ),
+                // Profile Picture
+                Positioned(
+                  bottom: -60,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: theme.scaffoldBackgroundColor,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: CircleAvatar(
+                      radius: 60,
+                      backgroundColor:
+                          theme.colorScheme.surfaceContainerHighest,
+                      backgroundImage: const AssetImage(
+                        'assets/images/aclclogo-nobg.png',
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 70),
+
+            // User Name and ID
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                children: [
+                  Text(
+                    user.fullName,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 4),
+                  if (student != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'ID: ${student.studentId}',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.primaryColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                ],
               ),
-            const SizedBox(height: 4),
-            
-            // Email
-             Text(
-               user.email,
-               style: TextStyle(
-                 fontSize: 14,
-                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-               ),
-             ),
-             const SizedBox(height: 32),
-             
-             // User Details Card
-             Container(
-               width: double.infinity,
-               padding: const EdgeInsets.all(20),
-               decoration: BoxDecoration(
-                 color: Theme.of(context).colorScheme.surface,
-                 borderRadius: BorderRadius.circular(16),
-                 boxShadow: [
-                   BoxShadow(
-                     color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
-                     spreadRadius: 1,
-                     blurRadius: 10,
-                     offset: const Offset(0, 2),
-                   ),
-                 ],
-               ),
-               child: Column(
-                 crossAxisAlignment: CrossAxisAlignment.start,
-                 children: [
-                   Text(
-                     'Profile Details',
-                     style: TextStyle(
-                       fontSize: 18,
-                       fontWeight: FontWeight.bold,
-                       color: Theme.of(context).colorScheme.onSurface,
-                     ),
-                   ),
-                   const SizedBox(height: 16),
-                   if (student != null) ...[
-                     _buildDetailRow(context, Icons.school_outlined, 'Degree Program', student.course ?? 'N/A'),
-                     const SizedBox(height: 12),
-                     _buildDetailRow(context, Icons.class_outlined, 'Year Level', student.yearLevel != null ? 'Year ${student.yearLevel}' : 'N/A'),
-                     const SizedBox(height: 12),
-                     _buildDetailRow(context, Icons.group_outlined, 'Section', student.section ?? 'N/A'),
-                     const SizedBox(height: 12),
-                   ],
-                   _buildDetailRow(context, Icons.badge_outlined, 'Status', user.status),
-                 ],
-               ),
-             ),
-             const SizedBox(height: 32),
-             
-             // Action Buttons
-             Row(
-               children: [
-                 Expanded(
-                   child: ElevatedButton.icon(
-                     onPressed: () {
-                       Navigator.push(
-                         context,
-                         MaterialPageRoute(
-                           builder: (context) => const EditProfileScreen(),
-                         ),
-                       );
-                     },
-                     icon: const Icon(Icons.edit_outlined),
-                     label: const Text('Edit Profile'),
-                     style: ElevatedButton.styleFrom(
-                       backgroundColor: AppTheme.primaryColor,
-                       foregroundColor: Colors.white,
-                       padding: const EdgeInsets.symmetric(vertical: 16),
-                       shape: RoundedRectangleBorder(
-                         borderRadius: BorderRadius.circular(12),
-                       ),
-                     ),
-                   ),
-                 ),
-                 const SizedBox(width: 16),
-                 Expanded(
-                   child: OutlinedButton.icon(
-                     onPressed: () {
-                       Navigator.push(
-                         context,
-                         MaterialPageRoute(
-                           builder: (context) => const SettingsScreen(),
-                         ),
-                       );
-                     },
-                     icon: const Icon(Icons.settings_outlined),
-                     label: const Text('Settings'),
-                     style: OutlinedButton.styleFrom(
-                       foregroundColor: AppTheme.primaryColor,
-                       side: BorderSide(color: AppTheme.primaryColor),
-                       padding: const EdgeInsets.symmetric(vertical: 16),
-                       shape: RoundedRectangleBorder(
-                         borderRadius: BorderRadius.circular(12),
-                       ),
-                     ),
-                   ),
-                 ),
-               ],
-             ),
-           ],
-          ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Info Cards
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: [
+                  // Academic Information
+                  if (student != null)
+                    _buildInfoCard(
+                      context,
+                      title: 'Academic Information',
+                      icon: Icons.school,
+                      children: [
+                        _buildInfoRow(
+                          context,
+                          'Course',
+                          student.course ?? 'Not set',
+                        ),
+                        _buildDivider(context),
+                        _buildInfoRow(
+                          context,
+                          'Year Level',
+                          student.yearLevel != null
+                              ? _getYearLevelText(student.yearLevel!)
+                              : 'Not set',
+                        ),
+                        _buildDivider(context),
+                        _buildInfoRow(
+                          context,
+                          'Section',
+                          student.section ?? 'Not set',
+                        ),
+                      ],
+                    ),
+
+                  const SizedBox(height: 16),
+
+                  // Contact Information
+                  _buildInfoCard(
+                    context,
+                    title: 'Contact Information',
+                    icon: Icons.contact_phone,
+                    children: [
+                      _buildInfoRow(context, 'Email', user.email),
+                      _buildDivider(context),
+                      _buildInfoRow(
+                        context,
+                        'Phone',
+                        user.contactNumber.isNotEmpty
+                            ? user.contactNumber
+                            : 'Not set',
+                      ),
+                      _buildDivider(context),
+                      _buildInfoRow(
+                        context,
+                        'Emergency',
+                        user.emergencyContactNumber.isNotEmpty
+                            ? user.emergencyContactNumber
+                            : 'Not set',
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Account Status
+                  _buildInfoCard(
+                    context,
+                    title: 'Account Status',
+                    icon: Icons.verified_user,
+                    children: [
+                      _buildInfoRow(
+                        context,
+                        'Status',
+                        user.status,
+                        valueColor: user.isActive ? Colors.green : Colors.red,
+                      ),
+                      _buildDivider(context),
+                      _buildInfoRow(
+                        context,
+                        'Member Since',
+                        DateFormat('MMMM d, yyyy').format(user.createdAt),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Action Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const EditProfileScreen(),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 2,
+                          ),
+                          child: const Text(
+                            'Edit Profile',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const SettingsScreen(),
+                              ),
+                            );
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: isDark
+                                ? Colors.white
+                                : AppTheme.primaryColor,
+                            side: BorderSide(
+                              color: isDark
+                                  ? Colors.white54
+                                  : AppTheme.primaryColor,
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'Settings',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildDetailRow(BuildContext context, IconData icon, String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          icon,
-          size: 20,
-          color: Theme.of(context).colorScheme.primary,
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+  Widget _buildInfoCard(
+    BuildContext context, {
+    required String title,
+    required IconData icon,
+    required List<Widget> children,
+  }) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: AppTheme.primaryColor, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-            ],
-          ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...children,
+          ],
         ),
-      ],
+      ),
     );
+  }
+
+  Widget _buildInfoRow(
+    BuildContext context,
+    String label,
+    String value, {
+    Color? valueColor,
+  }) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+                color: valueColor ?? theme.colorScheme.onSurface,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDivider(BuildContext context) {
+    return Divider(
+      color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+      height: 16,
+    );
+  }
+
+  String _getYearLevelText(int yearLevel) {
+    String suffix = 'th';
+    if (yearLevel % 100 < 11 || yearLevel % 100 > 13) {
+      switch (yearLevel % 10) {
+        case 1:
+          suffix = 'st';
+          break;
+        case 2:
+          suffix = 'nd';
+          break;
+        case 3:
+          suffix = 'rd';
+          break;
+      }
+    }
+    return '$yearLevel$suffix Year';
   }
 }

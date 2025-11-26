@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/user_profile_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../utils/app_theme.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -20,12 +21,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     super.initState();
     _phoneController = TextEditingController();
     _emergencyContactController = TextEditingController();
-    
+
     // Load user data when screen initializes
     Future.microtask(() {
       final authState = ref.read(authProvider);
       if (authState.user != null) {
-        ref.read(userProfileProvider.notifier).loadUserData(authState.user!.userId);
+        ref
+            .read(userProfileProvider.notifier)
+            .loadUserData(authState.user!.userId);
       }
     });
   }
@@ -47,7 +50,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       if (_phoneController.text != formattedPhone) {
         _phoneController.text = formattedPhone;
       }
-      
+
       // Format emergency contact by removing +63 prefix if present
       String formattedEmergency = state.user!.emergencyContactNumber;
       if (formattedEmergency.startsWith('+63 ')) {
@@ -59,52 +62,52 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     final profileState = ref.watch(userProfileProvider);
-    
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     // Update controllers when state changes
     _updateControllersFromState(profileState);
-    
+
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text(
           'Edit Profile',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 20,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
-
+        centerTitle: true,
+        backgroundColor: AppTheme.primaryColor,
+        foregroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
-            child: ElevatedButton(
+            child: TextButton(
               onPressed: profileState.isLoading || !profileState.hasChanges
                   ? null
                   : () async {
                       if (_formKey.currentState!.validate()) {
-                        await ref.read(userProfileProvider.notifier).saveProfile();
+                        await ref
+                            .read(userProfileProvider.notifier)
+                            .saveProfile();
                         if (mounted && profileState.error == null) {
                           if (context.mounted) Navigator.pop(context);
                         }
                       }
                     },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: profileState.hasChanges && !profileState.isLoading
-                    ? Colors.white
-                    : Colors.grey[300],
-                foregroundColor: profileState.hasChanges && !profileState.isLoading
-                    ? Colors.blue[600]
-                    : Colors.grey[600],
-                elevation: profileState.hasChanges && !profileState.isLoading ? 2 : 0,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white,
+                disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
+                textStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
                 ),
               ),
               child: profileState.isLoading
@@ -113,16 +116,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       height: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.grey),
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
-                  : const Text(
-                      'Save',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
+                  : const Text('Save'),
             ),
           ),
         ],
@@ -130,243 +127,312 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       body: profileState.isLoading && profileState.user == null
           ? const Center(child: CircularProgressIndicator())
           : profileState.error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Error: ${profileState.error}',
-                        style: TextStyle(color: Theme.of(context).colorScheme.error),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () {
-                          final authState = ref.read(authProvider);
-                          if (authState.user != null) {
-                            ref.read(userProfileProvider.notifier).loadUserData(authState.user!.userId);
-                          }
-                        },
-                        child: const Text('Retry'),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: theme.colorScheme.error,
                   ),
-                )
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Profile Picture Section
-                        Center(
-                          child: Column(
-                            children: [
-                              CircleAvatar(
-                                radius: 60,
-                                backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
-                                backgroundImage: const AssetImage('assets/images/aclclogo-nobg.png'),
-                                child: null,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                profileState.user?.fullName ?? 'User Name',
-                                style: const TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                profileState.user?.email ?? 'user@example.com',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Student ID: ${profileState.student?.studentId ?? 'Not specified'}',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        
-                        // Course Information (Read-only)
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
-                                spreadRadius: 1,
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(
-                                  Icons.school,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                                  size: 24,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Degree Program',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        fontWeight: FontWeight.w500,
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error loading profile',
+                    style: theme.textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    profileState.error!,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      final authState = ref.read(authProvider);
+                      if (authState.user != null) {
+                        ref
+                            .read(userProfileProvider.notifier)
+                            .loadUserData(authState.user!.userId);
+                      }
+                    },
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            )
+          : SingleChildScrollView(
+              child: Column(
+                children: [
+                  // Header with Profile Picture
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.only(bottom: 32),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor,
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(30),
+                        bottomRight: Radius.circular(30),
                       ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      profileState.student?.course ?? 'Not specified',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                    ),
+                    child: Column(
+                      children: [
+                        Stack(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white.withValues(alpha: 0.2),
                               ),
-                            ],
-                          ),
+                              child: const CircleAvatar(
+                                radius: 50,
+                                backgroundImage: AssetImage(
+                                  'assets/images/aclclogo-nobg.png',
+                                ),
+                                backgroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 24),
-                        
-                        // Contact Number Field
+
+                        const SizedBox(height: 16),
                         Text(
-                          'Contact Number',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: _phoneController,
-                          keyboardType: TextInputType.phone,
-                          onChanged: (value) {
-                            ref.read(userProfileProvider.notifier).updateContactNumber(value);
-                          },
-                          decoration: InputDecoration(
-                            prefixText: '+63 | ',
-                            prefixStyle: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                              fontWeight: FontWeight.w500,
-                            ),
-                            hintText: '123 456 7890',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
-                            ),
-                            filled: true,
-                            fillColor: Theme.of(context).colorScheme.surface,
-                            contentPadding: const EdgeInsets.all(16),
+                          profileState.user?.fullName ?? 'User Name',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Contact number is required';
-                            }
-                            if (!RegExp(r'^\d{3}\s\d{3}\s\d{4}$').hasMatch(value.trim())) {
-                              return 'Please enter a valid contact number (123 456 7890)';
-                            }
-                            if (value.trim() == _emergencyContactController.text.trim()) {
-                              return 'Contact number cannot be the same as emergency contact number';
-                            }
-                            return null;
-                          },
                         ),
-                        const SizedBox(height: 24),
-                        
-                        // Emergency Contact Number Field
                         Text(
-                          'Emergency Contact Number',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: _emergencyContactController,
-                          keyboardType: TextInputType.phone,
-                          onChanged: (value) {
-                            ref.read(userProfileProvider.notifier).updateEmergencyContactNumber(value);
-                          },
-                          decoration: InputDecoration(
-                            prefixText: '+63 | ',
-                            prefixStyle: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                              fontWeight: FontWeight.w500,
-                            ),
-                            hintText: '987 654 3210',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
-                            ),
-                            filled: true,
-                            fillColor: Theme.of(context).colorScheme.surface,
-                            contentPadding: const EdgeInsets.all(16),
+                          profileState.user?.email ?? 'user@example.com',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.white.withValues(alpha: 0.8),
                           ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Emergency contact number is required';
-                            }
-                            if (!RegExp(r'^\d{3}\s\d{3}\s\d{4}$').hasMatch(value.trim())) {
-                              return 'Please enter a valid emergency contact number (987 654 3210)';
-                            }
-                            if (value.trim() == _phoneController.text.trim()) {
-                              return 'Emergency contact number cannot be the same as contact number';
-                            }
-                            return null;
-                          },
                         ),
-                        const SizedBox(height: 32),
                       ],
                     ),
                   ),
+
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionTitle(context, 'Academic Info'),
+                          const SizedBox(height: 16),
+
+                          // Read-only Academic Info
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surface,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: theme.colorScheme.outline.withValues(
+                                  alpha: 0.1,
+                                ),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                _buildReadOnlyField(
+                                  context,
+                                  'Student ID',
+                                  profileState.student?.studentId ?? 'N/A',
+                                  Icons.badge_outlined,
+                                ),
+                                const Divider(height: 24),
+                                _buildReadOnlyField(
+                                  context,
+                                  'Degree Program',
+                                  profileState.student?.course ?? 'N/A',
+                                  Icons.school_outlined,
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 32),
+                          _buildSectionTitle(context, 'Contact Information'),
+                          const SizedBox(height: 16),
+
+                          // Contact Fields
+                          _buildPhoneField(
+                            context,
+                            controller: _phoneController,
+                            label: 'Contact Number',
+                            icon: Icons.phone_outlined,
+                            onChanged: (value) {
+                              ref
+                                  .read(userProfileProvider.notifier)
+                                  .updateContactNumber(value);
+                            },
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Contact number is required';
+                              }
+                              if (!RegExp(
+                                r'^\d{3}\s\d{3}\s\d{4}$',
+                              ).hasMatch(value.trim())) {
+                                return 'Format: 123 456 7890';
+                              }
+                              if (value.trim() ==
+                                  _emergencyContactController.text.trim()) {
+                                return 'Cannot be same as emergency';
+                              }
+                              return null;
+                            },
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          _buildPhoneField(
+                            context,
+                            controller: _emergencyContactController,
+                            label: 'Emergency Contact',
+                            icon: Icons.contact_phone_outlined,
+                            onChanged: (value) {
+                              ref
+                                  .read(userProfileProvider.notifier)
+                                  .updateEmergencyContactNumber(value);
+                            },
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Emergency contact is required';
+                              }
+                              if (!RegExp(
+                                r'^\d{3}\s\d{3}\s\d{4}$',
+                              ).hasMatch(value.trim())) {
+                                return 'Format: 987 654 3210';
+                              }
+                              if (value.trim() ==
+                                  _phoneController.text.trim()) {
+                                return 'Cannot be same as contact';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _buildSectionTitle(BuildContext context, String title) {
+    return Text(
+      title,
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+        fontWeight: FontWeight.bold,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+    );
+  }
+
+  Widget _buildReadOnlyField(
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+  ) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 20, color: theme.colorScheme.primary),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPhoneField(
+    BuildContext context, {
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required Function(String) onChanged,
+    required String? Function(String?) validator,
+  }) {
+    final theme = Theme.of(context);
+    return TextFormField(
+      controller: controller,
+      keyboardType: TextInputType.phone,
+      onChanged: onChanged,
+      style: TextStyle(fontWeight: FontWeight.w500),
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: theme.colorScheme.primary),
+        prefixText: '+63 | ',
+        prefixStyle: TextStyle(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          fontWeight: FontWeight.w500,
+        ),
+        hintText: 'XXX XXX XXXX',
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: theme.colorScheme.outline),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: theme.colorScheme.outline.withValues(alpha: 0.3),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+        ),
+        filled: true,
+        fillColor: theme.colorScheme.surface,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+      ),
+      validator: validator,
     );
   }
 }
