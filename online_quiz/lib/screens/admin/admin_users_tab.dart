@@ -5,11 +5,11 @@ import '../../models/user.dart';
 import '../../models/teacher.dart';
 import '../../models/student.dart';
 import '../../providers/user_management_provider.dart';
-import '../../providers/auth_provider.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/dialog.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/info_card.dart';
+import 'create_user_screen.dart';
 
 class AdminUsersTab extends ConsumerStatefulWidget {
   const AdminUsersTab({super.key});
@@ -49,7 +49,7 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showCreateUserDialog(context, userNotifier),
+        onPressed: () => _navigateToCreateUser(context, userNotifier),
         icon: const Icon(Icons.person_add),
         label: const Text('Add User'),
         backgroundColor: AppTheme.primaryColor,
@@ -245,7 +245,7 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
             ? 'No users match your search criteria'
             : 'Start by adding your first user',
         action: ElevatedButton.icon(
-          onPressed: () => _showCreateUserDialog(context, notifier),
+          onPressed: () => _navigateToCreateUser(context, notifier),
           icon: const Icon(Icons.person_add),
           label: const Text('Add User'),
         ),
@@ -582,309 +582,20 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
     }
   }
 
-  void _showCreateUserDialog(
+  Future<void> _navigateToCreateUser(
     BuildContext context,
     UserManagementNotifier notifier,
-  ) {
-    final emailController = TextEditingController();
-    final passwordController = TextEditingController();
-    final fullNameController = TextEditingController();
-    final contactController = TextEditingController();
-    final emergencyController = TextEditingController();
-    final departmentController = TextEditingController();
-    final studentIdController = TextEditingController();
-    final sectionController = TextEditingController();
-    final courseController = TextEditingController();
-
-    UserType selectedUserType = UserType.students;
-    int? selectedYearLevel = 1;
-
-    final formKey = GlobalKey<FormState>();
-
-    AppDialog.show(
-      context: context,
-      title: 'Add New User',
-      type: DialogType.custom,
-      maxWidth: 600,
-      content: StatefulBuilder(
-        builder: (context, setState) {
-          return Form(
-            key: formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // User Type Selection
-                  Text(
-                    'User Type',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.getTextColor(context),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  RadioGroup<UserType>(
-                    groupValue: selectedUserType,
-                    onChanged: (value) {
-                      setState(() {
-                        selectedUserType = value!;
-                      });
-                    },
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: ListTile(
-                            title: Text(
-                              'Student',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: AppTheme.getTextColor(context),
-                              ),
-                            ),
-                            leading: Radio<UserType>(value: UserType.students),
-                            onTap: () {
-                              setState(() {
-                                selectedUserType = UserType.students;
-                              });
-                            },
-                          ),
-                        ),
-                        Expanded(
-                          child: ListTile(
-                            title: Text(
-                              'Teacher',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: AppTheme.getTextColor(context),
-                              ),
-                            ),
-                            leading: Radio<UserType>(value: UserType.teachers),
-                            onTap: () {
-                              setState(() {
-                                selectedUserType = UserType.teachers;
-                              });
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Basic Information
-                  Text(
-                    'Basic Information',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.getTextColor(context),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  CustomTextField(
-                    controller: emailController,
-                    labelText: 'Email',
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Email is required';
-                      }
-                      if (!RegExp(
-                        r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                      ).hasMatch(value)) {
-                        return 'Please enter a valid email';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  CustomTextField(
-                    controller: passwordController,
-                    labelText: 'Password',
-                    obscureText: true,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Password is required';
-                      }
-                      if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  CustomTextField(
-                    controller: fullNameController,
-                    labelText: 'Full Name',
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Full name is required';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  CustomTextField(
-                    controller: contactController,
-                    labelText: 'Contact Number',
-                    keyboardType: TextInputType.phone,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  CustomTextField(
-                    controller: emergencyController,
-                    labelText: 'Emergency Contact',
-                    keyboardType: TextInputType.phone,
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Role-specific Information
-                  if (selectedUserType == UserType.teachers) ...[
-                    Text(
-                      'Teacher Information',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.getTextColor(context),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    CustomTextField(
-                      controller: departmentController,
-                      labelText: 'Department',
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Department is required for teachers';
-                        }
-                        return null;
-                      },
-                    ),
-                  ] else ...[
-                    Text(
-                      'Student Information',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.getTextColor(context),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    CustomTextField(
-                      controller: studentIdController,
-                      labelText: 'Student ID',
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Student ID is required';
-                        }
-                        return null;
-                      },
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    DropdownButtonFormField<int>(
-                      initialValue: selectedYearLevel,
-                      decoration: const InputDecoration(
-                        labelText: 'Year Level',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: List.generate(4, (index) => index + 1)
-                          .map(
-                            (level) => DropdownMenuItem(
-                              value: level,
-                              child: Text('Year $level'),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedYearLevel = value;
-                        });
-                      },
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    CustomTextField(
-                      controller: sectionController,
-                      labelText: 'Section',
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    CustomTextField(
-                      controller: courseController,
-                      labelText: 'Course',
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          );
-        },
+  ) async {
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (context) => const CreateUserScreen(),
       ),
-      actions: [
-        DialogAction.cancel(context: context),
-        DialogAction.save(
-          onPressed: () async {
-            if (formKey.currentState!.validate()) {
-              Navigator.of(context).pop();
-
-              final currentUser = ref.read(authProvider).user;
-              if (currentUser == null) return;
-
-              await notifier.createUser(
-                email: emailController.text,
-                password: passwordController.text,
-                fullName: fullNameController.text,
-                contactNumber: contactController.text,
-                emergencyContactNumber: emergencyController.text,
-                userType: selectedUserType,
-                createdBy: currentUser.userId,
-                department: selectedUserType == UserType.teachers
-                    ? departmentController.text
-                    : null,
-                studentId: selectedUserType == UserType.students
-                    ? studentIdController.text
-                    : null,
-                yearLevel: selectedUserType == UserType.students
-                    ? selectedYearLevel
-                    : null,
-                section: selectedUserType == UserType.students
-                    ? sectionController.text
-                    : null,
-                course: selectedUserType == UserType.students
-                    ? courseController.text
-                    : null,
-              );
-
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('User created successfully!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            }
-          },
-        ),
-      ],
     );
+
+    // Reload users if creation was successful
+    if (result == true && mounted) {
+      notifier.loadUsers();
+    }
   }
 
   void _showEditUserDialog(

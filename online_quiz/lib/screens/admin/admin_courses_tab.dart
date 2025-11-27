@@ -8,6 +8,7 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/dialog.dart';
 import '../../widgets/empty_state_widget.dart';
+import 'create_course_screen.dart';
 
 class AdminCoursesTab extends ConsumerStatefulWidget {
   const AdminCoursesTab({super.key});
@@ -88,7 +89,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showCreateCourseDialog(context, courseNotifier),
+        onPressed: () => _navigateToCreateCourse(context, courseNotifier),
         icon: const Icon(Icons.add),
         label: const Text('Add Course'),
         backgroundColor: AppTheme.primaryColor,
@@ -421,7 +422,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
             ? 'No courses match your search criteria'
             : 'Start by adding your first course',
         action: ElevatedButton.icon(
-          onPressed: () => _showCreateCourseDialog(context, notifier),
+          onPressed: () => _navigateToCreateCourse(context, notifier),
           icon: const Icon(Icons.add),
           label: const Text('Add Course'),
         ),
@@ -751,297 +752,20 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
     }
   }
 
-  void _showCreateCourseDialog(BuildContext context, CourseNotifier notifier) {
-    final codeController = TextEditingController();
-    final nameController = TextEditingController();
-    final categoryController = TextEditingController();
-    final sectionController = TextEditingController();
-
-    int? selectedInstructorId;
-    String selectedStatus = 'Active';
-
-    final formKey = GlobalKey<FormState>();
-
-    AppDialog.show(
-      context: context,
-      title: 'Add New Course',
-      type: DialogType.custom,
-      maxWidth: 600,
-      content: StatefulBuilder(
-        builder: (context, setState) {
-          return Form(
-            key: formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Basic Information
-                  Text(
-                    'Course Information',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.getTextColor(context),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  CustomTextField(
-                    controller: codeController,
-                    labelText: 'Course Code',
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Course code is required';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  CustomTextField(
-                    controller: nameController,
-                    labelText: 'Course Name',
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Course name is required';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  CustomTextField(
-                    controller: categoryController,
-                    labelText: 'Category (Optional)',
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Instructor Assignment
-                  Text(
-                    'Instructor & Section Assignment',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.getTextColor(context),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  DropdownButtonFormField<int>(
-                    decoration: const InputDecoration(
-                      labelText: 'Select Instructor',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: _teachers
-                        .map(
-                          (teacher) => DropdownMenuItem(
-                            value: teacher.userId,
-                            child: Text(
-                              teacher.fullName,
-                              style: TextStyle(fontSize: 12),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedInstructorId = value;
-                      });
-                    },
-                    validator: (value) {
-                      if (value == null) {
-                        return 'Please select an instructor';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  _availableSections.isEmpty
-                      ? const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Row(
-                            children: [
-                              SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                              SizedBox(width: 12),
-                              Text('Loading available sections...'),
-                            ],
-                          ),
-                        )
-                      : DropdownButtonFormField<String>(
-                          decoration: const InputDecoration(
-                            labelText: 'Section',
-                            border: OutlineInputBorder(),
-                            helperText: 'Sections from Student records',
-                          ),
-                          items: _availableSections
-                              .map(
-                                (section) => DropdownMenuItem(
-                                  value: section,
-                                  child: Text(
-                                    section,
-                                    style: const TextStyle(fontSize: 12),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              sectionController.text = value ?? '';
-                            });
-                          },
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Section is required';
-                            }
-                            return null;
-                          },
-                        ),
-
-                  const SizedBox(height: 20),
-
-                  // Status Selection
-                  Text(
-                    'Status',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.getTextColor(context),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedStatus,
-                    decoration: const InputDecoration(
-                      labelText: 'Status',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'Active',
-                        child: Text(
-                          'Active',
-                          style: TextStyle(fontSize: 12),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Inactive',
-                        child: Text(
-                          'Inactive',
-                          style: TextStyle(fontSize: 12),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Archived',
-                        child: Text(
-                          'Archived',
-                          style: TextStyle(fontSize: 12),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        selectedStatus = value!;
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
+  Future<void> _navigateToCreateCourse(
+    BuildContext context,
+    CourseNotifier notifier,
+  ) async {
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (context) => const CreateCourseScreen(),
       ),
-      actions: [
-        DialogAction.cancel(context: context),
-        DialogAction.save(
-          onPressed: () async {
-            if (formKey.currentState!.validate()) {
-              Navigator.of(context).pop();
-
-              // Show loading dialog
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => const Center(
-                  child: Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(20.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          CircularProgressIndicator(),
-                          SizedBox(height: 16),
-                          Text('Creating course...'),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-
-              final success = await notifier.createCourse(
-                code: codeController.text,
-                name: nameController.text,
-                instructorUserId: selectedInstructorId!,
-                category: categoryController.text.isNotEmpty
-                    ? categoryController.text
-                    : null,
-                section: sectionController.text.trim(),
-                status: selectedStatus,
-                createdBy: 1, // Admin user ID
-              );
-
-              if (context.mounted) {
-                // Close loading dialog
-                Navigator.of(context).pop();
-
-                if (success) {
-                  // Reload courses
-                  await notifier.loadAllCourses();
-
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Course created successfully!'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  }
-                } else {
-                  final courseState = ref.read(courseProvider);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          courseState.error ?? 'Failed to create course',
-                        ),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              }
-            }
-          },
-        ),
-      ],
     );
+
+    // Reload courses if creation was successful
+    if (result == true && mounted) {
+      await notifier.loadAllCourses();
+    }
   }
 
   void _showEditCourseDialog(
