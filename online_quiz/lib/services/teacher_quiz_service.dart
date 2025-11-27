@@ -1,10 +1,14 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/quiz.dart';
 import '../models/question.dart';
 import '../models/choice.dart';
+import '../models/course.dart';
+import 'quiz_notification_service.dart';
 
 class TeacherQuizService {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final QuizNotificationService _notificationService = QuizNotificationService();
 
   /// Create a new quiz
   Future<Quiz> createQuiz({
@@ -439,6 +443,35 @@ class TeacherQuizService {
               isCorrect: choices[j]['isCorrect'],
               order: j + 1,
             );
+          }
+        }
+      }
+
+      // 3. If quiz is being published, send notifications to enrolled students
+      if (isPublished == true && quiz.isPublished) {
+        try {
+          // Get course information
+          final courseResponse = await _supabase
+              .from('Course')
+              .select('*')
+              .eq('CourseId', quiz.courseId)
+              .single();
+
+          final course = Course.fromJson(courseResponse);
+
+          // Send new quiz notification
+          await _notificationService.notifyNewQuiz(
+            quiz: quiz,
+            course: course,
+          );
+
+          if (kDebugMode) {
+            debugPrint('Sent new quiz notification for: ${quiz.title}');
+          }
+        } catch (e) {
+          // Don't fail the update if notification fails
+          if (kDebugMode) {
+            debugPrint('Failed to send quiz notification: $e');
           }
         }
       }

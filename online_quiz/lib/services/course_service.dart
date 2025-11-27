@@ -7,10 +7,12 @@ import '../models/user.dart' as app_user;
 import '../models/student.dart';
 import '../models/activity_log.dart';
 import 'activity_log_service.dart';
+import 'quiz_notification_service.dart';
 
 class CourseService {
   final SupabaseClient _supabase = Supabase.instance.client;
   final ActivityLogService _activityLog = ActivityLogService();
+  final QuizNotificationService _notificationService = QuizNotificationService();
 
   // Get all courses a student is enrolled in
   Future<List<Course>> getEnrolledCourses(int userId) async {
@@ -736,6 +738,27 @@ class CourseService {
         );
       } catch (e) {
         debugPrint('Failed to log enrollment: $e');
+      }
+
+      // Send enrollment notification to student
+      try {
+        final courseResponse = await _supabase
+            .from('Course')
+            .select('*')
+            .eq('CourseId', courseId)
+            .single();
+
+        final course = Course.fromJson(courseResponse);
+
+        await _notificationService.notifyEnrollment(
+          studentId: userId,
+          course: course,
+        );
+
+        debugPrint('Sent enrollment notification to student ID: $userId');
+      } catch (e) {
+        // Don't fail enrollment if notification fails
+        debugPrint('Failed to send enrollment notification: $e');
       }
 
       return enrollment;

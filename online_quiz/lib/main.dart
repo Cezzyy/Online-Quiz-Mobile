@@ -12,6 +12,7 @@ import 'providers/auth_provider.dart';
 import 'providers/settings_provider.dart';
 import 'services/local_notification_service.dart';
 import 'services/notification_navigation_service.dart';
+import 'services/deadline_reminder_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'config/supabase_config.dart';
 
@@ -39,6 +40,9 @@ void main() async {
 
   // Initialize Local Notification Service
   await LocalNotificationService().initialize();
+
+  // Start deadline reminder service for quiz notifications
+  DeadlineReminderService().startPeriodicChecks();
 
   // Initialize and precompute themes at app startup for instant switching
   AppTheme.initialize();
