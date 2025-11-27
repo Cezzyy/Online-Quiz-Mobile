@@ -25,7 +25,9 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
       final currentUser = ref.read(currentUserProvider);
       final userRole = ref.read(currentUserRoleProvider);
       if (currentUser != null) {
-        ref.read(courseProvider.notifier).initializeCourses(currentUser.userId, userRole: userRole);
+        ref
+            .read(courseProvider.notifier)
+            .initializeCourses(currentUser.userId, userRole: userRole);
       }
     });
   }
@@ -34,27 +36,22 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
   Widget build(BuildContext context) {
     final courseState = ref.watch(courseProvider);
     final currentUser = ref.watch(currentUserProvider);
-    
+
     if (currentUser == null) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    // Get teacher's courses from Supabase
-    final teacherCourses = courseState.allCourses;
-    
+    // Get teacher's courses from Supabase and filter to only show active courses
+    final allTeacherCourses = courseState.allCourses;
+    final teacherCourses = allTeacherCourses
+        .where((course) => course.isActive)
+        .toList();
+
     // Show loading indicator while courses are being loaded
     if (courseState.isLoading && teacherCourses.isEmpty) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    
+
     // Show error if there's an error
     if (courseState.error != null) {
       return Scaffold(
@@ -82,7 +79,12 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
               ElevatedButton(
                 onPressed: () {
                   final userRole = ref.read(currentUserRoleProvider);
-                  ref.read(courseProvider.notifier).initializeCourses(currentUser.userId, userRole: userRole);
+                  ref
+                      .read(courseProvider.notifier)
+                      .initializeCourses(
+                        currentUser.userId,
+                        userRole: userRole,
+                      );
                 },
                 child: const Text('Retry'),
               ),
@@ -91,7 +93,7 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
         ),
       );
     }
-    
+
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -102,10 +104,10 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
             // Header Section
             _buildHeader(context, teacherCourses),
             const SizedBox(height: 30),
-            
+
             // Courses List
             Expanded(
-              child: teacherCourses.isEmpty 
+              child: teacherCourses.isEmpty
                   ? _buildEmptyState()
                   : _buildCoursesList(context, teacherCourses),
             ),
@@ -114,42 +116,47 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
       ),
     );
   }
-  
+
   Widget _buildHeader(BuildContext context, List<Course> teacherCourses) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-           'My Courses',
-           style: TextStyle(
-             fontSize: 28,
-             fontWeight: FontWeight.bold,
-             color: Theme.of(context).colorScheme.onSurface,
-           ),
-         ),
-         const SizedBox(height: 8),
-         Text(
-           'You are teaching ${teacherCourses.length} ${teacherCourses.length == 1 ? 'course' : 'courses'}',
-           style: TextStyle(
-             fontSize: 16,
-             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-           ),
-         ),
+          'My Courses',
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'You are teaching ${teacherCourses.length} ${teacherCourses.length == 1 ? 'course' : 'courses'}',
+          style: TextStyle(
+            fontSize: 16,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
       ],
     );
   }
-  
+
   Widget _buildEmptyState() {
     return EmptyStateWidget(
       icon: Icons.school_outlined,
       title: 'No Classes Assigned',
-      message: 'You don\'t have any classes assigned yet.\nContact your administrator to get courses assigned.',
+      message:
+          'You don\'t have any classes assigned yet.\nContact your administrator to get courses assigned.',
       action: ElevatedButton(
         onPressed: () {
           final currentUser = ref.read(currentUserProvider);
           final userRole = ref.read(currentUserRoleProvider);
           if (currentUser != null) {
-            ref.read(courseProvider.notifier).initializeCourses(currentUser.userId, userRole: userRole);
+            ref
+                .read(courseProvider.notifier)
+                .initializeCourses(currentUser.userId, userRole: userRole);
           }
         },
         child: const Text('Refresh'),
@@ -169,18 +176,15 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
       },
     );
   }
-  
+
   Widget _buildCourseCard(BuildContext context, Course course) {
     // Data will be loaded dynamically in the UI
-    
+
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Theme.of(context).dividerColor,
-          width: 1,
-        ),
+        border: Border.all(color: Theme.of(context).dividerColor, width: 1),
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
@@ -218,10 +222,10 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
                       Text(
                         course.name,
                         style: TextStyle(
-                           fontSize: 20,
-                           fontWeight: FontWeight.bold,
-                           color: Theme.of(context).colorScheme.onSurface,
-                         ),
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -229,10 +233,12 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
                       Text(
                         course.code,
                         style: TextStyle(
-                           fontSize: 16,
-                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                           fontWeight: FontWeight.w500,
-                         ),
+                          fontSize: 16,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       if (course.category != null) ...[
                         const SizedBox(height: 2),
@@ -240,7 +246,9 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
                           'Category: ${course.category}',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                       ],
@@ -251,13 +259,20 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
                             'Status: ',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
-                              color: _getStatusColor(course.status).withValues(alpha: 0.1),
+                              color: _getStatusColor(
+                                course.status,
+                              ).withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -277,7 +292,7 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
               ],
             ),
             const SizedBox(height: 20),
-            
+
             // Statistics Row - Load dynamically from Supabase
             FutureBuilder<Map<String, int>>(
               future: _getCourseStatistics(course.courseId),
@@ -285,15 +300,16 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
                 final enrollmentCount = snapshot.data?['enrollments'] ?? 0;
                 final quizCount = snapshot.data?['quizzes'] ?? 0;
                 final submissionCount = snapshot.data?['submissions'] ?? 0;
-                
+
                 return Row(
                   children: [
                     Expanded(
                       child: StatCard(
                         icon: Icons.people_outline,
                         title: 'Students',
-                        value: snapshot.connectionState == ConnectionState.waiting 
-                            ? '...' 
+                        value:
+                            snapshot.connectionState == ConnectionState.waiting
+                            ? '...'
                             : enrollmentCount.toString(),
                         color: AppTheme.successColor,
                         height: 150,
@@ -304,8 +320,9 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
                       child: StatCard(
                         icon: Icons.quiz_outlined,
                         title: 'Quizzes',
-                        value: snapshot.connectionState == ConnectionState.waiting 
-                            ? '...' 
+                        value:
+                            snapshot.connectionState == ConnectionState.waiting
+                            ? '...'
                             : quizCount.toString(),
                         color: AppTheme.getQuizTypeColor('quiz'),
                         height: 150,
@@ -316,8 +333,9 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
                       child: StatCard(
                         icon: Icons.assignment_turned_in_outlined,
                         title: 'Submissions',
-                        value: snapshot.connectionState == ConnectionState.waiting 
-                            ? '...' 
+                        value:
+                            snapshot.connectionState == ConnectionState.waiting
+                            ? '...'
                             : submissionCount.toString(),
                         color: AppTheme.getQuizTypeColor('system'),
                         height: 150,
@@ -328,12 +346,12 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
               },
             ),
             const SizedBox(height: 20),
-            
+
             // Recent Activity
             _buildRecentActivity(context, course),
-            
+
             const SizedBox(height: 16),
-            
+
             // Action Buttons
             Row(
               children: [
@@ -343,10 +361,10 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
                     icon: const Icon(Icons.people, size: 18),
                     label: const Text('View Students'),
                     style: OutlinedButton.styleFrom(
-                       foregroundColor: Theme.of(context).colorScheme.onSurface,
-                       side: BorderSide(color: Theme.of(context).dividerColor),
-                       padding: const EdgeInsets.symmetric(vertical: 12),
-                     ),
+                      foregroundColor: Theme.of(context).colorScheme.onSurface,
+                      side: BorderSide(color: Theme.of(context).dividerColor),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -369,22 +387,20 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
       ),
     );
   }
-  
 
-  
   Widget _buildRecentActivity(BuildContext context, Course course) {
     // Simplified: Just show that quiz activity exists
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-           'Recent Activity',
-           style: TextStyle(
-             fontSize: 16,
-             fontWeight: FontWeight.w600,
-             color: Theme.of(context).colorScheme.onSurface,
-           ),
-         ),
+          'Recent Activity',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(16),
@@ -398,21 +414,17 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
           ),
           child: Row(
             children: [
-              Icon(
-                Icons.trending_up,
-                color: AppTheme.successColor,
-                size: 20,
-              ),
+              Icon(Icons.trending_up, color: AppTheme.successColor, size: 20),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                   'View detailed activity in Results tab',
-                   style: TextStyle(
-                     color: Theme.of(context).colorScheme.onSurface,
-                     fontSize: 14,
-                     fontWeight: FontWeight.w500,
-                   ),
-                 ),
+                  'View detailed activity in Results tab',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
             ],
           ),
@@ -420,31 +432,37 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
       ],
     );
   }
-  
+
   Future<Map<String, int>> _getCourseStatistics(int courseId) async {
     try {
-      final enrollments = await ref.read(courseProvider.notifier).getEnrolledStudentsWithDetails(courseId);
-      final quizzes = await ref.read(courseProvider.notifier).getCourseQuizzes(courseId);
-      
+      final enrollments = await ref
+          .read(courseProvider.notifier)
+          .getEnrolledStudentsWithDetails(courseId);
+      final quizzes = await ref
+          .read(courseProvider.notifier)
+          .getCourseQuizzes(courseId);
+
       int totalSubmissions = 0;
       for (final quiz in quizzes) {
-        final attempts = await ref.read(courseProvider.notifier).getQuizAttempts(quiz.quizId);
-        totalSubmissions += attempts.where((attempt) => attempt.submittedAt != null).length;
+        final attempts = await ref
+            .read(courseProvider.notifier)
+            .getQuizAttempts(quiz.quizId);
+        totalSubmissions += attempts
+            .where((attempt) => attempt.submittedAt != null)
+            .length;
       }
-      
+
       return {
         'enrollments': enrollments.length,
         'quizzes': quizzes.length,
         'submissions': totalSubmissions,
       };
     } catch (e) {
-      return {
-        'enrollments': 0,
-        'quizzes': 0,
-        'submissions': 0,
-      };
+      return {'enrollments': 0, 'quizzes': 0, 'submissions': 0};
     }
-  }  void _viewStudents(BuildContext context, Course course) {
+  }
+
+  void _viewStudents(BuildContext context, Course course) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -452,7 +470,7 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
       ),
     );
   }
-  
+
   void _manageCourse(BuildContext context, Course course) {
     Navigator.push(
       context,
@@ -461,7 +479,7 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
       ),
     );
   }
-  
+
   Color _getCourseColor(String courseCode) {
     return AppTheme.getCourseColor(courseCode);
   }

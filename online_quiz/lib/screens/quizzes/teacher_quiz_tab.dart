@@ -22,17 +22,17 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
   List<Quiz> courseQuizzes = [];
   bool isLoading = false;
   bool isRefreshing = false;
-  
+
   // Pagination variables
   int currentPage = 0;
   final int itemsPerPage = 10;
-  
+
   List<Quiz> get paginatedQuizzes {
     final startIndex = currentPage * itemsPerPage;
     final endIndex = (startIndex + itemsPerPage).clamp(0, courseQuizzes.length);
     return courseQuizzes.sublist(startIndex, endIndex);
   }
-  
+
   int get totalPages => (courseQuizzes.length / itemsPerPage).ceil();
   bool get hasNextPage => currentPage < totalPages - 1;
   bool get hasPreviousPage => currentPage > 0;
@@ -44,7 +44,9 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
       final currentUser = ref.read(currentUserProvider);
       final userRole = ref.read(currentUserRoleProvider);
       if (currentUser != null) {
-        ref.read(courseProvider.notifier).initializeCourses(currentUser.userId, userRole: userRole);
+        ref
+            .read(courseProvider.notifier)
+            .initializeCourses(currentUser.userId, userRole: userRole);
       }
     });
   }
@@ -56,7 +58,7 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
     });
 
     await ref.read(quizProvider.notifier).loadQuizzesForCourse(course.courseId);
-    
+
     setState(() {
       courseQuizzes = ref.read(quizProvider).allQuizzes;
       currentPage = 0; // Reset to first page when loading new course
@@ -66,13 +68,15 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
 
   Future<void> _refreshQuizzes() async {
     if (selectedCourse == null) return;
-    
+
     setState(() {
       isRefreshing = true;
     });
-    
-    await ref.read(quizProvider.notifier).loadQuizzesForCourse(selectedCourse!.courseId);
-    
+
+    await ref
+        .read(quizProvider.notifier)
+        .loadQuizzesForCourse(selectedCourse!.courseId);
+
     setState(() {
       courseQuizzes = ref.read(quizProvider).allQuizzes;
       currentPage = 0; // Reset to first page after refresh
@@ -123,7 +127,9 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Quiz'),
-        content: Text('Are you sure you want to delete "${quiz.title}"? This action cannot be undone.'),
+        content: Text(
+          'Are you sure you want to delete "${quiz.title}"? This action cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -132,26 +138,34 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              
+
               // Delete quiz using provider
-              final success = await ref.read(quizProvider.notifier).deleteQuiz(quiz.quizId);
-              
+              final success = await ref
+                  .read(quizProvider.notifier)
+                  .deleteQuiz(quiz.quizId);
+
               if (success) {
                 setState(() {
                   courseQuizzes = ref.read(quizProvider).allQuizzes;
                   currentPage = 0; // Reset to first page
                 });
-                
+
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Quiz "${quiz.title}" deleted successfully')),
+                    SnackBar(
+                      content: Text(
+                        'Quiz "${quiz.title}" deleted successfully',
+                      ),
+                    ),
                   );
                 }
               } else {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(ref.read(quizProvider).error ?? 'Failed to delete quiz'),
+                      content: Text(
+                        ref.read(quizProvider).error ?? 'Failed to delete quiz',
+                      ),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -170,10 +184,8 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CreateQuizScreen(
-          course: selectedCourse!,
-          quiz: quiz,
-        ),
+        builder: (context) =>
+            CreateQuizScreen(course: selectedCourse!, quiz: quiz),
       ),
     ).then((_) {
       // Refresh the quiz list when returning from creation screen
@@ -185,24 +197,24 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
     final courseState = ref.watch(courseProvider);
-    
+
     if (currentUser == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (courseState.isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final teacherCourses = courseState.allCourses;
+    // Filter to only show active courses
+    final allCourses = courseState.allCourses;
+    final teacherCourses = allCourses
+        .where((course) => course.isActive)
+        .toList();
 
     return Scaffold(
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -278,7 +290,10 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
                   Expanded(
                     child: StatCard(
                       title: 'Published',
-                      value: courseQuizzes.where((q) => q.isPublished).length.toString(),
+                      value: courseQuizzes
+                          .where((q) => q.isPublished)
+                          .length
+                          .toString(),
                       icon: Icons.publish,
                       color: Colors.green,
                     ),
@@ -287,7 +302,10 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
                   Expanded(
                     child: StatCard(
                       title: 'Draft',
-                      value: courseQuizzes.where((q) => !q.isPublished).length.toString(),
+                      value: courseQuizzes
+                          .where((q) => !q.isPublished)
+                          .length
+                          .toString(),
                       icon: Icons.edit_document,
                       color: Colors.orange,
                     ),
@@ -311,7 +329,7 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
                   const SizedBox(width: 12),
                   OutlinedButton.icon(
                     onPressed: isRefreshing ? null : _refreshQuizzes,
-                    icon: isRefreshing 
+                    icon: isRefreshing
                         ? const SizedBox(
                             width: 16,
                             height: 16,
@@ -332,12 +350,16 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
                       icon: Icons.class_outlined,
                       title: 'No Classes Assigned',
                       message: 'You don\'t have any classes assigned yet.',
-                      subtitle: 'Contact your administrator to get courses assigned.',
+                      subtitle:
+                          'Contact your administrator to get courses assigned.',
                       showInfoCard: true,
-                      infoCardText: 'If you recently received assignments, refresh to load them.',
+                      infoCardText:
+                          'If you recently received assignments, refresh to load them.',
                       action: ElevatedButton(
                         onPressed: () async {
-                          await ref.read(courseProvider.notifier).initializeCourses(currentUser.userId);
+                          await ref
+                              .read(courseProvider.notifier)
+                              .initializeCourses(currentUser.userId);
                           if (mounted) {
                             setState(() {});
                           }
@@ -346,246 +368,296 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
                       ),
                     )
                   : selectedCourse == null
-                      ? EmptyStateWidget(
-                          icon: Icons.school,
-                          title: 'Select a Course',
-                          message: 'Choose a course from the dropdown above to manage its quizzes.',
-                        )
-                      : courseQuizzes.isEmpty
-                          ? EmptyStateWidget(
-                              icon: Icons.quiz_outlined,
-                              title: 'No Quizzes Yet',
-                              message: 'Create your first quiz for ${selectedCourse!.name}.',
-                              action: ElevatedButton.icon(
-                                onPressed: _showCreateQuizDialog,
-                                icon: const Icon(Icons.add),
-                                label: const Text('Create Quiz'),
-                              ),
-                            )
-                          : isRefreshing
-                          ? const Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  CircularProgressIndicator(),
-                                  SizedBox(height: 16),
-                                  Text('Refreshing quizzes...'),
-                                ],
-                              ),
-                            )
-                          : Column(
+                  ? EmptyStateWidget(
+                      icon: Icons.school,
+                      title: 'Select a Course',
+                      message:
+                          'Choose a course from the dropdown above to manage its quizzes.',
+                    )
+                  : courseQuizzes.isEmpty
+                  ? EmptyStateWidget(
+                      icon: Icons.quiz_outlined,
+                      title: 'No Quizzes Yet',
+                      message:
+                          'Create your first quiz for ${selectedCourse!.name}.',
+                      action: ElevatedButton.icon(
+                        onPressed: _showCreateQuizDialog,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Create Quiz'),
+                      ),
+                    )
+                  : isRefreshing
+                  ? const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text('Refreshing quizzes...'),
+                        ],
+                      ),
+                    )
+                  : Column(
+                      children: [
+                        // Pagination info
+                        if (courseQuizzes.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                // Pagination info
-                                if (courseQuizzes.isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 16),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          'Showing ${currentPage * itemsPerPage + 1}-${((currentPage + 1) * itemsPerPage).clamp(0, courseQuizzes.length)} of ${courseQuizzes.length} quizzes',
-                                          style: Theme.of(context).textTheme.bodySmall,
-                                        ),
-                                        if (totalPages > 1)
-                                          Text(
-                                            'Page ${currentPage + 1} of $totalPages',
-                                            style: Theme.of(context).textTheme.bodySmall,
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                
-                                // Quiz list
-                                Expanded(
-                                  child: ListView.builder(
-                                    itemCount: paginatedQuizzes.length,
-                                    itemBuilder: (context, index) {
-                                      final quiz = paginatedQuizzes[index];
-                                      // Question count will be fetched when needed
-                                      
-                                      return Card(
-                                        margin: const EdgeInsets.only(bottom: 12),
-                                        child: ListTile(
-                                          contentPadding: const EdgeInsets.all(16),
-                                          leading: CircleAvatar(
-                                            backgroundColor: quiz.isPublished 
-                                                ? Colors.green.withValues(alpha: 0.1)
-                                                : Colors.orange.withValues(alpha: 0.1),
-                                            child: Icon(
-                                             quiz.isPublished ? Icons.publish : Icons.edit_document,
-                                             color: quiz.isPublished ? Colors.green : Colors.orange,
-                                           ),
-                                          ),
-                                          title: Text(
-                                            quiz.title,
-                                            style: const TextStyle(fontWeight: FontWeight.w600),
-                                          ),
-                                          subtitle: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              const SizedBox(height: 4),
-                                              FutureBuilder<int>(
-                                                future: ref.read(quizProvider.notifier).getQuestionCount(quiz.quizId),
-                                                builder: (context, snapshot) {
-                                                  final count = snapshot.data ?? 0;
-                                                  return Text('$count questions');
-                                                },
-                                              ),
-                                              if (quiz.dueAt != null)
-                                                Text(
-                                                  'Due: ${_formatDate(quiz.dueAt!)}',
-                                                  style: TextStyle(
-                                                    color: quiz.isOverdue ? Colors.red : null,
-                                                  ),
-                                                ),
-                                              if (quiz.timeLimitMinutes != null)
-                                                Text('Time limit: ${quiz.timeLimitMinutes} minutes'),
-                                            ],
-                                          ),
-                                          trailing: PopupMenuButton<String>(
-                                            onSelected: (value) {
-                                              switch (value) {
-                                                case 'continue_draft':
-                                                  _continueDraft(quiz);
-                                                  break;
-                                                case 'edit':
-                                                  _showEditQuizDialog(quiz);
-                                                  break;
-                                                case 'toggle_publish':
-                                                  _togglePublishStatus(quiz);
-                                                  break;
-                                                case 'delete':
-                                                  _deleteQuiz(quiz);
-                                                  break;
-                                              }
-                                            },
-                                            itemBuilder: (context) => [
-                                              if (!quiz.isPublished)
-                                                const PopupMenuItem(
-                                                  value: 'continue_draft',
-                                                  child: Row(
-                                                    children: [
-                                                      Icon(Icons.edit_note, color: Colors.blue),
-                                                      SizedBox(width: 8),
-                                                      Text('Continue Draft', style: TextStyle(color: Colors.blue)),
-                                                    ],
-                                                  ),
-                                                ),
-                                              const PopupMenuItem(
-                                                value: 'edit',
-                                                child: Row(
-                                                  children: [
-                                                    Icon(Icons.edit),
-                                                    SizedBox(width: 8),
-                                                    Text('Edit'),
-                                                  ],
-                                                ),
-                                              ),
-                                              PopupMenuItem(
-                                                value: 'toggle_publish',
-                                                child: Row(
-                                                  children: [
-                                                    Icon(quiz.isPublished ? Icons.unpublished : Icons.publish),
-                                                    const SizedBox(width: 8),
-                                                    Text(quiz.isPublished ? 'Unpublish' : 'Publish'),
-                                                  ],
-                                                ),
-                                              ),
-                                              const PopupMenuItem(
-                                                value: 'delete',
-                                                child: Row(
-                                                  children: [
-                                                    Icon(Icons.delete, color: Colors.red),
-                                                    SizedBox(width: 8),
-                                                    Text('Delete', style: TextStyle(color: Colors.red)),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
+                                Text(
+                                  'Showing ${currentPage * itemsPerPage + 1}-${((currentPage + 1) * itemsPerPage).clamp(0, courseQuizzes.length)} of ${courseQuizzes.length} quizzes',
+                                  style: Theme.of(context).textTheme.bodySmall,
                                 ),
-                                
-                                // Pagination controls
                                 if (totalPages > 1)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        IconButton(
-                                          onPressed: hasPreviousPage
-                                              ? () {
-                                                  setState(() {
-                                                    currentPage--;
-                                                  });
-                                                }
-                                              : null,
-                                          icon: const Icon(Icons.chevron_left),
-                                          tooltip: 'Previous page',
-                                        ),
-                                        const SizedBox(width: 8),
-                                        ...List.generate(totalPages, (index) {
-                                          return Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                                            child: InkWell(
-                                              onTap: () {
-                                                setState(() {
-                                                  currentPage = index;
-                                                });
-                                              },
-                                              borderRadius: BorderRadius.circular(8),
-                                              child: Container(
-                                                width: 40,
-                                                height: 40,
-                                                decoration: BoxDecoration(
-                                                  color: currentPage == index
-                                                      ? Theme.of(context).primaryColor
-                                                      : Colors.transparent,
-                                                  borderRadius: BorderRadius.circular(8),
-                                                  border: Border.all(
-                                                    color: currentPage == index
-                                                        ? Theme.of(context).primaryColor
-                                                        : Colors.grey.withValues(alpha: 0.3),
-                                                  ),
-                                                ),
-                                                child: Center(
-                                                  child: Text(
-                                                    '${index + 1}',
-                                                    style: TextStyle(
-                                                      color: currentPage == index
-                                                          ? Colors.white
-                                                          : Theme.of(context).textTheme.bodyMedium?.color,
-                                                      fontWeight: currentPage == index
-                                                          ? FontWeight.bold
-                                                          : FontWeight.normal,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          );
-                                        }),
-                                        const SizedBox(width: 8),
-                                        IconButton(
-                                          onPressed: hasNextPage
-                                              ? () {
-                                                  setState(() {
-                                                    currentPage++;
-                                                  });
-                                                }
-                                              : null,
-                                          icon: const Icon(Icons.chevron_right),
-                                          tooltip: 'Next page',
-                                        ),
-                                      ],
-                                    ),
+                                  Text(
+                                    'Page ${currentPage + 1} of $totalPages',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
                                   ),
                               ],
                             ),
+                          ),
+
+                        // Quiz list
+                        Expanded(
+                          child: ListView.builder(
+                            itemCount: paginatedQuizzes.length,
+                            itemBuilder: (context, index) {
+                              final quiz = paginatedQuizzes[index];
+                              // Question count will be fetched when needed
+
+                              return Card(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                child: ListTile(
+                                  contentPadding: const EdgeInsets.all(16),
+                                  leading: CircleAvatar(
+                                    backgroundColor: quiz.isPublished
+                                        ? Colors.green.withValues(alpha: 0.1)
+                                        : Colors.orange.withValues(alpha: 0.1),
+                                    child: Icon(
+                                      quiz.isPublished
+                                          ? Icons.publish
+                                          : Icons.edit_document,
+                                      color: quiz.isPublished
+                                          ? Colors.green
+                                          : Colors.orange,
+                                    ),
+                                  ),
+                                  title: Text(
+                                    quiz.title,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  subtitle: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const SizedBox(height: 4),
+                                      FutureBuilder<int>(
+                                        future: ref
+                                            .read(quizProvider.notifier)
+                                            .getQuestionCount(quiz.quizId),
+                                        builder: (context, snapshot) {
+                                          final count = snapshot.data ?? 0;
+                                          return Text('$count questions');
+                                        },
+                                      ),
+                                      if (quiz.dueAt != null)
+                                        Text(
+                                          'Due: ${_formatDate(quiz.dueAt!)}',
+                                          style: TextStyle(
+                                            color: quiz.isOverdue
+                                                ? Colors.red
+                                                : null,
+                                          ),
+                                        ),
+                                      if (quiz.timeLimitMinutes != null)
+                                        Text(
+                                          'Time limit: ${quiz.timeLimitMinutes} minutes',
+                                        ),
+                                    ],
+                                  ),
+                                  trailing: PopupMenuButton<String>(
+                                    onSelected: (value) {
+                                      switch (value) {
+                                        case 'continue_draft':
+                                          _continueDraft(quiz);
+                                          break;
+                                        case 'edit':
+                                          _showEditQuizDialog(quiz);
+                                          break;
+                                        case 'toggle_publish':
+                                          _togglePublishStatus(quiz);
+                                          break;
+                                        case 'delete':
+                                          _deleteQuiz(quiz);
+                                          break;
+                                      }
+                                    },
+                                    itemBuilder: (context) => [
+                                      if (!quiz.isPublished)
+                                        const PopupMenuItem(
+                                          value: 'continue_draft',
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                Icons.edit_note,
+                                                color: Colors.blue,
+                                              ),
+                                              SizedBox(width: 8),
+                                              Text(
+                                                'Continue Draft',
+                                                style: TextStyle(
+                                                  color: Colors.blue,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      const PopupMenuItem(
+                                        value: 'edit',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.edit),
+                                            SizedBox(width: 8),
+                                            Text('Edit'),
+                                          ],
+                                        ),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'toggle_publish',
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              quiz.isPublished
+                                                  ? Icons.unpublished
+                                                  : Icons.publish,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              quiz.isPublished
+                                                  ? 'Unpublish'
+                                                  : 'Publish',
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const PopupMenuItem(
+                                        value: 'delete',
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.delete,
+                                              color: Colors.red,
+                                            ),
+                                            SizedBox(width: 8),
+                                            Text(
+                                              'Delete',
+                                              style: TextStyle(
+                                                color: Colors.red,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+
+                        // Pagination controls
+                        if (totalPages > 1)
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                IconButton(
+                                  onPressed: hasPreviousPage
+                                      ? () {
+                                          setState(() {
+                                            currentPage--;
+                                          });
+                                        }
+                                      : null,
+                                  icon: const Icon(Icons.chevron_left),
+                                  tooltip: 'Previous page',
+                                ),
+                                const SizedBox(width: 8),
+                                ...List.generate(totalPages, (index) {
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                    ),
+                                    child: InkWell(
+                                      onTap: () {
+                                        setState(() {
+                                          currentPage = index;
+                                        });
+                                      },
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Container(
+                                        width: 40,
+                                        height: 40,
+                                        decoration: BoxDecoration(
+                                          color: currentPage == index
+                                              ? Theme.of(context).primaryColor
+                                              : Colors.transparent,
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
+                                            color: currentPage == index
+                                                ? Theme.of(context).primaryColor
+                                                : Colors.grey.withValues(
+                                                    alpha: 0.3,
+                                                  ),
+                                          ),
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            '${index + 1}',
+                                            style: TextStyle(
+                                              color: currentPage == index
+                                                  ? Colors.white
+                                                  : Theme.of(context)
+                                                        .textTheme
+                                                        .bodyMedium
+                                                        ?.color,
+                                              fontWeight: currentPage == index
+                                                  ? FontWeight.bold
+                                                  : FontWeight.normal,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  onPressed: hasNextPage
+                                      ? () {
+                                          setState(() {
+                                            currentPage++;
+                                          });
+                                        }
+                                      : null,
+                                  icon: const Icon(Icons.chevron_right),
+                                  tooltip: 'Next page',
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
             ),
           ],
         ),
@@ -595,20 +667,19 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
 
   Future<void> _togglePublishStatus(Quiz quiz) async {
     // Toggle publish status using provider
-    final success = await ref.read(quizProvider.notifier).togglePublishQuiz(
-      quiz.quizId,
-      !quiz.isPublished,
-    );
-    
+    final success = await ref
+        .read(quizProvider.notifier)
+        .togglePublishQuiz(quiz.quizId, !quiz.isPublished);
+
     if (success) {
       setState(() {
         courseQuizzes = ref.read(quizProvider).allQuizzes;
         currentPage = 0; // Reset to first page
       });
     }
-    
+
     if (!mounted) return;
-    
+
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -620,7 +691,9 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(ref.read(quizProvider).error ?? 'Failed to toggle publish status'),
+          content: Text(
+            ref.read(quizProvider).error ?? 'Failed to toggle publish status',
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -636,10 +709,7 @@ class _CreateQuizDialog extends ConsumerStatefulWidget {
   final Course course;
   final VoidCallback onQuizCreated;
 
-  const _CreateQuizDialog({
-    required this.course,
-    required this.onQuizCreated,
-  });
+  const _CreateQuizDialog({required this.course, required this.onQuizCreated});
 
   @override
   ConsumerState<_CreateQuizDialog> createState() => _CreateQuizDialogState();
@@ -728,7 +798,9 @@ class _CreateQuizDialogState extends ConsumerState<_CreateQuizDialog> {
                     labelText: 'Due Date',
                     border: const OutlineInputBorder(),
                     suffixIcon: const Icon(Icons.calendar_today),
-                    errorText: _dueDate == null ? 'Please select a due date' : null,
+                    errorText: _dueDate == null
+                        ? 'Please select a due date'
+                        : null,
                   ),
                   child: Text(
                     _dueDate != null
@@ -746,10 +818,7 @@ class _CreateQuizDialogState extends ConsumerState<_CreateQuizDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        ElevatedButton(
-          onPressed: _createQuiz,
-          child: const Text('Create'),
-        ),
+        ElevatedButton(onPressed: _createQuiz, child: const Text('Create')),
       ],
     );
   }
@@ -760,41 +829,43 @@ class _CreateQuizDialogState extends ConsumerState<_CreateQuizDialog> {
       setState(() {}); // Trigger rebuild to show error
       return;
     }
-    
+
     if (_formKey.currentState!.validate()) {
       // Create the quiz using provider
-      final createdQuiz = await ref.read(quizProvider.notifier).createQuiz(
-        courseId: widget.course.courseId,
-        title: _titleController.text.trim(),
-        createdBy: widget.course.instructorUserId,
-        dueAt: _dueDate,
-        timeLimitMinutes: _selectedTimeLimit,
-        isPublished: false,
-      );
-      
+      final createdQuiz = await ref
+          .read(quizProvider.notifier)
+          .createQuiz(
+            courseId: widget.course.courseId,
+            title: _titleController.text.trim(),
+            createdBy: widget.course.instructorUserId,
+            dueAt: _dueDate,
+            timeLimitMinutes: _selectedTimeLimit,
+            isPublished: false,
+          );
+
       if (!mounted) return;
-      
+
       if (createdQuiz == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(ref.read(quizProvider).error ?? 'Failed to create quiz'),
+            content: Text(
+              ref.read(quizProvider).error ?? 'Failed to create quiz',
+            ),
             backgroundColor: Colors.red,
           ),
         );
         return;
       }
-      
+
       // Close the dialog and navigate
       Navigator.pop(context);
-      
+
       // Navigate to the quiz creation screen with the created quiz
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => CreateQuizScreen(
-            course: widget.course,
-            quiz: createdQuiz,
-          ),
+          builder: (context) =>
+              CreateQuizScreen(course: widget.course, quiz: createdQuiz),
         ),
       ).then((_) {
         // Refresh the quiz list when returning from creation screen
@@ -903,7 +974,8 @@ class _EditQuizDialogState extends ConsumerState<_EditQuizDialog> {
                 onTap: () async {
                   final date = await showDatePicker(
                     context: context,
-                    initialDate: _dueDate ?? DateTime.now().add(const Duration(days: 7)),
+                    initialDate:
+                        _dueDate ?? DateTime.now().add(const Duration(days: 7)),
                     firstDate: DateTime.now(),
                     lastDate: DateTime.now().add(const Duration(days: 365)),
                   );
@@ -918,7 +990,9 @@ class _EditQuizDialogState extends ConsumerState<_EditQuizDialog> {
                     labelText: 'Due Date',
                     border: const OutlineInputBorder(),
                     suffixIcon: const Icon(Icons.calendar_today),
-                    errorText: _dueDate == null ? 'Please select a due date' : null,
+                    errorText: _dueDate == null
+                        ? 'Please select a due date'
+                        : null,
                   ),
                   child: Text(
                     _dueDate != null
@@ -946,10 +1020,7 @@ class _EditQuizDialogState extends ConsumerState<_EditQuizDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        ElevatedButton(
-          onPressed: _updateQuiz,
-          child: const Text('Update'),
-        ),
+        ElevatedButton(onPressed: _updateQuiz, child: const Text('Update')),
       ],
     );
   }
@@ -960,29 +1031,37 @@ class _EditQuizDialogState extends ConsumerState<_EditQuizDialog> {
       setState(() {}); // Trigger rebuild to show error
       return;
     }
-    
+
     if (_formKey.currentState!.validate()) {
       // Update using provider
-      final success = await ref.read(quizProvider.notifier).updateQuiz(
-        quizId: widget.quiz.quizId,
-        title: _titleController.text.trim(),
-        dueAt: _dueDate,
-        timeLimitMinutes: _selectedTimeLimit,
-        isPublished: _isPublished,
-      );
-      
+      final success = await ref
+          .read(quizProvider.notifier)
+          .updateQuiz(
+            quizId: widget.quiz.quizId,
+            title: _titleController.text.trim(),
+            dueAt: _dueDate,
+            timeLimitMinutes: _selectedTimeLimit,
+            isPublished: _isPublished,
+          );
+
       if (!mounted) return;
-      
+
       if (success) {
         widget.onQuizUpdated();
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Quiz "${_titleController.text}" updated successfully')),
+          SnackBar(
+            content: Text(
+              'Quiz "${_titleController.text}" updated successfully',
+            ),
+          ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(ref.read(quizProvider).error ?? 'Failed to update quiz'),
+            content: Text(
+              ref.read(quizProvider).error ?? 'Failed to update quiz',
+            ),
             backgroundColor: Colors.red,
           ),
         );

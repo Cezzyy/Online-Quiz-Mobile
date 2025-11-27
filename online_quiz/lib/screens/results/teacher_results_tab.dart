@@ -19,7 +19,7 @@ class TeacherResultsTab extends ConsumerStatefulWidget {
 
 class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
   Course? _selectedCourse;
-  
+
   @override
   void initState() {
     super.initState();
@@ -51,9 +51,7 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
     }
 
     if (courseState.isLoading || quizState.isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (courseState.error != null) {
@@ -80,7 +78,9 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
                 courseState.error!,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -88,8 +88,15 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
               ElevatedButton(
                 onPressed: () {
                   final userRole = ref.read(currentUserRoleProvider);
-                  ref.read(courseProvider.notifier).initializeCourses(authState.user!.userId, userRole: userRole);
-                  ref.read(quizProvider.notifier).initializeQuizzes(authState.user!.userId);
+                  ref
+                      .read(courseProvider.notifier)
+                      .initializeCourses(
+                        authState.user!.userId,
+                        userRole: userRole,
+                      );
+                  ref
+                      .read(quizProvider.notifier)
+                      .initializeQuizzes(authState.user!.userId);
                 },
                 child: const Text('Retry'),
               ),
@@ -99,11 +106,15 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
       );
     }
 
-    final teacherCourses = courseState.allCourses;
+    // Filter to only show active courses
+    final allCourses = courseState.allCourses;
+    final teacherCourses = allCourses
+        .where((course) => course.isActive)
+        .toList();
 
     return Scaffold(
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -158,9 +169,13 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
                               _selectedCourse = course;
                             });
                             // Load quizzes for this specific course
-                            await ref.read(quizProvider.notifier).loadQuizzesForCourse(course.courseId);
+                            await ref
+                                .read(quizProvider.notifier)
+                                .loadQuizzesForCourse(course.courseId);
                             // Trigger data load for the selected course
-                            ref.read(analyticsProvider.notifier).getCourseStatistics(course.courseId);
+                            ref
+                                .read(analyticsProvider.notifier)
+                                .getCourseStatistics(course.courseId);
                           }
                         },
                       ),
@@ -177,15 +192,22 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
                       icon: Icons.class_outlined,
                       title: 'No Classes Assigned',
                       message: 'You don\'t have any classes assigned yet.',
-                      subtitle: 'Contact your administrator to get courses assigned.',
+                      subtitle:
+                          'Contact your administrator to get courses assigned.',
                       showInfoCard: true,
-                      infoCardText: 'If you recently received assignments, refresh to load them.',
+                      infoCardText:
+                          'If you recently received assignments, refresh to load them.',
                       action: ElevatedButton(
                         onPressed: () async {
                           final user = ref.read(authProvider).user;
                           final userRole = ref.read(currentUserRoleProvider);
                           if (user != null) {
-                            await ref.read(courseProvider.notifier).initializeCourses(user.userId, userRole: userRole);
+                            await ref
+                                .read(courseProvider.notifier)
+                                .initializeCourses(
+                                  user.userId,
+                                  userRole: userRole,
+                                );
                             if (mounted) {
                               setState(() {});
                             }
@@ -195,12 +217,13 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
                       ),
                     )
                   : _selectedCourse == null
-                      ? EmptyStateWidget(
-                          icon: Icons.analytics_outlined,
-                          title: 'Select a Course',
-                          message: 'Choose a course from the dropdown above to view results and analytics.',
-                        )
-                      : _buildCourseResults(_selectedCourse!),
+                  ? EmptyStateWidget(
+                      icon: Icons.analytics_outlined,
+                      title: 'Select a Course',
+                      message:
+                          'Choose a course from the dropdown above to view results and analytics.',
+                    )
+                  : _buildCourseResults(_selectedCourse!),
             ),
           ],
         ),
@@ -211,7 +234,9 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
   Widget _buildCourseResults(Course course) {
     return FutureBuilder<Map<String, dynamic>>(
       key: ValueKey(course.courseId), // Force rebuild when course changes
-      future: ref.read(analyticsProvider.notifier).getCourseStatistics(course.courseId),
+      future: ref
+          .read(analyticsProvider.notifier)
+          .getCourseStatistics(course.courseId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -241,7 +266,9 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
 
         final statistics = snapshot.data!;
         final allQuizzes = ref.read(quizProvider).allQuizzes;
-        final quizzes = allQuizzes.where((q) => q.courseId == course.courseId).toList();
+        final quizzes = allQuizzes
+            .where((q) => q.courseId == course.courseId)
+            .toList();
 
         if (quizzes.isEmpty) {
           return EmptyStateWidget(
@@ -263,7 +290,10 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
     );
   }
 
-  Widget _buildCourseStatisticsCard(Course course, Map<String, dynamic> statistics) {
+  Widget _buildCourseStatisticsCard(
+    Course course,
+    Map<String, dynamic> statistics,
+  ) {
     final totalStudents = statistics['totalStudents'] as int;
     final totalQuizzes = statistics['totalQuizzes'] as int;
     final publishedQuizzes = statistics['publishedQuizzes'] as int;
@@ -293,7 +323,9 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -319,7 +351,9 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
                       course.code,
                       style: TextStyle(
                         fontSize: 14,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -383,11 +417,7 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
   }) {
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 20,
-          color: Theme.of(context).colorScheme.primary,
-        ),
+        Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 8),
         Expanded(
           child: Column(
@@ -397,7 +427,9 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
                 label,
                 style: TextStyle(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               Text(
@@ -435,7 +467,9 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
 
   Widget _buildQuizResultCard(Quiz quiz) {
     return FutureBuilder<Map<String, dynamic>>(
-      future: ref.read(analyticsProvider.notifier).getQuizAnalytics(quiz.quizId),
+      future: ref
+          .read(analyticsProvider.notifier)
+          .getQuizAnalytics(quiz.quizId),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return Card(
@@ -459,10 +493,7 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
             contentPadding: const EdgeInsets.all(16),
             leading: CircleAvatar(
               backgroundColor: Colors.blue.withValues(alpha: 0.1),
-              child: const Icon(
-                Icons.quiz_outlined,
-                color: Colors.blue,
-              ),
+              child: const Icon(Icons.quiz_outlined, color: Colors.blue),
             ),
             title: Text(
               quiz.title,
@@ -478,9 +509,7 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
                 if (quiz.dueAt != null)
                   Text(
                     'Due: ${_formatDate(quiz.dueAt!)}',
-                    style: TextStyle(
-                      color: quiz.isOverdue ? Colors.red : null,
-                    ),
+                    style: TextStyle(color: quiz.isOverdue ? Colors.red : null),
                   ),
               ],
             ),
@@ -505,7 +534,7 @@ class _TeacherResultsTabState extends ConsumerState<TeacherResultsTab> {
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = date.difference(now);
-    
+
     if (difference.isNegative) {
       return 'Overdue';
     } else if (difference.inDays > 0) {

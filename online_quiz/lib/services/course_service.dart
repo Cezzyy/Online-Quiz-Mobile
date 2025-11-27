@@ -27,19 +27,21 @@ class CourseService {
       for (final enrollment in response) {
         if (enrollment['Course'] != null) {
           final courseData = enrollment['Course'];
-          
-          courses.add(Course(
-            courseId: courseData['CourseId'],
-            code: courseData['Code'],
-            name: courseData['Name'],
-            instructorUserId: courseData['Instructor_UserId'],
-            status: courseData['Status'] ?? 'Active',
-            category: courseData['Category'],
-            section: courseData['Section'],
-            createdAt: DateTime.parse(courseData['CreatedAt']),
-            updatedAt: DateTime.parse(courseData['UpdatedAt']),
-            createdBy: courseData['CreatedBy'],
-          ));
+
+          courses.add(
+            Course(
+              courseId: courseData['CourseId'],
+              code: courseData['Code'],
+              name: courseData['Name'],
+              instructorUserId: courseData['Instructor_UserId'],
+              status: courseData['Status'] ?? 'Active',
+              category: courseData['Category'],
+              section: courseData['Section'],
+              createdAt: DateTime.parse(courseData['CreatedAt']),
+              updatedAt: DateTime.parse(courseData['UpdatedAt']),
+              createdBy: courseData['CreatedBy'],
+            ),
+          );
         }
       }
 
@@ -112,17 +114,21 @@ class CourseService {
 
       final List<Quiz> quizzes = [];
       for (final quizData in response) {
-        quizzes.add(Quiz(
-          quizId: quizData['QuizId'],
-          courseId: quizData['CourseId'],
-          title: quizData['Title'],
-          dueAt: quizData['Due_At'] != null ? DateTime.parse(quizData['Due_At']) : null,
-          timeLimitMinutes: quizData['Time_Limit_Minutes'],
-          isPublished: quizData['Is_Published'] ?? false,
-          createdAt: DateTime.parse(quizData['CreatedAt']),
-          updatedAt: DateTime.parse(quizData['UpdatedAt']),
-          createdBy: quizData['CreatedBy'],
-        ));
+        quizzes.add(
+          Quiz(
+            quizId: quizData['QuizId'],
+            courseId: quizData['CourseId'],
+            title: quizData['Title'],
+            dueAt: quizData['Due_At'] != null
+                ? DateTime.parse(quizData['Due_At'])
+                : null,
+            timeLimitMinutes: quizData['Time_Limit_Minutes'],
+            isPublished: quizData['Is_Published'] ?? false,
+            createdAt: DateTime.parse(quizData['CreatedAt']),
+            updatedAt: DateTime.parse(quizData['UpdatedAt']),
+            createdBy: quizData['CreatedBy'],
+          ),
+        );
       }
 
       return quizzes;
@@ -134,7 +140,10 @@ class CourseService {
   }
 
   // Get course progress for a student (completed quizzes / total quizzes)
-  Future<Map<int, double>> getCourseProgress(int userId, List<int> courseIds) async {
+  Future<Map<int, double>> getCourseProgress(
+    int userId,
+    List<int> courseIds,
+  ) async {
     try {
       final Map<int, double> courseProgress = {};
 
@@ -150,7 +159,7 @@ class CourseService {
 
         // Get submitted attempts for this user's quizzes in this course
         final quizIds = quizzes.map((q) => q.quizId).toList();
-        
+
         final attemptsResponse = await _supabase
             .from('Attempt')
             .select('QuizId')
@@ -177,7 +186,10 @@ class CourseService {
   }
 
   // Get quiz counts for courses (total and completed)
-  Future<Map<String, Map<int, int>>> getQuizCounts(int userId, List<int> courseIds) async {
+  Future<Map<String, Map<int, int>>> getQuizCounts(
+    int userId,
+    List<int> courseIds,
+  ) async {
     try {
       final Map<int, int> totalCounts = {};
       final Map<int, int> completedCounts = {};
@@ -194,7 +206,7 @@ class CourseService {
 
         // Get submitted attempts for this user
         final quizIds = quizzes.map((q) => q.quizId).toList();
-        
+
         final attemptsResponse = await _supabase
             .from('Attempt')
             .select('QuizId')
@@ -211,10 +223,7 @@ class CourseService {
         completedCounts[courseId] = completedQuizIds.length;
       }
 
-      return {
-        'total': totalCounts,
-        'completed': completedCounts,
-      };
+      return {'total': totalCounts, 'completed': completedCounts};
     } on PostgrestException catch (e) {
       throw Exception('Failed to get quiz counts: ${e.message}');
     } catch (e) {
@@ -269,13 +278,15 @@ class CourseService {
 
       final List<Enrollment> enrollments = [];
       for (final data in response) {
-        enrollments.add(Enrollment(
-          enrollmentId: data['EnrollmentId'],
-          userId: data['UserId'],
-          courseId: data['CourseId'],
-          enrolledAt: DateTime.parse(data['EnrolledAt']),
-          enrolledBy: data['EnrolledBy'],
-        ));
+        enrollments.add(
+          Enrollment(
+            enrollmentId: data['EnrollmentId'],
+            userId: data['UserId'],
+            courseId: data['CourseId'],
+            enrolledAt: DateTime.parse(data['EnrolledAt']),
+            enrolledBy: data['EnrolledBy'],
+          ),
+        );
       }
 
       return enrollments;
@@ -296,18 +307,20 @@ class CourseService {
 
       final List<Course> courses = [];
       for (final courseData in response) {
-        courses.add(Course(
-          courseId: courseData['CourseId'],
-          code: courseData['Code'],
-          name: courseData['Name'],
-          instructorUserId: courseData['Instructor_UserId'],
-          status: courseData['Status'] ?? 'Active',
-          category: courseData['Category'],
-          section: courseData['Section'],
-          createdAt: DateTime.parse(courseData['CreatedAt']),
-          updatedAt: DateTime.parse(courseData['UpdatedAt']),
-          createdBy: courseData['CreatedBy'],
-        ));
+        courses.add(
+          Course(
+            courseId: courseData['CourseId'],
+            code: courseData['Code'],
+            name: courseData['Name'],
+            instructorUserId: courseData['Instructor_UserId'],
+            status: courseData['Status'] ?? 'Active',
+            category: courseData['Category'],
+            section: courseData['Section'],
+            createdAt: DateTime.parse(courseData['CreatedAt']),
+            updatedAt: DateTime.parse(courseData['UpdatedAt']),
+            createdBy: courseData['CreatedBy'],
+          ),
+        );
       }
 
       return courses;
@@ -321,26 +334,30 @@ class CourseService {
   // Get courses taught by a specific instructor
   Future<List<Course>> getCoursesByInstructor(int instructorUserId) async {
     try {
+      // Only fetch active courses for teachers - inactive and archived courses should be hidden
       final response = await _supabase
           .from('Course')
           .select('*')
           .eq('Instructor_UserId', instructorUserId)
+          .eq('Status', 'Active')
           .order('CreatedAt', ascending: false);
 
       final List<Course> courses = [];
       for (final courseData in response) {
-        courses.add(Course(
-          courseId: courseData['CourseId'],
-          code: courseData['Code'],
-          name: courseData['Name'],
-          instructorUserId: courseData['Instructor_UserId'],
-          status: courseData['Status'] ?? 'Active',
-          category: courseData['Category'],
-          section: courseData['Section'],
-          createdAt: DateTime.parse(courseData['CreatedAt']),
-          updatedAt: DateTime.parse(courseData['UpdatedAt']),
-          createdBy: courseData['CreatedBy'],
-        ));
+        courses.add(
+          Course(
+            courseId: courseData['CourseId'],
+            code: courseData['Code'],
+            name: courseData['Name'],
+            instructorUserId: courseData['Instructor_UserId'],
+            status: courseData['Status'] ?? 'Active',
+            category: courseData['Category'],
+            section: courseData['Section'],
+            createdAt: DateTime.parse(courseData['CreatedAt']),
+            updatedAt: DateTime.parse(courseData['UpdatedAt']),
+            createdBy: courseData['CreatedBy'],
+          ),
+        );
       }
 
       return courses;
@@ -386,12 +403,12 @@ class CourseService {
           ''')
           .eq('CourseId', courseId)
           .order('EnrolledAt', ascending: false);
-      
+
       final List<Map<String, dynamic>> students = [];
       for (final enrollment in response) {
         if (enrollment['Student'] != null) {
           final studentData = enrollment['Student'];
-          
+
           if (studentData['User'] != null) {
             // Convert Student JSON to Student object
             Student? student;
@@ -401,10 +418,10 @@ class CourseService {
               debugPrint('Error parsing student data: $e');
               continue;
             }
-            
+
             try {
               final user = app_user.User.fromJson(studentData['User']);
-              
+
               final enrollmentObj = Enrollment(
                 enrollmentId: enrollment['EnrollmentId'] as int,
                 userId: enrollment['UserId'] as int,
@@ -413,14 +430,16 @@ class CourseService {
                 enrolledAt: DateTime.parse(enrollment['EnrolledAt'] as String),
                 enrolledBy: enrollment['EnrolledBy'] as int,
               );
-              
+
               students.add({
                 'user': user,
                 'student': student,
                 'enrollment': enrollmentObj,
               });
             } catch (e) {
-              debugPrint('Error processing enrollment ${enrollment['EnrollmentId']}: $e');
+              debugPrint(
+                'Error processing enrollment ${enrollment['EnrollmentId']}: $e',
+              );
             }
           }
         }
@@ -486,7 +505,11 @@ class CourseService {
           entity: EntityType.course,
           entityId: course.courseId,
           description: 'Created course "${course.name}" (${course.code})',
-          newValues: {'name': course.name, 'code': course.code, 'section': course.section},
+          newValues: {
+            'name': course.name,
+            'code': course.code,
+            'section': course.section,
+          },
         );
       } catch (e) {
         debugPrint('Failed to log course creation: $e');
@@ -514,7 +537,7 @@ class CourseService {
     try {
       // Get old values
       final oldCourse = await getCourseById(courseId);
-      
+
       await _supabase
           .from('Course')
           .update({
@@ -537,7 +560,9 @@ class CourseService {
             entity: EntityType.course,
             entityId: courseId,
             description: 'Updated course "$name"',
-            oldValues: oldCourse != null ? {'name': oldCourse.name, 'code': oldCourse.code} : null,
+            oldValues: oldCourse != null
+                ? {'name': oldCourse.name, 'code': oldCourse.code}
+                : null,
             newValues: {'name': name, 'code': code, 'status': status},
           );
         } catch (e) {
@@ -557,11 +582,8 @@ class CourseService {
     try {
       // Get course details before deletion
       final course = await getCourseById(courseId);
-      
-      await _supabase
-          .from('Course')
-          .delete()
-          .eq('CourseId', courseId);
+
+      await _supabase.from('Course').delete().eq('CourseId', courseId);
 
       // Log course deletion
       if (deletedBy != null && course != null) {
@@ -629,7 +651,9 @@ class CourseService {
           .select('UserId')
           .eq('CourseId', courseId);
 
-      final enrolledUserIds = enrolledResponse.map((e) => e['UserId'] as int).toSet();
+      final enrolledUserIds = enrolledResponse
+          .map((e) => e['UserId'] as int)
+          .toSet();
 
       final List<Map<String, dynamic>> availableStudents = [];
       for (final studentData in allStudentsResponse) {
@@ -661,22 +685,26 @@ class CourseService {
     required int enrolledBy,
   }) async {
     try {
-      debugPrint('Attempting to enroll student - UserId: $userId, CourseId: $courseId');
-      
+      debugPrint(
+        'Attempting to enroll student - UserId: $userId, CourseId: $courseId',
+      );
+
       // First check if student record exists
       final studentCheck = await _supabase
           .from('Student')
           .select('UserId, StudentId')
           .eq('UserId', userId)
           .maybeSingle();
-      
+
       if (studentCheck == null) {
         debugPrint('WARNING: No Student record found for UserId: $userId');
-        throw Exception('Cannot enroll user without Student record. User must have Student role.');
+        throw Exception(
+          'Cannot enroll user without Student record. User must have Student role.',
+        );
       }
-      
+
       debugPrint('Student record exists: ${studentCheck['StudentId']}');
-      
+
       final response = await _supabase
           .from('Enrollment')
           .insert({
@@ -745,7 +773,10 @@ class CourseService {
             entity: EntityType.enrollment,
             entityId: enrollmentId,
             description: 'Removed student from course',
-            oldValues: {'courseId': enrollmentResponse['CourseId'], 'userId': enrollmentResponse['UserId']},
+            oldValues: {
+              'courseId': enrollmentResponse['CourseId'],
+              'userId': enrollmentResponse['UserId'],
+            },
           );
         } catch (e) {
           debugPrint('Failed to log unenrollment: $e');
@@ -762,7 +793,7 @@ class CourseService {
   Future<Map<String, List<Course>>> getAllCoursesGrouped() async {
     try {
       final courses = await getAllCourses();
-      
+
       final Map<String, List<Course>> groupedCourses = {};
       for (final course in courses) {
         if (!groupedCourses.containsKey(course.code)) {
