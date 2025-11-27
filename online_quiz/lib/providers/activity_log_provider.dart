@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/activity_log.dart';
 import '../services/activity_log_service.dart';
 
+/// Sentinel value for undefined optional parameters
+const _undefined = Object();
+
 /// Provider for ActivityLogService
 final activityLogServiceProvider = Provider<ActivityLogService>((ref) {
   return ActivityLogService();
@@ -48,11 +51,11 @@ class ActivityLogState {
     String? error,
     int? totalCount,
     ActivityStatistics? statistics,
-    ActivityAction? filterAction,
-    EntityType? filterEntity,
-    DateTime? startDate,
-    DateTime? endDate,
-    String? searchQuery,
+    Object? filterAction = _undefined,
+    Object? filterEntity = _undefined,
+    Object? startDate = _undefined,
+    Object? endDate = _undefined,
+    Object? searchQuery = _undefined,
     int? currentPage,
     int? itemsPerPage,
   }) {
@@ -62,11 +65,11 @@ class ActivityLogState {
       error: error,
       totalCount: totalCount ?? this.totalCount,
       statistics: statistics ?? this.statistics,
-      filterAction: filterAction ?? this.filterAction,
-      filterEntity: filterEntity ?? this.filterEntity,
-      startDate: startDate ?? this.startDate,
-      endDate: endDate ?? this.endDate,
-      searchQuery: searchQuery ?? this.searchQuery,
+      filterAction: filterAction == _undefined ? this.filterAction : filterAction as ActivityAction?,
+      filterEntity: filterEntity == _undefined ? this.filterEntity : filterEntity as EntityType?,
+      startDate: startDate == _undefined ? this.startDate : startDate as DateTime?,
+      endDate: endDate == _undefined ? this.endDate : endDate as DateTime?,
+      searchQuery: searchQuery == _undefined ? this.searchQuery : searchQuery as String?,
       currentPage: currentPage ?? this.currentPage,
       itemsPerPage: itemsPerPage ?? this.itemsPerPage,
     );

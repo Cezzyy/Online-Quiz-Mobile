@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../models/activity_log.dart';
 import '../../providers/activity_log_provider.dart';
+import '../../widgets/pagination_widget.dart';
 
 class AdminActivityLogsScreen extends ConsumerStatefulWidget {
   const AdminActivityLogsScreen({super.key});
@@ -454,44 +455,13 @@ class _AdminActivityLogsScreenState
   }
 
   Widget _buildPagination(ActivityLogState state) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 4,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Previous Button
-          ElevatedButton.icon(
-            onPressed: state.hasPreviousPage
-                ? () => ref.read(activityLogProvider.notifier).previousPage()
-                : null,
-            icon: const Icon(Icons.chevron_left),
-            label: const Text('Previous'),
-          ),
-          // Page Info
-          Text(
-            'Page ${state.currentPage} of ${state.totalPages}',
-            style: const TextStyle(fontWeight: FontWeight.w500),
-          ),
-          // Next Button
-          ElevatedButton.icon(
-            onPressed: state.hasNextPage
-                ? () => ref.read(activityLogProvider.notifier).nextPage()
-                : null,
-            icon: const Icon(Icons.chevron_right),
-            label: const Text('Next'),
-          ),
-        ],
-      ),
+    return PaginationWidget(
+      currentPage: state.currentPage,
+      totalPages: state.totalPages,
+      hasPreviousPage: state.hasPreviousPage,
+      hasNextPage: state.hasNextPage,
+      onPreviousPage: () => ref.read(activityLogProvider.notifier).previousPage(),
+      onNextPage: () => ref.read(activityLogProvider.notifier).nextPage(),
     );
   }
 

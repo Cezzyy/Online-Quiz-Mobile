@@ -165,7 +165,7 @@ class QuizNotificationService {
       final quizId = quiz['QuizId'] as int;
       final quizTitle = quiz['Title'] as String;
       final courseId = quiz['CourseId'] as int;
-      final dueAt = DateTime.parse(quiz['DueAt'] as String);
+      final dueAt = DateTime.parse(quiz['Due_At'] as String);
 
       // Get course info
       final courseResponse = await _supabase
@@ -254,10 +254,10 @@ class QuizNotificationService {
     try {
       final response = await _supabase
           .from('Quiz')
-          .select('QuizId, Title, DueAt')
+          .select('QuizId, Title, Due_At')
           .eq('CourseId', courseId)
           .eq('Is_Published', true)
-          .order('DueAt', ascending: true);
+          .order('Due_At', ascending: true);
 
       return response.map((q) => Map<String, dynamic>.from(q)).toList();
     } catch (e) {
@@ -276,10 +276,10 @@ class QuizNotificationService {
     try {
       final response = await _supabase
           .from('Quiz')
-          .select('QuizId, Title, CourseId, DueAt')
+          .select('QuizId, Title, CourseId, Due_At')
           .eq('Is_Published', true)
-          .gte('DueAt', start.toIso8601String())
-          .lt('DueAt', end.toIso8601String());
+          .gte('Due_At', start.toIso8601String())
+          .lt('Due_At', end.toIso8601String());
 
       return response.map((q) => Map<String, dynamic>.from(q)).toList();
     } catch (e) {
