@@ -89,6 +89,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'admin_courses_fab',
         onPressed: () => _navigateToCreateCourse(context, courseNotifier),
         icon: const Icon(Icons.add),
         label: const Text('Add Course'),
@@ -757,9 +758,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
     CourseNotifier notifier,
   ) async {
     final result = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (context) => const CreateCourseScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const CreateCourseScreen()),
     );
 
     // Reload courses if creation was successful

@@ -533,4 +533,68 @@ class AuthService {
       throw Exception('Failed to get user details: $e');
     }
   }
+
+  /// Get user password (admin only - for display purposes)
+  /// Note: Passwords are hashed in database, this returns the plain password if stored
+  /// In a real scenario, you'd need to implement a secure way to retrieve/reset passwords
+  Future<String> getUserPassword(int userId) async {
+    try {
+      // Note: Passwords are hashed in the database for security
+      // This returns the hashed password (bcrypt hash)
+      // Original passwords cannot be retrieved once hashed
+      
+      final response = await _supabase
+          .from('User')
+          .select('PasswordHash')
+          .eq('UserId', userId)
+          .maybeSingle();
+
+      if (response == null) {
+        throw Exception('User not found');
+      }
+
+      // Return the hashed password from the database
+      final passwordHash = response['PasswordHash'] as String?;
+      return passwordHash ?? 'No password set';
+    } on PostgrestException catch (e) {
+      throw Exception('Failed to get user password: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to get user password: $e');
+    }
+  }
+
+  /// Reset user password (admin only)
+  /// Generates a new temporary password and updates the user's password
+  /// Returns the new plain-text password to be shared with the user
+  Future<String> resetUserPassword(int userId) async {
+    try {
+      // Generate a random temporary password
+      final random = DateTime.now().millisecondsSinceEpoch.toString();
+      final tempPassword = 'Temp${random.substring(random.length - 6)}!';
+
+      // Hash the new password
+      final hashedPasswordResponse = await _supabase.rpc(
+        'hash_password',
+        params: {'plain_password': tempPassword},
+      );
+
+      final hashedPassword = hashedPasswordResponse as String;
+
+      // Update user's password
+      await _supabase
+          .from('User')
+          .update({
+            'PasswordHash': hashedPassword,
+            'UpdatedAt': DateTime.now().toIso8601String(),
+          })
+          .eq('UserId', userId);
+
+      // Return the plain-text password to be displayed to admin
+      return tempPassword;
+    } on PostgrestException catch (e) {
+      throw Exception('Failed to reset password: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to reset password: $e');
+    }
+  }
 }

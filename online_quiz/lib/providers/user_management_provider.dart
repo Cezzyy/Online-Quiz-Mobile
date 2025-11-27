@@ -298,6 +298,30 @@ class UserManagementNotifier extends StateNotifier<UserManagementState> {
   void clearError() {
     state = state.copyWith(clearError: true);
   }
+
+  /// Get user password for display purposes (admin only)
+  Future<String> getUserPassword(int userId) async {
+    try {
+      final password = await _authService.getUserPassword(userId);
+      return password;
+    } catch (e) {
+      throw Exception('Failed to retrieve password: $e');
+    }
+  }
+
+  /// Reset user password (admin only)
+  /// Generates a new temporary password for the user
+  /// Returns the new password that should be shared with the user
+  Future<String> resetUserPassword(int userId) async {
+    try {
+      final newPassword = await _authService.resetUserPassword(userId);
+      // Optionally reload users to reflect any changes
+      await loadUsers();
+      return newPassword;
+    } catch (e) {
+      throw Exception('Failed to reset password: $e');
+    }
+  }
 }
 
 // Provider

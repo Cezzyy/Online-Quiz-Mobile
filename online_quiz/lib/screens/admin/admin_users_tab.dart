@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../utils/app_theme.dart';
 import '../../models/user.dart';
-import '../../models/teacher.dart';
-import '../../models/student.dart';
 import '../../providers/user_management_provider.dart';
-import '../../widgets/custom_text_field.dart';
 import '../../widgets/dialog.dart';
 import '../../widgets/empty_state_widget.dart';
-import '../../widgets/info_card.dart';
 import 'create_user_screen.dart';
+import 'user_details_screen.dart';
+import 'edit_user_screen.dart';
 
 class AdminUsersTab extends ConsumerStatefulWidget {
   const AdminUsersTab({super.key});
@@ -49,6 +47,7 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'admin_users_fab',
         onPressed: () => _navigateToCreateUser(context, userNotifier),
         icon: const Icon(Icons.person_add),
         label: const Text('Add User'),
@@ -377,10 +376,10 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                         onSelected: (value) {
                           switch (value) {
                             case 'view':
-                              _showUserDetailsDialog(context, user);
+                              _navigateToUserDetails(context, user);
                               break;
                             case 'edit':
-                              _showEditUserDialog(context, user, notifier);
+                              _navigateToEditUser(context, user, notifier);
                               break;
                             case 'delete':
                               _showDeleteConfirmationDialog(
@@ -587,9 +586,7 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
     UserManagementNotifier notifier,
   ) async {
     final result = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (context) => const CreateUserScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const CreateUserScreen()),
     );
 
     // Reload users if creation was successful
@@ -598,498 +595,24 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
     }
   }
 
-  void _showEditUserDialog(
+  Future<void> _navigateToEditUser(
     BuildContext context,
     User user,
     UserManagementNotifier notifier,
-  ) {
-    final emailController = TextEditingController(text: user.email);
-    final fullNameController = TextEditingController(text: user.fullName);
-    final contactController = TextEditingController(text: user.contactNumber);
-    final emergencyController = TextEditingController(
-      text: user.emergencyContactNumber,
+  ) async {
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (context) => EditUserScreen(user: user)),
     );
-    final departmentController = TextEditingController();
-    final studentIdController = TextEditingController();
-    final sectionController = TextEditingController();
-    final courseController = TextEditingController();
 
-    String? selectedStatus = user.status;
-    int? selectedYearLevel;
-
-    // Get existing role-specific data from state
-    final userState = ref.read(userManagementProvider);
-    String userRole = 'User';
-    Teacher? teacher;
-    Student? student;
-
-    if (userState.teachers.any((t) => t.userId == user.userId)) {
-      userRole = 'Teacher';
-      teacher = userState.teachers.firstWhere((t) => t.userId == user.userId);
-    } else if (userState.students.any((s) => s.userId == user.userId)) {
-      userRole = 'Student';
-      student = userState.students.firstWhere((s) => s.userId == user.userId);
+    // Reload users if update was successful
+    if (result == true && mounted) {
+      notifier.loadUsers();
     }
-
-    if (teacher != null) {
-      departmentController.text = teacher.department ?? '';
-    }
-    if (student != null) {
-      studentIdController.text = student.studentId;
-      selectedYearLevel = student.yearLevel;
-      sectionController.text = student.section ?? '';
-      courseController.text = student.course ?? '';
-    }
-
-    final formKey = GlobalKey<FormState>();
-
-    AppDialog.show(
-      context: context,
-      title: 'Edit User',
-      type: DialogType.custom,
-      maxWidth: 600,
-      content: Form(
-        key: formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Status Selection
-              Text(
-                'Status',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.getTextColor(context),
-                ),
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                initialValue: selectedStatus,
-                decoration: const InputDecoration(
-                  labelText: 'Status',
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'Active', child: Text('Active')),
-                  DropdownMenuItem(value: 'Inactive', child: Text('Inactive')),
-                ],
-                onChanged: (value) {
-                  selectedStatus = value;
-                },
-              ),
-
-              const SizedBox(height: 16),
-
-              // Basic Information
-              Text(
-                'Basic Information',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.getTextColor(context),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              CustomTextField(
-                controller: emailController,
-                labelText: 'Email',
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Email is required';
-                  }
-                  if (!RegExp(
-                    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                  ).hasMatch(value)) {
-                    return 'Please enter a valid email';
-                  }
-                  return null;
-                },
-              ),
-
-              const SizedBox(height: 16),
-
-              CustomTextField(
-                controller: fullNameController,
-                labelText: 'Full Name',
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Full name is required';
-                  }
-                  return null;
-                },
-              ),
-
-              const SizedBox(height: 16),
-
-              CustomTextField(
-                controller: contactController,
-                labelText: 'Contact Number',
-                keyboardType: TextInputType.phone,
-              ),
-
-              const SizedBox(height: 16),
-
-              CustomTextField(
-                controller: emergencyController,
-                labelText: 'Emergency Contact',
-                keyboardType: TextInputType.phone,
-              ),
-
-              const SizedBox(height: 20),
-
-              // Role-specific Information
-              if (userRole == 'Teacher') ...[
-                Text(
-                  'Teacher Information',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.getTextColor(context),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                CustomTextField(
-                  controller: departmentController,
-                  labelText: 'Department',
-                ),
-              ] else if (userRole == 'Student') ...[
-                Text(
-                  'Student Information',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.getTextColor(context),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                CustomTextField(
-                  controller: studentIdController,
-                  labelText: 'Student ID',
-                ),
-
-                const SizedBox(height: 16),
-
-                DropdownButtonFormField<int>(
-                  initialValue: selectedYearLevel,
-                  decoration: const InputDecoration(
-                    labelText: 'Year Level',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: List.generate(4, (index) => index + 1)
-                      .map(
-                        (level) => DropdownMenuItem(
-                          value: level,
-                          child: Text('Year $level'),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    selectedYearLevel = value;
-                  },
-                ),
-
-                const SizedBox(height: 16),
-
-                CustomTextField(
-                  controller: sectionController,
-                  labelText: 'Section',
-                ),
-
-                const SizedBox(height: 16),
-
-                CustomTextField(
-                  controller: courseController,
-                  labelText: 'Course',
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        DialogAction.cancel(context: context),
-        DialogAction.save(
-          onPressed: () async {
-            if (formKey.currentState!.validate()) {
-              Navigator.of(context).pop();
-
-              await notifier.updateUser(
-                user,
-                email: emailController.text,
-                fullName: fullNameController.text,
-                contactNumber: contactController.text,
-                emergencyContactNumber: emergencyController.text,
-                status: selectedStatus,
-                department: userRole == 'Teacher'
-                    ? departmentController.text
-                    : null,
-                studentId: userRole == 'Student'
-                    ? studentIdController.text
-                    : null,
-                yearLevel: userRole == 'Student' ? selectedYearLevel : null,
-                section: userRole == 'Student' ? sectionController.text : null,
-              );
-
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('User updated successfully!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            }
-          },
-        ),
-      ],
-    );
   }
 
-  void _showUserDetailsDialog(BuildContext context, User user) {
-    final userState = ref.read(userManagementProvider);
-    String userRole = 'User';
-    Teacher? teacher;
-    Student? student;
-
-    if (userState.teachers.any((t) => t.userId == user.userId)) {
-      userRole = 'Teacher';
-      teacher = userState.teachers.firstWhere((t) => t.userId == user.userId);
-    } else if (userState.students.any((s) => s.userId == user.userId)) {
-      userRole = 'Student';
-      student = userState.students.firstWhere((s) => s.userId == user.userId);
-    }
-
-    AppDialog.show(
-      context: context,
-      title: 'User Details',
-      type: DialogType.info,
-      maxWidth: 500,
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // User Avatar and Basic Info
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 30,
-                backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
-                child: Text(
-                  user.fullName.isNotEmpty
-                      ? user.fullName[0].toUpperCase()
-                      : '?',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryColor,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      user.fullName,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.getTextColor(context),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      user.email,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: AppTheme.getSecondaryTextColor(context),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _getRoleColor(
-                              userRole,
-                            ).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Text(
-                            userRole,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: _getRoleColor(userRole),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: user.isActive
-                                ? Colors.green.withValues(alpha: 0.1)
-                                : Colors.red.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Text(
-                            user.status,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: user.isActive ? Colors.green : Colors.red,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 24),
-
-          // Contact Information
-          Text(
-            'Contact Information',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.getTextColor(context),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          InfoCardPresets.compact(
-            icon: Icons.phone,
-            title: 'Contact Number',
-            value: user.contactNumber.isNotEmpty
-                ? user.contactNumber
-                : 'Not provided',
-            color: Colors.indigo,
-          ),
-
-          const SizedBox(height: 12),
-
-          InfoCardPresets.compact(
-            icon: Icons.emergency,
-            title: 'Emergency Contact',
-            value: user.emergencyContactNumber.isNotEmpty
-                ? user.emergencyContactNumber
-                : 'Not provided',
-            color: Colors.red,
-          ),
-
-          const SizedBox(height: 24),
-
-          // Role-specific Information
-          if (userRole == 'Teacher' && teacher != null) ...[
-            Text(
-              'Teacher Information',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.getTextColor(context),
-              ),
-            ),
-            const SizedBox(height: 12),
-            InfoCardPresets.compact(
-              icon: Icons.school,
-              title: 'Department',
-              value: teacher.department ?? 'Not specified',
-              color: Colors.blue,
-            ),
-          ] else if (userRole == 'Student' && student != null) ...[
-            Text(
-              'Student Information',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.getTextColor(context),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            InfoCardPresets.compact(
-              icon: Icons.badge,
-              title: 'Student ID',
-              value: student.studentId,
-              color: Colors.green,
-            ),
-
-            const SizedBox(height: 12),
-
-            InfoCardPresets.compact(
-              icon: Icons.grade,
-              title: 'Year Level',
-              value: student.yearLevel.toString(),
-              color: Colors.orange,
-            ),
-
-            const SizedBox(height: 12),
-
-            InfoCardPresets.compact(
-              icon: Icons.group,
-              title: 'Section',
-              value: student.section ?? 'Not assigned',
-              color: Colors.purple,
-            ),
-
-            const SizedBox(height: 12),
-
-            InfoCardPresets.compact(
-              icon: Icons.book,
-              title: 'Course',
-              value: student.course ?? 'Not specified',
-              color: Colors.teal,
-            ),
-          ],
-
-          const SizedBox(height: 24),
-
-          // Account Information
-          Text(
-            'Account Information',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.getTextColor(context),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          InfoCardPresets.compact(
-            icon: Icons.calendar_today,
-            title: 'Created At',
-            value: _formatDate(user.createdAt),
-            color: Colors.grey,
-          ),
-
-          const SizedBox(height: 12),
-
-          InfoCardPresets.compact(
-            icon: Icons.update,
-            title: 'Last Updated',
-            value: _formatDate(user.updatedAt),
-            color: Colors.grey,
-          ),
-        ],
-      ),
-      actions: [DialogAction.ok()],
+  Future<void> _navigateToUserDetails(BuildContext context, User user) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => UserDetailsScreen(user: user)),
     );
   }
 
@@ -1120,9 +643,5 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
         }
       }
     });
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year} at ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 }

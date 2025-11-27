@@ -12,10 +12,7 @@ import '../../providers/auth_provider.dart';
 class ManageCourseScreen extends ConsumerStatefulWidget {
   final Course course;
 
-  const ManageCourseScreen({
-    super.key,
-    required this.course,
-  });
+  const ManageCourseScreen({super.key, required this.course});
 
   @override
   ConsumerState<ManageCourseScreen> createState() => _ManageCourseScreenState();
@@ -51,14 +48,18 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
 
     try {
       final courseNotifier = ref.read(courseProvider.notifier);
-      
+
       // Load enrolled students using course provider
-      final enrolled = await courseNotifier.getEnrolledStudentsWithDetails(widget.course.courseId);
-      
+      final enrolled = await courseNotifier.getEnrolledStudentsWithDetails(
+        widget.course.courseId,
+      );
+
       // Load available students (not enrolled in this course) using course provider
-      final availableStudentsData = await courseNotifier.getAvailableStudents(widget.course.courseId);
+      final availableStudentsData = await courseNotifier.getAvailableStudents(
+        widget.course.courseId,
+      );
       final students = <Map<String, dynamic>>[];
-      
+
       // Convert available students data to the expected format with Student objects
       for (final studentData in availableStudentsData) {
         final user = studentData['user'] as User;
@@ -69,17 +70,14 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
           section: studentData['section'] as String?,
           course: studentData['course'] as String?,
         );
-        
-        students.add({
-          'user': user,
-          'student': student,
-        });
+
+        students.add({'user': user, 'student': student});
       }
-      
+
       // Build sections and year levels sets
       final sectionsSet = <String>{'All'};
       final yearLevelsSet = <String>{'All'};
-      
+
       // Add sections and year levels from both enrolled and available students
       for (final studentData in [...enrolled, ...students]) {
         final student = studentData['student'] as Student?;
@@ -96,11 +94,12 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
           allStudents = students;
           enrolledStudents = enrolled;
           sections = sectionsSet.toList()..sort();
-          yearLevels = yearLevelsSet.toList()..sort((a, b) {
-            if (a == 'All') return -1;
-            if (b == 'All') return 1;
-            return int.tryParse(a)?.compareTo(int.tryParse(b) ?? 0) ?? 0;
-          });
+          yearLevels = yearLevelsSet.toList()
+            ..sort((a, b) {
+              if (a == 'All') return -1;
+              if (b == 'All') return 1;
+              return int.tryParse(a)?.compareTo(int.tryParse(b) ?? 0) ?? 0;
+            });
           isLoading = false;
         });
       }
@@ -109,7 +108,7 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
         setState(() {
           isLoading = false;
         });
-      
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error loading data: $e'),
@@ -124,34 +123,36 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
     var filtered = allStudents.where((studentData) {
       final user = studentData['user'] as User;
       final student = studentData['student'] as Student?;
-      
+
       // Check if already enrolled
-      final isEnrolled = enrolledStudents.any((enrolled) => 
-          (enrolled['user'] as User).userId == user.userId);
+      final isEnrolled = enrolledStudents.any(
+        (enrolled) => (enrolled['user'] as User).userId == user.userId,
+      );
       if (isEnrolled) return false;
-      
+
       // Search filter
       final searchTerm = _searchController.text.toLowerCase();
       if (searchTerm.isNotEmpty) {
         final matchesName = user.fullName.toLowerCase().contains(searchTerm);
         final matchesEmail = user.email.toLowerCase().contains(searchTerm);
-        final matchesStudentId = student?.studentId.toLowerCase().contains(searchTerm) ?? false;
-        
+        final matchesStudentId =
+            student?.studentId.toLowerCase().contains(searchTerm) ?? false;
+
         if (!matchesName && !matchesEmail && !matchesStudentId) {
           return false;
         }
       }
-      
+
       // Section filter
       if (selectedSection != 'All') {
         if (student?.section != selectedSection) return false;
       }
-      
+
       // Year level filter
       if (selectedYearLevel != 'All') {
         if (student?.yearLevel?.toString() != selectedYearLevel) return false;
       }
-      
+
       return true;
     }).toList();
 
@@ -181,11 +182,11 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
 
     final courseNotifier = ref.read(courseProvider.notifier);
     final currentUser = ref.read(authProvider).user;
-    
+
     if (currentUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Authentication error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Authentication error')));
       return;
     }
 
@@ -195,11 +196,11 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
     // Enroll selected students using course provider
     for (final userId in selectedStudentIds) {
       final success = await courseNotifier.enrollStudentInCourse(
-        userId, 
-        widget.course.courseId, 
-        currentUser.userId
+        userId,
+        widget.course.courseId,
+        currentUser.userId,
       );
-      
+
       if (success) {
         successCount++;
       } else {
@@ -210,7 +211,7 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
     setState(() {
       selectedStudentIds.clear();
     });
-    
+
     // Reload data to reflect changes
     _loadData();
 
@@ -219,7 +220,9 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
       if (failCount == 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$successCount student(s) assigned to ${widget.course.name}'),
+            content: Text(
+              '$successCount student(s) assigned to ${widget.course.name}',
+            ),
             backgroundColor: AppTheme.successColor,
           ),
         );
@@ -239,7 +242,9 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Remove Student'),
-        content: const Text('Are you sure you want to remove this student from the course?'),
+        content: const Text(
+          'Are you sure you want to remove this student from the course?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -250,10 +255,10 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
               final navigator = Navigator.of(context);
               final scaffoldMessenger = ScaffoldMessenger.of(context);
               navigator.pop();
-              
+
               final courseNotifier = ref.read(courseProvider.notifier);
               final currentUser = ref.read(authProvider).user;
-              
+
               if (currentUser == null) {
                 if (mounted) {
                   scaffoldMessenger.showSnackBar(
@@ -265,11 +270,11 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
 
               // Remove student using course provider
               final success = await courseNotifier.removeStudentFromCourse(
-                userId, 
-                widget.course.courseId, 
-                currentUser.userId
+                userId,
+                widget.course.courseId,
+                currentUser.userId,
               );
-              
+
               if (mounted) {
                 if (success) {
                   scaffoldMessenger.showSnackBar(
@@ -288,7 +293,7 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
                   );
                 }
               }
-              
+
               _loadData();
             },
             child: const Text('Remove'),
@@ -302,7 +307,7 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
   Widget build(BuildContext context) {
     final filtered = filteredStudents;
     final courseState = ref.watch(courseProvider);
-    
+
     // Show error if there's a course provider error
     if (courseState.error != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -337,9 +342,7 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
           ),
           backgroundColor: AppTheme.primaryColor,
           elevation: 0,
-          iconTheme: const IconThemeData(
-            color: Colors.white,
-          ),
+          iconTheme: const IconThemeData(color: Colors.white),
           bottom: TabBar(
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white.withValues(alpha: 0.7),
@@ -360,6 +363,7 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
               ),
         floatingActionButton: selectedStudentIds.isNotEmpty
             ? FloatingActionButton.extended(
+                heroTag: 'manage_course_assign_fab',
                 onPressed: _assignSelectedStudents,
                 backgroundColor: AppTheme.primaryColor,
                 icon: const Icon(Icons.add, color: Colors.white),
@@ -380,204 +384,223 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
       },
       child: Column(
         children: [
-        // Course Header
-        Container(
-          width: double.infinity,
-          margin: const EdgeInsets.all(20),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Theme.of(context).dividerColor,
-              width: 1,
+          // Course Header
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Theme.of(context).dividerColor,
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
+                  spreadRadius: 1,
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
-                spreadRadius: 1,
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.getCourseColor(
+                      widget.course.code,
+                    ).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.class_,
+                    color: AppTheme.getCourseColor(widget.course.code),
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.course.name,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.course.code,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.getCourseColor(widget.course.code).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+
+          // Search and Filters
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              children: [
+                CustomTextField(
+                  controller: _searchController,
+                  labelText: 'Search Students',
+                  hintText: 'Search by name, email, or student ID',
+                  prefixIcon: Icons.search,
+                  onChanged: (value) => setState(() {}),
                 ),
-                child: Icon(
-                  Icons.class_,
-                  color: AppTheme.getCourseColor(widget.course.code),
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(height: 16),
+
+                // Filters
+                Row(
                   children: [
-                    Text(
-                      widget.course.name,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Section',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: Theme.of(context).dividerColor,
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: selectedSection,
+                                isExpanded: true,
+                                hint: const Text('Select Section'),
+                                menuMaxHeight: 300,
+                                items: sections.map((String section) {
+                                  return DropdownMenuItem<String>(
+                                    value: section,
+                                    child: Text(
+                                      section == 'All'
+                                          ? 'All Sections'
+                                          : section,
+                                      style: TextStyle(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (String? newValue) {
+                                  if (newValue != null) {
+                                    setState(() {
+                                      selectedSection = newValue;
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.course.code,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        fontWeight: FontWeight.w500,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Year Level',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: Theme.of(context).dividerColor,
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: selectedYearLevel,
+                                isExpanded: true,
+                                hint: const Text('Select Year'),
+                                menuMaxHeight:
+                                    300, // Limit dropdown height to enable scrolling
+                                items: yearLevels.map((String year) {
+                                  return DropdownMenuItem<String>(
+                                    value: year,
+                                    child: Text(
+                                      year == 'All'
+                                          ? 'All Years'
+                                          : 'Year $year',
+                                      style: TextStyle(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (String? newValue) {
+                                  if (newValue != null) {
+                                    setState(() {
+                                      selectedYearLevel = newValue;
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
 
-        // Search and Filters
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            children: [
-              CustomTextField(
-                controller: _searchController,
-                labelText: 'Search Students',
-                hintText: 'Search by name, email, or student ID',
-                prefixIcon: Icons.search,
-                onChanged: (value) => setState(() {}),
-              ),
-              const SizedBox(height: 16),
-              
-              // Filters
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Section',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: Theme.of(context).dividerColor,
-                            ),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: selectedSection,
-                              isExpanded: true,
-                              hint: const Text('Select Section'),
-                              menuMaxHeight: 300,
-                              items: sections.map((String section) {
-                                return DropdownMenuItem<String>(
-                                  value: section,
-                                  child: Text(
-                                    section == 'All' ? 'All Sections' : section,
-                                    style: TextStyle(
-                                      color: Theme.of(context).colorScheme.onSurface,
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                              onChanged: (String? newValue) {
-                                if (newValue != null) {
-                                  setState(() {
-                                    selectedSection = newValue;
-                                  });
-                                }
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Year Level',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: Theme.of(context).dividerColor,
-                            ),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: selectedYearLevel,
-                              isExpanded: true,
-                              hint: const Text('Select Year'),
-                              menuMaxHeight: 300, // Limit dropdown height to enable scrolling
-                              items: yearLevels.map((String year) {
-                                return DropdownMenuItem<String>(
-                                  value: year,
-                                  child: Text(
-                                    year == 'All' ? 'All Years' : 'Year $year',
-                                    style: TextStyle(
-                                      color: Theme.of(context).colorScheme.onSurface,
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                              onChanged: (String? newValue) {
-                                if (newValue != null) {
-                                  setState(() {
-                                    selectedYearLevel = newValue;
-                                  });
-                                }
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
+          const SizedBox(height: 20),
+
+          // Students List
+          Expanded(
+            child: filtered.isEmpty
+                ? _buildEmptyState('No students found matching your criteria.')
+                : _buildStudentsList(filtered, true),
           ),
-        ),
-
-        const SizedBox(height: 20),
-
-        // Students List
-        Expanded(
-          child: filtered.isEmpty
-              ? _buildEmptyState('No students found matching your criteria.')
-              : _buildStudentsList(filtered, true),
-        ),
         ],
       ),
     );
@@ -590,68 +613,68 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
       },
       child: Column(
         children: [
-        // Stats Header
-        Container(
-          width: double.infinity,
-          margin: const EdgeInsets.all(20),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Theme.of(context).dividerColor,
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
-                spreadRadius: 1,
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+          // Stats Header
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Theme.of(context).dividerColor,
+                width: 1,
               ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.people,
-                color: AppTheme.successColor,
-                size: 32,
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Enrolled Students',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${enrolledStudents.length} students currently enrolled',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
+              boxShadow: [
+                BoxShadow(
+                  color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
+                  spreadRadius: 1,
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
-              ),
-            ],
+              ],
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.people, color: AppTheme.successColor, size: 32),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Enrolled Students',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${enrolledStudents.length} students currently enrolled',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
 
-        // Enrolled Students List
-        Expanded(
-          child: enrolledStudents.isEmpty
-              ? _buildEmptyState('No students are currently enrolled in this course.')
-              : _buildStudentsList(enrolledStudents, false),
-        ),
+          // Enrolled Students List
+          Expanded(
+            child: enrolledStudents.isEmpty
+                ? _buildEmptyState(
+                    'No students are currently enrolled in this course.',
+                  )
+                : _buildStudentsList(enrolledStudents, false),
+          ),
         ],
       ),
     );
@@ -665,7 +688,10 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
     );
   }
 
-  Widget _buildStudentsList(List<Map<String, dynamic>> students, bool isAssignTab) {
+  Widget _buildStudentsList(
+    List<Map<String, dynamic>> students,
+    bool isAssignTab,
+  ) {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       itemCount: students.length,
@@ -673,7 +699,7 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
         final studentData = students[index];
         final user = studentData['user'] as User;
         final student = studentData['student'] as Student?;
-        
+
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: _buildStudentCard(user, student, isAssignTab),
@@ -687,12 +713,12 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: isSelected 
+        color: isSelected
             ? AppTheme.primaryColor.withValues(alpha: 0.1)
             : Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isSelected 
+          color: isSelected
               ? AppTheme.primaryColor
               : Theme.of(context).dividerColor,
           width: isSelected ? 2 : 1,
@@ -710,7 +736,9 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: isAssignTab ? () => _toggleStudentSelection(user.userId) : null,
+          onTap: isAssignTab
+              ? () => _toggleStudentSelection(user.userId)
+              : null,
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -726,7 +754,9 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
                         color: isSelected ? AppTheme.primaryColor : Colors.grey,
                         width: 2,
                       ),
-                      color: isSelected ? AppTheme.primaryColor : Colors.transparent,
+                      color: isSelected
+                          ? AppTheme.primaryColor
+                          : Colors.transparent,
                     ),
                     child: isSelected
                         ? const Icon(Icons.check, color: Colors.white, size: 16)
@@ -734,13 +764,17 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
                   ),
                   const SizedBox(width: 16),
                 ],
-                
+
                 // Avatar
                 CircleAvatar(
                   radius: 24,
                   backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
                   child: Text(
-                    user.fullName.split(' ').map((name) => name[0]).take(2).join(),
+                    user.fullName
+                        .split(' ')
+                        .map((name) => name[0])
+                        .take(2)
+                        .join(),
                     style: TextStyle(
                       color: AppTheme.primaryColor,
                       fontWeight: FontWeight.bold,
@@ -749,7 +783,7 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
                   ),
                 ),
                 const SizedBox(width: 16),
-                
+
                 // Student Info
                 Expanded(
                   child: Column(
@@ -768,7 +802,9 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
                         user.email,
                         style: TextStyle(
                           fontSize: 13,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                       if (student?.studentId != null) ...[
@@ -777,7 +813,9 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
                           'ID: ${student!.studentId}',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.5),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -785,16 +823,21 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
                     ],
                   ),
                 ),
-                
+
                 // Student Details and Actions
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     if (student?.section != null) ...[
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: AppTheme.getCourseColor(widget.course.code).withValues(alpha: 0.1),
+                          color: AppTheme.getCourseColor(
+                            widget.course.code,
+                          ).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -813,7 +856,9 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
                         'Year ${student!.yearLevel}',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
