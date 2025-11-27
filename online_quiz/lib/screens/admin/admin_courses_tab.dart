@@ -4,11 +4,12 @@ import '../../utils/app_theme.dart';
 import '../../models/course.dart';
 import '../../models/user.dart';
 import '../../providers/course_provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../widgets/custom_text_field.dart';
-import '../../widgets/dialog.dart';
 import '../../widgets/empty_state_widget.dart';
 import 'create_course_screen.dart';
+import 'course_details_screen.dart';
+import 'manage_sections_screen.dart';
+import 'add_section_screen.dart';
+import 'manage_course_screen.dart';
 
 class AdminCoursesTab extends ConsumerStatefulWidget {
   const AdminCoursesTab({super.key});
@@ -541,15 +542,43 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                           itemBuilder: (context) => [
                             const PopupMenuItem(
                               value: 'view',
-                              child: Text('View Details'),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.info_outline, size: 20),
+                                  SizedBox(width: 12),
+                                  Text('View Details'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'manage',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.edit_outlined, size: 20),
+                                  SizedBox(width: 12),
+                                  Text('Manage Course'),
+                                ],
+                              ),
                             ),
                             const PopupMenuItem(
                               value: 'sections',
-                              child: Text('Manage Sections'),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.layers_outlined, size: 20),
+                                  SizedBox(width: 12),
+                                  Text('Manage Sections'),
+                                ],
+                              ),
                             ),
                             const PopupMenuItem(
                               value: 'add_section',
-                              child: Text('Add Section'),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.add_circle_outline, size: 20),
+                                  SizedBox(width: 12),
+                                  Text('Add Section'),
+                                ],
+                              ),
                             ),
                           ],
                           child: Icon(
@@ -699,37 +728,6 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
     );
   }
 
-  Future<Map<String, dynamic>> _loadCourseDetails(Course course) async {
-    try {
-      final courseNotifier = ref.read(courseProvider.notifier);
-      final instructor = await courseNotifier.getCourseInstructor(
-        course.courseId,
-      );
-      final enrolledStudents = await courseNotifier
-          .getEnrolledStudentsWithDetails(course.courseId);
-
-      return {
-        'instructor': instructor,
-        'enrollmentCount': enrolledStudents.length,
-      };
-    } catch (e) {
-      return {'instructor': null, 'enrollmentCount': 0};
-    }
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'active':
-        return Colors.green;
-      case 'inactive':
-        return Colors.orange;
-      case 'archived':
-        return Colors.grey;
-      default:
-        return Colors.blue;
-    }
-  }
-
   void _handleGroupedCourseAction(
     BuildContext context,
     String action,
@@ -742,14 +740,84 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
 
     switch (action) {
       case 'view':
-        _showGroupedCourseDetailsDialog(context, groupedCourse);
+        _navigateToCourseDetails(context, groupedCourse, notifier);
+        break;
+      case 'manage':
+        _navigateToManageCourse(context, groupedCourse, notifier);
         break;
       case 'sections':
-        _showManageSectionsDialog(context, courseCode, courses, notifier);
+        _navigateToManageSections(context, courseCode, courses, notifier);
         break;
       case 'add_section':
-        _showAddSectionDialog(context, courseCode, primaryCourse, notifier);
+        _navigateToAddSection(context, courseCode, primaryCourse, notifier);
         break;
+    }
+  }
+
+  Future<void> _navigateToCourseDetails(
+    BuildContext context,
+    Map<String, dynamic> groupedCourse,
+    CourseNotifier notifier,
+  ) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) =>
+            CourseDetailsScreen(groupedCourse: groupedCourse),
+      ),
+    );
+  }
+
+  Future<void> _navigateToManageCourse(
+    BuildContext context,
+    Map<String, dynamic> groupedCourse,
+    CourseNotifier notifier,
+  ) async {
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (context) => ManageCourseScreen(groupedCourse: groupedCourse),
+      ),
+    );
+
+    if (result == true && mounted) {
+      await notifier.loadAllCourses();
+    }
+  }
+
+  Future<void> _navigateToManageSections(
+    BuildContext context,
+    String courseCode,
+    List<Course> courses,
+    CourseNotifier notifier,
+  ) async {
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (context) =>
+            ManageSectionsScreen(courseCode: courseCode, courses: courses),
+      ),
+    );
+
+    if (result == true && mounted) {
+      await notifier.loadAllCourses();
+    }
+  }
+
+  Future<void> _navigateToAddSection(
+    BuildContext context,
+    String courseCode,
+    Course primaryCourse,
+    CourseNotifier notifier,
+  ) async {
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (context) => AddSectionScreen(
+          courseCode: courseCode,
+          primaryCourse: primaryCourse,
+        ),
+      ),
+    );
+
+    if (result == true && mounted) {
+      await notifier.loadAllCourses();
     }
   }
 
@@ -765,932 +833,6 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
     if (result == true && mounted) {
       await notifier.loadAllCourses();
     }
-  }
-
-  void _showEditCourseDialog(
-    BuildContext context,
-    Course course,
-    CourseNotifier notifier,
-  ) {
-    final codeController = TextEditingController(text: course.code);
-    final nameController = TextEditingController(text: course.name);
-    final categoryController = TextEditingController(
-      text: course.category ?? '',
-    );
-
-    int? selectedInstructorId = course.instructorUserId;
-    String selectedStatus = course.status;
-
-    final formKey = GlobalKey<FormState>();
-
-    AppDialog.show(
-      context: context,
-      title: 'Edit Course',
-      type: DialogType.custom,
-      maxWidth: 600,
-      content: StatefulBuilder(
-        builder: (context, setState) {
-          return Form(
-            key: formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Basic Information
-                  Text(
-                    'Course Information',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.getTextColor(context),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  CustomTextField(
-                    controller: codeController,
-                    labelText: 'Course Code',
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Course code is required';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  CustomTextField(
-                    controller: nameController,
-                    labelText: 'Course Name',
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Course name is required';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  CustomTextField(
-                    controller: categoryController,
-                    labelText: 'Category (Optional)',
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Instructor Selection
-                  Text(
-                    'Instructor Assignment',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.getTextColor(context),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  DropdownButtonFormField<int>(
-                    initialValue: selectedInstructorId,
-                    decoration: const InputDecoration(
-                      labelText: 'Select Instructor',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: _teachers
-                        .map(
-                          (teacher) => DropdownMenuItem(
-                            value: teacher.userId,
-                            child: Text(
-                              teacher.fullName,
-                              style: TextStyle(fontSize: 12),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedInstructorId = value;
-                      });
-                    },
-                    validator: (value) {
-                      if (value == null) {
-                        return 'Please select an instructor';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Status Selection
-                  Text(
-                    'Status',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.getTextColor(context),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedStatus,
-                    decoration: const InputDecoration(
-                      labelText: 'Status',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'Active',
-                        child: Text(
-                          'Active',
-                          style: TextStyle(fontSize: 12),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Inactive',
-                        child: Text(
-                          'Inactive',
-                          style: TextStyle(fontSize: 12),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Archived',
-                        child: Text(
-                          'Archived',
-                          style: TextStyle(fontSize: 12),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        selectedStatus = value!;
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-      actions: [
-        DialogAction.cancel(context: context),
-        DialogAction.save(
-          onPressed: () async {
-            if (formKey.currentState!.validate()) {
-              // Close the edit dialog first
-              Navigator.of(context).pop();
-
-              // Show loading dialog
-              if (context.mounted) {
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (context) => const Center(
-                    child: Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(20.0),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            CircularProgressIndicator(),
-                            SizedBox(height: 16),
-                            Text('Updating course...'),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              }
-
-              final currentUser = ref.read(authProvider).user;
-              final success = await notifier.updateCourse(
-                courseId: course.courseId,
-                code: codeController.text,
-                name: nameController.text,
-                instructorUserId:
-                    selectedInstructorId ?? course.instructorUserId,
-                category: categoryController.text.isNotEmpty
-                    ? categoryController.text
-                    : null,
-                section: course.section,
-                status: selectedStatus,
-                updatedBy: currentUser?.userId,
-              );
-
-              if (context.mounted) {
-                // Close loading dialog
-                Navigator.of(context).pop();
-
-                if (success) {
-                  // Close any remaining dialogs (like manage sections dialog)
-                  if (context.mounted && Navigator.of(context).canPop()) {
-                    // Keep popping until we're back to the main screen
-                    while (Navigator.of(context).canPop()) {
-                      Navigator.of(context).pop();
-                      await Future.delayed(const Duration(milliseconds: 50));
-                      if (!context.mounted) break;
-                    }
-                  }
-
-                  // Reload courses
-                  await notifier.loadAllCourses();
-
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Course updated successfully!'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  }
-                } else {
-                  final courseState = ref.read(courseProvider);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          courseState.error ?? 'Failed to update course',
-                        ),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              }
-            }
-          },
-        ),
-      ],
-    );
-  }
-
-  void _showGroupedCourseDetailsDialog(
-    BuildContext context,
-    Map<String, dynamic> groupedCourse,
-  ) {
-    final courseCode = groupedCourse['courseCode'] as String;
-    final courseName = groupedCourse['courseName'] as String;
-    final sections = groupedCourse['sections'] as List<String>;
-    final instructors = groupedCourse['instructors'] as List<String>;
-    final category = groupedCourse['category'] as String?;
-    final status = groupedCourse['status'] as String;
-    final totalEnrollments = groupedCourse['totalEnrollments'] as int;
-    final courses = groupedCourse['courses'] as List<Course>;
-
-    AppDialog.show(
-      context: context,
-      title: 'Course Details',
-      type: DialogType.info,
-      maxWidth: 600,
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Course Header
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 30,
-                backgroundColor: _getCourseColor(
-                  courseCode,
-                ).withValues(alpha: 0.1),
-                child: Icon(
-                  Icons.book,
-                  color: _getCourseColor(courseCode),
-                  size: 30,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      courseName,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.getTextColor(context),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      courseCode,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: AppTheme.getSecondaryTextColor(context),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _getStatusColor(
-                              status,
-                            ).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Text(
-                            status,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: _getStatusColor(status),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 24),
-
-          // Course Information
-          Text(
-            'Course Information',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.getTextColor(context),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          _buildInfoRow(
-            context,
-            'Category',
-            category ?? 'Not specified',
-            Icons.category,
-          ),
-          _buildInfoRow(
-            context,
-            'Total Students',
-            totalEnrollments.toString(),
-            Icons.people,
-          ),
-          _buildInfoRow(context, 'Sections', sections.join(', '), Icons.group),
-          _buildInfoRow(
-            context,
-            'Instructors',
-            instructors.join(', '),
-            Icons.person,
-          ),
-
-          const SizedBox(height: 24),
-
-          // Sections Breakdown
-          Text(
-            'Sections Breakdown',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.getTextColor(context),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          ...courses.map((course) {
-            return FutureBuilder<Map<String, dynamic>>(
-              future: _loadCourseDetails(course),
-              builder: (context, snapshot) {
-                final instructor = snapshot.data?['instructor'] as User?;
-                final enrollmentCount =
-                    snapshot.data?['enrollmentCount'] as int? ?? 0;
-
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppTheme.getCardColor(context),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: AppTheme.getDividerColor(context),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Section ${course.section ?? 'A'}',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppTheme.getTextColor(context),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Instructor: ${instructor?.fullName ?? 'Loading...'}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: AppTheme.getSecondaryTextColor(context),
-                              ),
-                            ),
-                            Text(
-                              'Students: $enrollmentCount',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: AppTheme.getSecondaryTextColor(context),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _getStatusColor(
-                            course.status,
-                          ).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          course.status,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: _getStatusColor(course.status),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          }),
-        ],
-      ),
-      actions: [DialogAction.ok()],
-    );
-  }
-
-  void _showManageSectionsDialog(
-    BuildContext context,
-    String courseCode,
-    List<Course> courses,
-    CourseNotifier notifier,
-  ) {
-    AppDialog.show(
-      context: context,
-      title: 'Manage Sections - $courseCode',
-      type: DialogType.info,
-      maxWidth: 600,
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Sections for $courseCode',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.getTextColor(context),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          ...courses.map((course) {
-            return FutureBuilder<Map<String, dynamic>>(
-              future: _loadCourseDetails(course),
-              builder: (context, snapshot) {
-                final instructor = snapshot.data?['instructor'] as User?;
-                final enrollmentCount =
-                    snapshot.data?['enrollmentCount'] as int? ?? 0;
-
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppTheme.getCardColor(context),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: AppTheme.getDividerColor(context),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Section ${course.section ?? 'A'}',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppTheme.getTextColor(context),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Instructor: ${instructor?.fullName ?? 'Loading...'}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: AppTheme.getSecondaryTextColor(context),
-                              ),
-                            ),
-                            Text(
-                              'Students: $enrollmentCount',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: AppTheme.getSecondaryTextColor(context),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          IconButton(
-                            onPressed: () => _showEditCourseDialog(
-                              context,
-                              course,
-                              notifier,
-                            ),
-                            icon: Icon(
-                              Icons.edit,
-                              color: AppTheme.getSecondaryTextColor(context),
-                            ),
-                            tooltip: 'Edit Section',
-                          ),
-                          IconButton(
-                            onPressed: () => _showDeleteConfirmationDialog(
-                              context,
-                              course,
-                              notifier,
-                            ),
-                            icon: Icon(Icons.delete, color: Colors.red),
-                            tooltip: 'Delete Section',
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          }),
-        ],
-      ),
-      actions: [DialogAction.ok()],
-    );
-  }
-
-  void _showAddSectionDialog(
-    BuildContext context,
-    String courseCode,
-    Course primaryCourse,
-    CourseNotifier notifier,
-  ) {
-    final sectionController = TextEditingController();
-    int? selectedInstructorId;
-
-    final formKey = GlobalKey<FormState>();
-
-    AppDialog.show(
-      context: context,
-      title: 'Add New Section - $courseCode',
-      type: DialogType.info,
-      maxWidth: 500,
-      content: Form(
-        key: formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Add a new section for $courseCode',
-              style: TextStyle(
-                fontSize: 16,
-                color: AppTheme.getTextColor(context),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            _availableSections.isEmpty
-                ? const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                        SizedBox(width: 12),
-                        Text('Loading available sections...'),
-                      ],
-                    ),
-                  )
-                : DropdownButtonFormField<String>(
-                    decoration: InputDecoration(
-                      labelText: 'Section',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      filled: true,
-                      fillColor: AppTheme.getCardColor(context),
-                      prefixIcon: const Icon(Icons.group),
-                      helperText: 'Sections from Student records',
-                    ),
-                    items: _availableSections
-                        .map(
-                          (section) => DropdownMenuItem(
-                            value: section,
-                            child: Text(
-                              section,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppTheme.getTextColor(context),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      sectionController.text = value ?? '';
-                    },
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Section is required';
-                      }
-                      return null;
-                    },
-                  ),
-
-            const SizedBox(height: 16),
-
-            // Instructor Selection
-            Text(
-              'Assign Instructor',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.getTextColor(context),
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            DropdownButtonFormField<int>(
-              initialValue: selectedInstructorId,
-              decoration: InputDecoration(
-                labelText: 'Select Instructor',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                filled: true,
-                fillColor: AppTheme.getCardColor(context),
-              ),
-              items: _teachers.map((teacher) {
-                return DropdownMenuItem<int>(
-                  value: teacher.userId,
-                  child: Text(
-                    teacher.fullName,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.getTextColor(context),
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                );
-              }).toList(),
-              onChanged: (value) {
-                selectedInstructorId = value;
-              },
-              validator: (value) {
-                if (value == null) {
-                  return 'Please select an instructor';
-                }
-                return null;
-              },
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        DialogAction.cancel(),
-        DialogAction.confirm(
-          text: 'Add Section',
-          onPressed: () async {
-            if (formKey.currentState!.validate() &&
-                selectedInstructorId != null) {
-              Navigator.of(context).pop();
-
-              // Show loading dialog
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => const Center(
-                  child: Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(20.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          CircularProgressIndicator(),
-                          SizedBox(height: 16),
-                          Text('Adding section...'),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-
-              final success = await notifier.createCourse(
-                code: courseCode,
-                name: primaryCourse.name,
-                instructorUserId: selectedInstructorId!,
-                category: primaryCourse.category,
-                section: sectionController.text,
-                status: primaryCourse.status,
-                createdBy: 1, // Admin user ID
-              );
-
-              if (context.mounted) {
-                // Close loading dialog
-                Navigator.of(context).pop();
-
-                if (success) {
-                  // Reload courses
-                  await notifier.loadAllCourses();
-
-                  if (context.mounted) {
-                    AppDialog.show(
-                      context: context,
-                      title: 'Success',
-                      type: DialogType.success,
-                      content: Text(
-                        'Section ${sectionController.text} added successfully!',
-                      ),
-                      actions: [DialogAction.ok()],
-                    );
-                  }
-                } else {
-                  final courseState = ref.read(courseProvider);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          courseState.error ?? 'Failed to add section',
-                        ),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              }
-            }
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildInfoRow(
-    BuildContext context,
-    String label,
-    String value,
-    IconData icon,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: AppTheme.getSecondaryTextColor(context)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.getTextColor(context),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.getSecondaryTextColor(context),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showDeleteConfirmationDialog(
-    BuildContext context,
-    Course course,
-    CourseNotifier notifier,
-  ) {
-    DialogUtils.showConfirmation(
-      context: context,
-      title: 'Delete Course',
-      message:
-          'Are you sure you want to delete "${course.name}"? This action cannot be undone.',
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
-      isDestructive: true,
-    ).then((confirmed) async {
-      if (confirmed == true && context.mounted) {
-        // Show loading dialog
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => const Center(
-            child: Card(
-              child: Padding(
-                padding: EdgeInsets.all(20.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Deleting course...'),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-
-        final currentUser = ref.read(authProvider).user;
-        final success = await notifier.deleteCourse(
-          course.courseId,
-          deletedBy: currentUser?.userId,
-        );
-
-        if (context.mounted) {
-          // Close loading dialog
-          Navigator.of(context).pop();
-
-          if (success) {
-            // Close any remaining dialogs (like manage sections dialog)
-            if (context.mounted && Navigator.of(context).canPop()) {
-              // Keep popping until we're back to the main screen
-              while (Navigator.of(context).canPop()) {
-                Navigator.of(context).pop();
-                await Future.delayed(const Duration(milliseconds: 50));
-                if (!context.mounted) break;
-              }
-            }
-
-            // Reload courses
-            await notifier.loadAllCourses();
-
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${course.name} has been deleted'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          } else {
-            final courseState = ref.read(courseProvider);
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(courseState.error ?? 'Failed to delete course'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          }
-        }
-      }
-    });
   }
 
   Color _getCourseColor(String courseCode) {
