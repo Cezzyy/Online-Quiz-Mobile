@@ -6,12 +6,15 @@ import 'package:syncfusion_flutter_xlsio/xlsio.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import '../services/export_import_service.dart';
+import '../services/activity_log_service.dart';
 import '../models/export_import_log.dart';
+import '../models/activity_log.dart';
 
 // Provider for export/import functionality
-final exportImportProvider = StateNotifierProvider<ExportImportNotifier, ExportImportState>((ref) {
-  return ExportImportNotifier();
-});
+final exportImportProvider =
+    StateNotifierProvider<ExportImportNotifier, ExportImportState>((ref) {
+      return ExportImportNotifier();
+    });
 
 // State class for export/import operations
 class ExportImportState {
@@ -54,7 +57,7 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
       // Check Android version and request appropriate permissions
       final androidInfo = await DeviceInfoPlugin().androidInfo;
       final sdkInt = androidInfo.version.sdkInt;
-      
+
       if (sdkInt >= 30) {
         // Android 11+ (API 30+) - Request MANAGE_EXTERNAL_STORAGE
         final status = await Permission.manageExternalStorage.request();
@@ -81,12 +84,13 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
     if (Platform.isAndroid) {
       final androidInfo = await DeviceInfoPlugin().androidInfo;
       final sdkInt = androidInfo.version.sdkInt;
-      
+
       if (sdkInt >= 30) {
         // Android 11+ - Use app-specific external storage or Downloads
         try {
           // Try to use Downloads directory if we have MANAGE_EXTERNAL_STORAGE permission
-          final hasManagePermission = await Permission.manageExternalStorage.isGranted;
+          final hasManagePermission =
+              await Permission.manageExternalStorage.isGranted;
           if (hasManagePermission) {
             Directory? directory = Directory('/storage/emulated/0/Download');
             if (await directory.exists()) {
@@ -96,7 +100,7 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
         } catch (e) {
           // Ignore and fall back
         }
-        
+
         // Fallback to app-specific external storage
         final externalDir = await getExternalStorageDirectory();
         if (externalDir != null) {
@@ -121,7 +125,7 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
     } else {
       return await getDownloadsDirectory();
     }
-    
+
     return null;
   }
 
@@ -132,10 +136,15 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
     required String courseName,
     required int userId,
   }) async {
-    String fileName = 'quiz_results_${DateTime.now().millisecondsSinceEpoch}.xlsx';
-    
+    String fileName =
+        'quiz_results_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+
     try {
-      state = state.copyWith(isExporting: true, errorMessage: null, successMessage: null);
+      state = state.copyWith(
+        isExporting: true,
+        errorMessage: null,
+        successMessage: null,
+      );
 
       // Create a new Excel document
       final Workbook workbook = Workbook();
@@ -148,22 +157,32 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
       worksheet.getRangeByName('A1').setText('Quiz Results Report');
       worksheet.getRangeByName('A1').cellStyle.fontSize = 16;
       worksheet.getRangeByName('A1').cellStyle.bold = true;
-      
+
       worksheet.getRangeByName('A2').setText('Quiz: $quizTitle');
       worksheet.getRangeByName('A2').cellStyle.fontSize = 12;
       worksheet.getRangeByName('A2').cellStyle.bold = true;
-      
+
       worksheet.getRangeByName('A3').setText('Course: $courseName');
       worksheet.getRangeByName('A3').cellStyle.fontSize = 12;
       worksheet.getRangeByName('A3').cellStyle.bold = true;
-      
-      worksheet.getRangeByName('A4').setText('Generated on: ${DateTime.now().toString().split('.')[0]}');
+
+      worksheet
+          .getRangeByName('A4')
+          .setText('Generated on: ${DateTime.now().toString().split('.')[0]}');
       worksheet.getRangeByName('A4').cellStyle.fontSize = 10;
 
       // Add headers starting from row 6
       const int headerRow = 6;
-      final List<String> headers = ['Student Name', 'Student ID', 'Section', 'Score', 'Total Points', 'Percentage', 'Status'];
-      
+      final List<String> headers = [
+        'Student Name',
+        'Student ID',
+        'Section',
+        'Score',
+        'Total Points',
+        'Percentage',
+        'Status',
+      ];
+
       for (int i = 0; i < headers.length; i++) {
         final Range headerCell = worksheet.getRangeByIndex(headerRow, i + 1);
         headerCell.setText(headers[i]);
@@ -177,21 +196,31 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
       for (int i = 0; i < results.length; i++) {
         final result = results[i];
         final int dataRow = headerRow + 1 + i;
-        
+
         // Calculate percentage and status
         final double totalPoints = result['totalPoints'] ?? 0.0;
         final double score = result['score'] ?? 0.0;
-        final double percentage = totalPoints > 0 ? (score / totalPoints) * 100 : 0.0;
+        final double percentage = totalPoints > 0
+            ? (score / totalPoints) * 100
+            : 0.0;
         final String status = percentage >= 75 ? 'Passed' : 'Failed';
-        
-        worksheet.getRangeByIndex(dataRow, 1).setText(result['studentName'] ?? '');
-        worksheet.getRangeByIndex(dataRow, 2).setText(result['studentId'] ?? '');
-        worksheet.getRangeByIndex(dataRow, 3).setText(result['section'] ?? 'N/A');
+
+        worksheet
+            .getRangeByIndex(dataRow, 1)
+            .setText(result['studentName'] ?? '');
+        worksheet
+            .getRangeByIndex(dataRow, 2)
+            .setText(result['studentId'] ?? '');
+        worksheet
+            .getRangeByIndex(dataRow, 3)
+            .setText(result['section'] ?? 'N/A');
         worksheet.getRangeByIndex(dataRow, 4).setNumber(score);
         worksheet.getRangeByIndex(dataRow, 5).setNumber(totalPoints);
-        worksheet.getRangeByIndex(dataRow, 6).setText('${percentage.toStringAsFixed(1)}%');
+        worksheet
+            .getRangeByIndex(dataRow, 6)
+            .setText('${percentage.toStringAsFixed(1)}%');
         worksheet.getRangeByIndex(dataRow, 7).setText(status);
-        
+
         // Color code the status
         final Range statusCell = worksheet.getRangeByIndex(dataRow, 7);
         if (status == 'Passed') {
@@ -209,7 +238,9 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
       }
 
       // Add borders to the data range
-      final Range dataRange = worksheet.getRangeByName('A$headerRow:G${headerRow + results.length}');
+      final Range dataRange = worksheet.getRangeByName(
+        'A$headerRow:G${headerRow + results.length}',
+      );
       dataRange.cellStyle.borders.all.lineStyle = LineStyle.thin;
 
       // Save the file
@@ -247,8 +278,9 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
         if (Platform.isAndroid) {
           final androidInfo = await DeviceInfoPlugin().androidInfo;
           final sdkInt = androidInfo.version.sdkInt;
-          final hasManagePermission = await Permission.manageExternalStorage.isGranted;
-          
+          final hasManagePermission =
+              await Permission.manageExternalStorage.isGranted;
+
           if (sdkInt >= 30 && !hasManagePermission) {
             locationMessage = 'App Downloads folder';
           } else {
@@ -259,10 +291,11 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
         } else {
           locationMessage = 'Downloads folder';
         }
-        
+
         state = state.copyWith(
           isExporting: false,
-          successMessage: 'Excel file exported successfully!\nSaved to: $locationMessage\nFile: $fileName',
+          successMessage:
+              'Excel file exported successfully!\nSaved to: $locationMessage\nFile: $fileName',
         );
 
         return filePath;
@@ -281,7 +314,7 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
         // Don't fail the export if logging fails, just print error
         debugPrint('Failed to log failed export: $logError');
       }
-      
+
       state = state.copyWith(
         isExporting: false,
         errorMessage: 'Failed to export Excel file: ${e.toString()}',
@@ -297,10 +330,15 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
     required String courseName,
     required int userId,
   }) async {
-    String fileName = 'quiz_scores_${DateTime.now().millisecondsSinceEpoch}.xlsx';
-    
+    String fileName =
+        'quiz_scores_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+
     try {
-      state = state.copyWith(isExporting: true, errorMessage: null, successMessage: null);
+      state = state.copyWith(
+        isExporting: true,
+        errorMessage: null,
+        successMessage: null,
+      );
 
       // Filter only results with attempts (scores)
       final scoresOnly = results.where((r) => r['hasAttempt'] == true).toList();
@@ -316,22 +354,24 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
       worksheet.getRangeByName('A1').setText('Quiz Scores Report');
       worksheet.getRangeByName('A1').cellStyle.fontSize = 16;
       worksheet.getRangeByName('A1').cellStyle.bold = true;
-      
+
       worksheet.getRangeByName('A2').setText('Quiz: $quizTitle');
       worksheet.getRangeByName('A2').cellStyle.fontSize = 12;
       worksheet.getRangeByName('A2').cellStyle.bold = true;
-      
+
       worksheet.getRangeByName('A3').setText('Course: $courseName');
       worksheet.getRangeByName('A3').cellStyle.fontSize = 12;
       worksheet.getRangeByName('A3').cellStyle.bold = true;
-      
-      worksheet.getRangeByName('A4').setText('Generated on: ${DateTime.now().toString().split('.')[0]}');
+
+      worksheet
+          .getRangeByName('A4')
+          .setText('Generated on: ${DateTime.now().toString().split('.')[0]}');
       worksheet.getRangeByName('A4').cellStyle.fontSize = 10;
 
       // Add headers starting from row 6
       const int headerRow = 6;
       final List<String> headers = ['Student Name', 'Section', 'Score'];
-      
+
       for (int i = 0; i < headers.length; i++) {
         final Range headerCell = worksheet.getRangeByIndex(headerRow, i + 1);
         headerCell.setText(headers[i]);
@@ -345,9 +385,13 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
       for (int i = 0; i < scoresOnly.length; i++) {
         final result = scoresOnly[i];
         final int dataRow = headerRow + 1 + i;
-        
-        worksheet.getRangeByIndex(dataRow, 1).setText(result['studentName'] ?? '');
-        worksheet.getRangeByIndex(dataRow, 2).setText(result['section'] ?? 'N/A');
+
+        worksheet
+            .getRangeByIndex(dataRow, 1)
+            .setText(result['studentName'] ?? '');
+        worksheet
+            .getRangeByIndex(dataRow, 2)
+            .setText(result['section'] ?? 'N/A');
         worksheet.getRangeByIndex(dataRow, 3).setNumber(result['score'] ?? 0.0);
       }
 
@@ -357,7 +401,9 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
       }
 
       // Add borders to the data range
-      final Range dataRange = worksheet.getRangeByName('A$headerRow:C${headerRow + scoresOnly.length}');
+      final Range dataRange = worksheet.getRangeByName(
+        'A$headerRow:C${headerRow + scoresOnly.length}',
+      );
       dataRange.cellStyle.borders.all.lineStyle = LineStyle.thin;
 
       // Save the file
@@ -395,8 +441,9 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
         if (Platform.isAndroid) {
           final androidInfo = await DeviceInfoPlugin().androidInfo;
           final sdkInt = androidInfo.version.sdkInt;
-          final hasManagePermission = await Permission.manageExternalStorage.isGranted;
-          
+          final hasManagePermission =
+              await Permission.manageExternalStorage.isGranted;
+
           if (sdkInt >= 30 && !hasManagePermission) {
             locationMessage = 'App Downloads folder';
           } else {
@@ -407,10 +454,11 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
         } else {
           locationMessage = 'Downloads folder';
         }
-        
+
         state = state.copyWith(
           isExporting: false,
-          successMessage: 'Excel file exported successfully!\nSaved to: $locationMessage\nFile: $fileName',
+          successMessage:
+              'Excel file exported successfully!\nSaved to: $locationMessage\nFile: $fileName',
         );
 
         return filePath;
@@ -429,10 +477,222 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
         // Don't fail the export if logging fails, just print error
         debugPrint('Failed to log failed export: $logError');
       }
-      
+
       state = state.copyWith(
         isExporting: false,
         errorMessage: 'Failed to export Excel file: ${e.toString()}',
+      );
+      return null;
+    }
+  }
+
+  // Export audit logs (activity logs) to Excel
+  Future<String?> exportAuditLogsToExcel({
+    required int userId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    String fileName =
+        'audit_logs_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+
+    try {
+      state = state.copyWith(
+        isExporting: true,
+        errorMessage: null,
+        successMessage: null,
+      );
+
+      // Fetch activity logs from Supabase
+      final activityLogService = ActivityLogService();
+      final activityLogs = await activityLogService.getAllActivityLogs(
+        startDate: startDate,
+        endDate: endDate,
+      );
+
+      // Create a new Excel document
+      final Workbook workbook = Workbook();
+      final Worksheet worksheet = workbook.worksheets[0];
+
+      // Set worksheet name
+      worksheet.name = 'Audit Logs';
+
+      // Add title
+      worksheet.getRangeByName('A1').setText('Activity Audit Logs Report');
+      worksheet.getRangeByName('A1').cellStyle.fontSize = 16;
+      worksheet.getRangeByName('A1').cellStyle.bold = true;
+
+      worksheet
+          .getRangeByName('A2')
+          .setText('Generated on: ${DateTime.now().toString().split('.')[0]}');
+      worksheet.getRangeByName('A2').cellStyle.fontSize = 10;
+
+      if (startDate != null || endDate != null) {
+        String dateRange = 'Date Range: ';
+        if (startDate != null) {
+          dateRange += 'From ${startDate.toString().split(' ')[0]}';
+        }
+        if (endDate != null) {
+          dateRange += ' To ${endDate.toString().split(' ')[0]}';
+        }
+        worksheet.getRangeByName('A3').setText(dateRange);
+        worksheet.getRangeByName('A3').cellStyle.fontSize = 10;
+      }
+
+      // Add headers starting from row 5
+      const int headerRow = 5;
+      final List<String> headers = [
+        'Activity ID',
+        'User',
+        'Action',
+        'Entity',
+        'Entity ID',
+        'Description',
+        'Created At',
+      ];
+
+      for (int i = 0; i < headers.length; i++) {
+        final Range headerCell = worksheet.getRangeByIndex(headerRow, i + 1);
+        headerCell.setText(headers[i]);
+        headerCell.cellStyle.bold = true;
+        headerCell.cellStyle.backColor = '#1976D2';
+        headerCell.cellStyle.fontColor = '#FFFFFF';
+        headerCell.cellStyle.hAlign = HAlignType.center;
+      }
+
+      // Add activity log data
+      for (int i = 0; i < activityLogs.length; i++) {
+        final log = activityLogs[i];
+        final int dataRow = headerRow + 1 + i;
+
+        worksheet
+            .getRangeByIndex(dataRow, 1)
+            .setNumber(log.activityLogId.toDouble());
+        worksheet
+            .getRangeByIndex(dataRow, 2)
+            .setText(log.userName ?? 'User #${log.userId}');
+        worksheet.getRangeByIndex(dataRow, 3).setText(log.actionText);
+        worksheet.getRangeByIndex(dataRow, 4).setText(log.entityText);
+        worksheet
+            .getRangeByIndex(dataRow, 5)
+            .setText(log.entityId?.toString() ?? 'N/A');
+        worksheet.getRangeByIndex(dataRow, 6).setText(log.description ?? '');
+        worksheet
+            .getRangeByIndex(dataRow, 7)
+            .setText(log.createdAt.toString().split('.')[0]);
+
+        // Color code based on action type
+        final Range actionCell = worksheet.getRangeByIndex(dataRow, 3);
+        switch (log.action) {
+          case ActivityAction.create:
+            actionCell.cellStyle.backColor = '#E8F5E9';
+            actionCell.cellStyle.fontColor = '#2E7D32';
+            break;
+          case ActivityAction.update:
+            actionCell.cellStyle.backColor = '#E3F2FD';
+            actionCell.cellStyle.fontColor = '#1565C0';
+            break;
+          case ActivityAction.delete:
+            actionCell.cellStyle.backColor = '#FFEBEE';
+            actionCell.cellStyle.fontColor = '#C62828';
+            break;
+          case ActivityAction.login:
+          case ActivityAction.logout:
+            actionCell.cellStyle.backColor = '#F3E5F5';
+            actionCell.cellStyle.fontColor = '#6A1B9A';
+            break;
+          default:
+            break;
+        }
+      }
+
+      // Auto-fit columns
+      for (int i = 1; i <= headers.length; i++) {
+        worksheet.autoFitColumn(i);
+      }
+
+      // Add borders to the data range
+      if (activityLogs.isNotEmpty) {
+        final Range dataRange = worksheet.getRangeByName(
+          'A$headerRow:G${headerRow + activityLogs.length}',
+        );
+        dataRange.cellStyle.borders.all.lineStyle = LineStyle.thin;
+      }
+
+      // Save the file
+      final List<int> bytes = workbook.saveAsStream();
+      workbook.dispose();
+
+      // Request storage permission
+      final hasPermission = await _requestStoragePermission();
+      if (!hasPermission) {
+        throw Exception('Storage permission denied');
+      }
+
+      // Get the downloads directory
+      final directory = await _getDownloadDirectory();
+
+      if (directory != null) {
+        fileName = 'audit_logs_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+        final String filePath = '${directory.path}/$fileName';
+        final File file = File(filePath);
+        await file.writeAsBytes(bytes);
+
+        // Log successful export to Supabase
+        try {
+          await _exportImportService.logExportOperation(
+            userId: userId,
+            fileName: fileName,
+          );
+        } catch (logError) {
+          // Don't fail the export if logging fails, just print error
+          debugPrint('Failed to log export operation: $logError');
+        }
+
+        // Create user-friendly success message
+        String locationMessage;
+        if (Platform.isAndroid) {
+          final androidInfo = await DeviceInfoPlugin().androidInfo;
+          final sdkInt = androidInfo.version.sdkInt;
+          final hasManagePermission =
+              await Permission.manageExternalStorage.isGranted;
+
+          if (sdkInt >= 30 && !hasManagePermission) {
+            locationMessage = 'App Downloads folder';
+          } else {
+            locationMessage = 'Downloads folder';
+          }
+        } else if (Platform.isIOS) {
+          locationMessage = 'Documents folder';
+        } else {
+          locationMessage = 'Downloads folder';
+        }
+
+        state = state.copyWith(
+          isExporting: false,
+          successMessage:
+              'Audit logs exported successfully!\nSaved to: $locationMessage\nFile: $fileName\nTotal records: ${activityLogs.length}',
+        );
+
+        return filePath;
+      } else {
+        throw Exception('Could not access storage directory');
+      }
+    } catch (e) {
+      // Log failed export to Supabase
+      try {
+        await _exportImportService.logFailedExportOperation(
+          userId: userId,
+          fileName: fileName,
+          errorMessage: e.toString(),
+        );
+      } catch (logError) {
+        // Don't fail the export if logging fails, just print error
+        debugPrint('Failed to log failed export: $logError');
+      }
+
+      state = state.copyWith(
+        isExporting: false,
+        errorMessage: 'Failed to export audit logs: ${e.toString()}',
       );
       return null;
     }
@@ -493,9 +753,7 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
   }
 
   // Get recent export/import logs
-  Future<List<ExportImportLog>> getRecentLogs({
-    required int userId,
-  }) async {
+  Future<List<ExportImportLog>> getRecentLogs({required int userId}) async {
     try {
       return await _exportImportService.getRecentLogs(userId: userId);
     } catch (e) {
@@ -508,7 +766,9 @@ class ExportImportNotifier extends StateNotifier<ExportImportState> {
     required int userId,
   }) async {
     try {
-      return await _exportImportService.getExportImportStatistics(userId: userId);
+      return await _exportImportService.getExportImportStatistics(
+        userId: userId,
+      );
     } catch (e) {
       throw Exception('Failed to get statistics: ${e.toString()}');
     }

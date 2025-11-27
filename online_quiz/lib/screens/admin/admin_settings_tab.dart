@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../utils/app_theme.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/export_import_provider.dart';
 import '../../widgets/info_card.dart';
+import '../../services/system_info_service.dart';
 import 'admin_activity_logs_screen.dart';
 
 class AdminSettingsTab extends ConsumerStatefulWidget {
@@ -14,6 +16,39 @@ class AdminSettingsTab extends ConsumerStatefulWidget {
 }
 
 class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
+  final SystemInfoService _systemInfoService = SystemInfoService();
+  SystemStatus? _systemStatus;
+  bool _isLoadingSystemInfo = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSystemInfo();
+  }
+
+  Future<void> _loadSystemInfo() async {
+    setState(() {
+      _isLoadingSystemInfo = true;
+    });
+
+    try {
+      final status = await _systemInfoService.checkSystemStatus();
+
+      if (mounted) {
+        setState(() {
+          _systemStatus = status;
+          _isLoadingSystemInfo = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingSystemInfo = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final settingsState = ref.watch(settingsProvider);
@@ -29,11 +64,6 @@ class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
             children: [
               // Theme Settings Section
               _buildThemeSection(context, settingsState, settingsNotifier),
-
-              const SizedBox(height: 16),
-
-              // Data Management Section
-              _buildDataManagementSection(context),
 
               const SizedBox(height: 16),
 
@@ -110,30 +140,6 @@ class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
     );
   }
 
-  Widget _buildDataManagementSection(BuildContext context) {
-    return _buildSection(
-      context,
-      title: 'Data Management',
-      icon: Icons.storage,
-      children: [
-        _buildSettingsTile(
-          context,
-          icon: Icons.backup,
-          title: 'Data Backup',
-          subtitle: 'Configure automatic backups',
-          onTap: () => _showBackupDialog(context),
-        ),
-        _buildSettingsTile(
-          context,
-          icon: Icons.file_download,
-          title: 'Export Data',
-          subtitle: 'Export system data to files',
-          onTap: () => _showExportDialog(context),
-        ),
-      ],
-    );
-  }
-
   Widget _buildAuditLogsSection(BuildContext context) {
     return _buildSection(
       context,
@@ -151,7 +157,7 @@ class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
           context,
           icon: Icons.download,
           title: 'Export Audit Logs',
-          subtitle: 'Download audit logs as CSV',
+          subtitle: 'Download audit logs as Excel',
           onTap: () => _showExportAuditLogsDialog(context),
         ),
       ],
@@ -159,6 +165,25 @@ class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
   }
 
   Widget _buildSystemInformationSection(BuildContext context) {
+    if (_isLoadingSystemInfo) {
+      return _buildSection(
+        context,
+        title: 'System Information',
+        icon: Icons.info,
+        children: [
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(20.0),
+              child: CircularProgressIndicator(),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final appVersion = _systemInfoService.getAppVersion();
+    final systemStatus = _systemStatus;
+
     return _buildSection(
       context,
       title: 'System Information',
@@ -166,23 +191,20 @@ class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
       children: [
         InfoCard(
           title: 'App Version',
-          value: '1.0.0',
+          value: appVersion,
           icon: Icons.apps,
           iconColor: AppTheme.primaryColor,
         ),
         const SizedBox(height: 12),
         InfoCard(
-          title: 'Last Backup',
-          value: 'Today, 2:30 AM',
-          icon: Icons.backup,
-          iconColor: Colors.green,
-        ),
-        const SizedBox(height: 12),
-        InfoCard(
-          title: 'System Status',
-          value: 'All Systems Operational',
-          icon: Icons.check_circle,
-          iconColor: Colors.green,
+          title: 'Database Connection',
+          value: systemStatus?.message ?? 'Unknown',
+          icon: systemStatus?.isOperational == true
+              ? Icons.check_circle
+              : Icons.error,
+          iconColor: systemStatus?.isOperational == true
+              ? Colors.green
+              : Colors.red,
         ),
       ],
     );
@@ -290,42 +312,6 @@ class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
 
   // Dialog methods
 
-  void _showBackupDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Data Backup'),
-        content: const Text(
-          'Data backup configuration will be available in future updates.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showExportDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Export Data'),
-        content: const Text(
-          'Data export functionality will be available in future updates.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showAuditLogsDialog(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => const AdminActivityLogsScreen()),
@@ -335,19 +321,95 @@ class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
   void _showExportAuditLogsDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Export Audit Logs'),
         content: const Text(
-          'Audit log export functionality will be available in future updates.',
+          'Export all activity audit logs to an Excel file?\n\nThe file will be saved to your Downloads folder.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              await _performAuditLogsExport(context);
+            },
+            child: const Text('Export'),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _performAuditLogsExport(BuildContext context) async {
+    // Get current user ID
+    final authState = ref.read(authProvider);
+    final userId = authState.user?.userId;
+
+    if (userId == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('User not authenticated'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Show loading dialog
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => const AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Exporting audit logs...'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Perform export
+    final exportNotifier = ref.read(exportImportProvider.notifier);
+    final filePath = await exportNotifier.exportAuditLogsToExcel(
+      userId: userId,
+    );
+
+    // Close loading dialog
+    if (context.mounted) {
+      Navigator.of(context).pop();
+    }
+
+    // Show result
+    final exportState = ref.read(exportImportProvider);
+    if (context.mounted) {
+      if (filePath != null && exportState.successMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(exportState.successMessage!),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      } else if (exportState.errorMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(exportState.errorMessage!),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
   }
 
   void _showSignOutDialog(BuildContext context) {
