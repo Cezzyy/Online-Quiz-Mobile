@@ -54,21 +54,13 @@ class _AdminNotificationsTabState extends ConsumerState<AdminNotificationsTab> {
           ],
         ),
       ),
-      floatingActionButton: Padding(
-        padding: EdgeInsets.only(
-          right: 16,
-          bottom: notificationState.totalPages > 1
-              ? 120
-              : 16, // Dynamic padding based on pagination
-        ),
-        child: FloatingActionButton(
-          heroTag: 'admin_notifications_fab',
-          onPressed: () =>
-              _showCreateNotificationDialog(context, notificationNotifier),
-          backgroundColor: AppTheme.primaryColor,
-          foregroundColor: Colors.white,
-          child: const Icon(Icons.add),
-        ),
+      floatingActionButton: FloatingActionButton(
+        heroTag: 'admin_notifications_fab',
+        onPressed: () =>
+            _showCreateNotificationDialog(context, notificationNotifier),
+        backgroundColor: AppTheme.primaryColor,
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.add),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
