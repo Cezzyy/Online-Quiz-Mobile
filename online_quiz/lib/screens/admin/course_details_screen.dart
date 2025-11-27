@@ -23,7 +23,6 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen> {
     final courseCode = widget.groupedCourse['courseCode'] as String;
     final courseName = widget.groupedCourse['courseName'] as String;
     final sections = widget.groupedCourse['sections'] as List<String>;
-    final instructors = widget.groupedCourse['instructors'] as List<String>;
     final category = widget.groupedCourse['category'] as String?;
     final status = widget.groupedCourse['status'] as String;
     final totalEnrollments = widget.groupedCourse['totalEnrollments'] as int;
@@ -150,12 +149,7 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen> {
                       Icons.group,
                     ),
                     const SizedBox(height: 16),
-                    _buildInfoRow(
-                      context,
-                      'Instructors',
-                      instructors.join(', '),
-                      Icons.person,
-                    ),
+                    _buildInstructorsRow(context, courses),
                   ],
                 ),
               ),
@@ -188,8 +182,14 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen> {
                           child: Row(
                             children: [
                               Container(
-                                width: 50,
-                                height: 50,
+                                constraints: const BoxConstraints(
+                                  minWidth: 60,
+                                  minHeight: 50,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: AppTheme.primaryColor
                                       .withValues(alpha: 0.1),
@@ -199,10 +199,11 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen> {
                                   child: Text(
                                     course.section ?? 'A',
                                     style: TextStyle(
-                                      fontSize: 20,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.bold,
                                       color: AppTheme.primaryColor,
                                     ),
+                                    textAlign: TextAlign.center,
                                   ),
                                 ),
                               ),
@@ -380,6 +381,104 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen> {
     );
   }
 
+  Widget _buildInstructorsRow(BuildContext context, List<Course> courses) {
+    // Get unique instructor user IDs
+    final instructorIds = courses.map((c) => c.instructorUserId).toSet().toList();
+    
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.getSurfaceColor(context),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.person,
+            color: AppTheme.primaryColor,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Instructors',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.getSecondaryTextColor(context),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                FutureBuilder<List<String>>(
+                  future: _loadInstructorNames(instructorIds),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const SizedBox(
+                        height: 20,
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            SizedBox(width: 8),
+                            Text('Loading...', style: TextStyle(fontSize: 14)),
+                          ],
+                        ),
+                      );
+                    }
+                    
+                    if (snapshot.hasError || !snapshot.hasData) {
+                      return Text(
+                        'Error loading instructors',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.red,
+                        ),
+                      );
+                    }
+                    
+                    return Text(
+                      snapshot.data!.join(', '),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.getTextColor(context),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<List<String>> _loadInstructorNames(List<int> instructorIds) async {
+    try {
+      final notifier = ref.read(courseProvider.notifier);
+      final names = <String>[];
+      
+      for (final id in instructorIds) {
+        final instructor = await notifier.getCourseInstructor(id);
+        if (instructor != null) {
+          names.add(instructor.fullName);
+        }
+      }
+      
+      return names;
+    } catch (e) {
+      return ['Error loading names'];
+    }
+  }
+
   Future<Map<String, dynamic>> _loadCourseDetails(Course course) async {
     // Check cache first
     if (_courseDetailsCache.containsKey(course.courseId)) {
@@ -389,7 +488,7 @@ class _CourseDetailsScreenState extends ConsumerState<CourseDetailsScreen> {
     try {
       final notifier = ref.read(courseProvider.notifier);
       final instructor =
-          await notifier.getCourseInstructor(course.courseId);
+          await notifier.getCourseInstructor(course.instructorUserId);
       final enrolledStudents =
           await notifier.getEnrolledStudentsWithDetails(course.courseId);
 

@@ -280,15 +280,17 @@ class CourseNotifier extends StateNotifier<CourseState> {
       final courses = entry.value;
       final primaryCourse = courses.first;
       
+      // Get unique instructor IDs
+      final instructorIds = courses.map((c) => c.instructorUserId).toSet().toList();
+      
       groupedList.add({
         'courseCode': entry.key,
         'courseName': primaryCourse.name,
         'courses': courses,
         'primaryCourse': primaryCourse,
         'sections': courses.map((c) => c.section ?? 'N/A').toSet().toList(),
-        'instructors': courses.map((c) => c.instructorUserId).toSet().toList()
-            .map((id) => 'Instructor $id') // Will be replaced with actual names in UI
-            .toList(),
+        'instructorIds': instructorIds,
+        'instructors': [], // Will be populated asynchronously
         'category': primaryCourse.category,
         'status': primaryCourse.status,
         'totalEnrollments': 0, // Will be calculated if needed

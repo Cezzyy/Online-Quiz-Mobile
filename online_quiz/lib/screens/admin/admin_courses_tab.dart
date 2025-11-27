@@ -200,6 +200,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                         child: DropdownButton<String>(
                           value: state.selectedStatus,
                           isExpanded: true,
+                          menuMaxHeight: 300,
                           hint: Text(
                             'All Status',
                             style: TextStyle(
@@ -266,6 +267,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                         child: DropdownButton<String>(
                           value: state.selectedCategory,
                           isExpanded: true,
+                          menuMaxHeight: 300,
                           hint: Text(
                             'All Categories',
                             style: TextStyle(
@@ -322,6 +324,7 @@ class _AdminCoursesTabState extends ConsumerState<AdminCoursesTab> {
                         child: DropdownButton<int>(
                           value: state.selectedInstructorId,
                           isExpanded: true,
+                          menuMaxHeight: 300,
                           hint: Text(
                             'All Instructors',
                             style: TextStyle(
