@@ -10,6 +10,8 @@ import 'utils/app_routes.dart';
 import 'utils/app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/settings_provider.dart';
+import 'services/local_notification_service.dart';
+import 'services/notification_navigation_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'config/supabase_config.dart';
 
@@ -26,7 +28,7 @@ extension ColorExtension on Color {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Load environment variables from .env file
   await dotenv.load(fileName: ".env");
 
@@ -35,15 +37,14 @@ void main() async {
     anonKey: SupabaseConfig.supabaseAnonKey,
   );
 
+  // Initialize Local Notification Service
+  await LocalNotificationService().initialize();
+
   // Initialize and precompute themes at app startup for instant switching
   AppTheme.initialize();
   AppTheme.precomputeThemes();
 
-  runApp(
-    const ProviderScope(
-      child: ACLCQuizApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: ACLCQuizApp()));
 }
 
 class ACLCQuizApp extends ConsumerWidget {
@@ -52,13 +53,15 @@ class ACLCQuizApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settingsState = ref.watch(settingsProvider);
-    
+
     return MaterialApp(
       title: 'ACLC Online Quiz',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: settingsState.themeMode,
       debugShowCheckedModeBanner: false,
+      // Global navigator key for notification navigation
+      navigatorKey: NotificationNavigationService.navigatorKey,
       // Minimize theme transition duration for near-instant switching
       themeAnimationDuration: const Duration(milliseconds: 50),
       themeAnimationCurve: Curves.linear,
@@ -95,15 +98,17 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
-    
+
     // Show splash screen only once on initial app startup
     if (!authState.isInitialized && !_hasShownSplash) {
       _hasShownSplash = true;
       return const SplashScreen();
     }
-    
+
     // If authenticated, return the appropriate screen based on user role
-    if (authState.isAuthenticated && authState.user != null && authState.role != null) {
+    if (authState.isAuthenticated &&
+        authState.user != null &&
+        authState.role != null) {
       switch (authState.role?.toLowerCase()) {
         case 'teacher':
           return const TeacherMainScreen();
@@ -114,7 +119,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
           return const MainScreen();
       }
     }
-    
+
     // Show login screen for unauthenticated users
     return const LoginScreen();
   }

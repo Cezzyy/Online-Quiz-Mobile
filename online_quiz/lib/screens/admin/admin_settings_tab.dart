@@ -6,7 +6,9 @@ import '../../providers/auth_provider.dart';
 import '../../providers/export_import_provider.dart';
 import '../../widgets/info_card.dart';
 import '../../services/system_info_service.dart';
+import '../../services/local_notification_service.dart';
 import 'admin_activity_logs_screen.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class AdminSettingsTab extends ConsumerStatefulWidget {
   const AdminSettingsTab({super.key});
@@ -17,13 +19,26 @@ class AdminSettingsTab extends ConsumerStatefulWidget {
 
 class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
   final SystemInfoService _systemInfoService = SystemInfoService();
+  final LocalNotificationService _notificationService =
+      LocalNotificationService();
   SystemStatus? _systemStatus;
   bool _isLoadingSystemInfo = true;
+  bool _notificationPermissionGranted = false;
 
   @override
   void initState() {
     super.initState();
     _loadSystemInfo();
+    _checkNotificationPermission();
+  }
+
+  Future<void> _checkNotificationPermission() async {
+    final isGranted = await _notificationService.isPermissionGranted();
+    if (mounted) {
+      setState(() {
+        _notificationPermissionGranted = isGranted;
+      });
+    }
   }
 
   Future<void> _loadSystemInfo() async {
@@ -69,6 +84,11 @@ class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
 
               // Audit Logs Section
               _buildAuditLogsSection(context),
+
+              const SizedBox(height: 16),
+
+              // Notification Permissions Section
+              _buildNotificationPermissionsSection(context),
 
               const SizedBox(height: 16),
 
@@ -160,6 +180,40 @@ class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
           subtitle: 'Download audit logs as Excel',
           onTap: () => _showExportAuditLogsDialog(context),
         ),
+      ],
+    );
+  }
+
+  Widget _buildNotificationPermissionsSection(BuildContext context) {
+    return _buildSection(
+      context,
+      title: 'Notification Permissions',
+      icon: Icons.notifications_active,
+      children: [
+        _buildSettingsTile(
+          context,
+          icon: _notificationPermissionGranted
+              ? Icons.check_circle
+              : Icons.warning_amber,
+          title: 'Push Notifications',
+          subtitle: _notificationPermissionGranted
+              ? 'Notifications are enabled'
+              : 'Tap to enable notifications',
+          trailing: _notificationPermissionGranted
+              ? const Icon(Icons.check, color: Colors.green)
+              : null,
+          onTap: _notificationPermissionGranted
+              ? null
+              : () => _requestNotificationPermission(context),
+        ),
+        if (!_notificationPermissionGranted)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Text(
+              'Enable notifications to receive real-time updates about quizzes, courses, and system announcements.',
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+          ),
       ],
     );
   }
@@ -435,5 +489,54 @@ class _AdminSettingsTabState extends ConsumerState<AdminSettingsTab> {
         ],
       ),
     );
+  }
+
+  Future<void> _requestNotificationPermission(BuildContext context) async {
+    final granted = await _notificationService.requestPermission();
+
+    if (granted) {
+      setState(() {
+        _notificationPermissionGranted = true;
+      });
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Notifications enabled successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } else {
+      // If permission denied, show dialog to open settings
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Enable Notifications'),
+            content: const Text(
+              'Notification permission is required to receive real-time updates. '
+              'Please enable notifications in your device settings.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.of(dialogContext).pop();
+                  await openAppSettings();
+                  // Recheck permission after user returns from settings
+                  await Future.delayed(const Duration(seconds: 1));
+                  await _checkNotificationPermission();
+                },
+                child: const Text('Open Settings'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
   }
 }

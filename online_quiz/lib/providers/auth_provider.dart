@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
+import '../services/realtime_notification_service.dart';
+import '../services/local_notification_service.dart';
 
 // Authentication state class
 class AuthState {
@@ -48,6 +50,8 @@ class AuthState {
 // Authentication notifier class
 class AuthNotifier extends StateNotifier<AuthState> {
   final AuthService _authService = AuthService();
+  final RealtimeNotificationService _realtimeNotificationService =
+      RealtimeNotificationService();
 
   AuthNotifier() : super(const AuthState()) {
     _initializeAuth();
@@ -56,11 +60,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
   // Initialize authentication state
   Future<void> _initializeAuth() async {
     state = state.copyWith(isLoading: true);
-    
+
     try {
       // Check for existing session first
       final session = await _authService.getCurrentSession();
-      
+
       if (session != null) {
         // User is already authenticated - skip splash delay for faster navigation
         state = state.copyWith(
@@ -71,19 +75,24 @@ class AuthNotifier extends StateNotifier<AuthState> {
           isLoading: false,
           isInitialized: true,
         );
+
+        // Subscribe to notifications
+        final user = session['user'] as User?;
+        if (user != null) {
+          await _realtimeNotificationService.subscribeToNotifications(
+            user.userId,
+          );
+        }
       } else {
         // No existing session - show splash screen for minimum time
         await Future.delayed(const Duration(seconds: 2));
-        
-        state = state.copyWith(
-          isLoading: false,
-          isInitialized: true,
-        );
+
+        state = state.copyWith(isLoading: false, isInitialized: true);
       }
     } catch (e) {
       // On error, still show splash briefly for UX consistency
       await Future.delayed(const Duration(seconds: 1));
-      
+
       state = state.copyWith(
         isLoading: false,
         isInitialized: true,
@@ -95,10 +104,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
   // Login method
   Future<bool> login(String email, String password) async {
     state = state.copyWith(isLoading: true, clearError: true);
-    
+
     try {
       final result = await _authService.login(email, password);
-      
+
       // Update state with authenticated user
       state = state.copyWith(
         user: result['user'] as User,
@@ -108,7 +117,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
         isLoading: false,
         clearError: true,
       );
-      
+
+      // Subscribe to realtime notifications
+      final user = result['user'] as User;
+      await _realtimeNotificationService.subscribeToNotifications(user.userId);
+
+      // Request notification permission on first login
+      await LocalNotificationService().requestPermission();
+
       return true;
     } catch (e) {
       // Extract the actual error message from the exception
@@ -116,11 +132,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (errorMessage.startsWith('Exception: ')) {
         errorMessage = errorMessage.substring('Exception: '.length);
       }
-      
-      state = state.copyWith(
-        isLoading: false,
-        error: errorMessage,
-      );
+
+      state = state.copyWith(isLoading: false, error: errorMessage);
       return false;
     }
   }
@@ -128,10 +141,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
   // Logout method
   Future<void> logout() async {
     state = state.copyWith(isLoading: true, clearError: true);
-    
+
     try {
+      // Unsubscribe from notifications
+      await _realtimeNotificationService.unsubscribe();
+
       await _authService.logout();
-      
+
       // Clear the auth state completely
       state = const AuthState(
         isInitialized: true,
@@ -143,10 +159,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         error: null,
       );
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Logout failed: $e',
-      );
+      state = state.copyWith(isLoading: false, error: 'Logout failed: $e');
     }
   }
 
