@@ -330,7 +330,14 @@ class QuizService {
 
             case QuestionType.text:
               final textAnswer = userAnswer as String;
-              isCorrect = textAnswer.trim().isNotEmpty;
+              // Validate text answer against correct answer (case-insensitive, trimmed)
+              if (question.correctAnswer != null && question.correctAnswer!.trim().isNotEmpty) {
+                isCorrect = textAnswer.trim().toLowerCase() == question.correctAnswer!.trim().toLowerCase();
+              } else {
+                // Fallback: if no correct answer is set, mark as correct if not empty
+                isCorrect = textAnswer.trim().isNotEmpty;
+              }
+              
               if (isCorrect) {
                 questionScore = question.points;
               }

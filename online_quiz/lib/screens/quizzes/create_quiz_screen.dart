@@ -530,6 +530,7 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
           'text': questionData.body,
           'points': questionData.points,
           'sortOrder': i + 1,
+          'correctAnswer': questionData.correctAnswer,
           'choices': questionData.choices.map((choice) => {
             'text': choice.text,
             'isCorrect': choice.isCorrect,
@@ -607,12 +608,14 @@ class QuestionData {
   final String body;
   final double points;
   final List<ChoiceData> choices;
+  final String? correctAnswer; // For text-type questions
 
   QuestionData({
     required this.type,
     required this.body,
     required this.points,
     required this.choices,
+    this.correctAnswer,
   });
 }
 
@@ -643,6 +646,7 @@ class _QuestionDialog extends StatefulWidget {
 class _QuestionDialogState extends State<_QuestionDialog> {
   final _formKey = GlobalKey<FormState>();
   final _bodyController = TextEditingController();
+  final _correctAnswerController = TextEditingController(); // For text questions
   double _selectedPoints = 1.0;
   QuestionType _selectedType = QuestionType.single;
   List<ChoiceController> _choiceControllers = [];
@@ -657,6 +661,10 @@ class _QuestionDialogState extends State<_QuestionDialog> {
       _bodyController.text = widget.questionData!.body;
       _selectedPoints = widget.questionData!.points;
       _selectedType = widget.questionData!.type;
+      
+      if (widget.questionData!.correctAnswer != null) {
+        _correctAnswerController.text = widget.questionData!.correctAnswer!;
+      }
       
       _choiceControllers = widget.questionData!.choices.map((choice) {
         return ChoiceController(
@@ -749,6 +757,30 @@ class _QuestionDialogState extends State<_QuestionDialog> {
                     return null;
                   },
                 ),
+                if (_selectedType == QuestionType.text) ...[
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Correct Answer',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _correctAnswerController,
+                    decoration: const InputDecoration(
+                      labelText: 'Expected Answer',
+                      hintText: 'Enter the correct answer for validation',
+                      border: OutlineInputBorder(),
+                      helperText: 'Student answers will be compared to this (case-insensitive)',
+                    ),
+                    maxLines: 3,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter the correct answer';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
                 if (_selectedType != QuestionType.text) ...[
                   const SizedBox(height: 16),
                   Row(
@@ -915,6 +947,9 @@ class _QuestionDialogState extends State<_QuestionDialog> {
           isCorrect: controller.isCorrect,
         );
       }).toList(),
+      correctAnswer: _selectedType == QuestionType.text 
+          ? _correctAnswerController.text.trim() 
+          : null,
     );
 
     widget.onSave(questionData);
@@ -924,6 +959,7 @@ class _QuestionDialogState extends State<_QuestionDialog> {
   @override
   void dispose() {
     _bodyController.dispose();
+    _correctAnswerController.dispose();
     for (var controller in _choiceControllers) {
       controller.controller.dispose();
     }

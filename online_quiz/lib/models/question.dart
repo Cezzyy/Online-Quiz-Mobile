@@ -21,6 +21,7 @@ class Question {
   final String body;
   final double points;
   final int sortOrder;
+  final String? correctAnswer; // For text-type questions
 
   const Question({
     required this.questionId,
@@ -29,6 +30,7 @@ class Question {
     required this.body,
     required this.points,
     required this.sortOrder,
+    this.correctAnswer,
   });
 
   factory Question.fromJson(Map<String, dynamic> json) {
@@ -39,6 +41,7 @@ class Question {
       body: json['Body'] as String,
       points: (json['Points'] as num).toDouble(),
       sortOrder: json['Sort_Order'] as int,
+      correctAnswer: json['Correct_Answer'] as String?,
     );
   }
 
@@ -50,6 +53,7 @@ class Question {
       'Body': body,
       'Points': points,
       'Sort_Order': sortOrder,
+      'Correct_Answer': correctAnswer,
     };
   }
 
@@ -60,6 +64,7 @@ class Question {
     String? body,
     double? points,
     int? sortOrder,
+    String? correctAnswer,
   }) {
     return Question(
       questionId: questionId ?? this.questionId,
@@ -68,6 +73,7 @@ class Question {
       body: body ?? this.body,
       points: points ?? this.points,
       sortOrder: sortOrder ?? this.sortOrder,
+      correctAnswer: correctAnswer ?? this.correctAnswer,
     );
   }
 

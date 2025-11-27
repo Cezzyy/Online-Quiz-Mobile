@@ -141,6 +141,7 @@ class TeacherQuizService {
     required QuestionType type,
     required int order,
     required double points,
+    String? correctAnswer,
   }) async {
     try {
       final response = await _supabase
@@ -151,6 +152,7 @@ class TeacherQuizService {
             'Type': type.value,
             'Sort_Order': order,
             'Points': points,
+            'Correct_Answer': correctAnswer,
           })
           .select()
           .single();
@@ -170,6 +172,7 @@ class TeacherQuizService {
     QuestionType? type,
     int? order,
     double? points,
+    String? correctAnswer,
   }) async {
     try {
       final updates = <String, dynamic>{};
@@ -178,6 +181,7 @@ class TeacherQuizService {
       if (type != null) updates['Type'] = type.toString().split('.').last;
       if (order != null) updates['Order'] = order;
       if (points != null) updates['Points'] = points;
+      if (correctAnswer != null) updates['Correct_Answer'] = correctAnswer;
 
       final response = await _supabase
           .from('Question')
@@ -347,6 +351,7 @@ class TeacherQuizService {
           type: QuestionType.fromString(questionData['type']),
           order: i + 1,
           points: questionData['points'],
+          correctAnswer: questionData['correctAnswer'],
         );
 
         // 3. Create choices for this question
@@ -423,6 +428,7 @@ class TeacherQuizService {
             type: QuestionType.fromString(questionData['type']),
             order: i + 1,
             points: questionData['points'],
+            correctAnswer: questionData['correctAnswer'],
           );
 
           final choices = questionData['choices'] as List<Map<String, dynamic>>;
@@ -485,7 +491,7 @@ class TeacherQuizService {
     try {
       final questions = await _supabase
           .from('Question')
-          .select('QuestionId, Type')
+          .select('QuestionId, Type, Correct_Answer')
           .eq('QuizId', quizId);
 
       if (questions.isEmpty) {
@@ -499,8 +505,18 @@ class TeacherQuizService {
       for (final question in questions) {
         final questionId = question['QuestionId'] as int;
         final type = question['Type'] as String;
+        final correctAnswer = question['Correct_Answer'] as String?;
 
-        if (type != 'text') {
+        if (type == 'Text') {
+          // Text questions must have a correct answer
+          if (correctAnswer == null || correctAnswer.trim().isEmpty) {
+            return {
+              'valid': false,
+              'message': 'All text questions must have a correct answer specified',
+            };
+          }
+        } else {
+          // Multiple choice questions must have choices and correct answers
           final choices = await _supabase
               .from('Choice')
               .select('ChoiceId, IsCorrect')
