@@ -4,6 +4,9 @@ import '../../models/course.dart';
 import '../../utils/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/user_profile_provider.dart';
+import '../../providers/quiz_provider.dart';
+import '../courses/course_detail_screen.dart';
+import '../quizzes/quiz_detail_screen.dart';
 
 class HomeTab extends ConsumerStatefulWidget {
   const HomeTab({super.key});
@@ -421,69 +424,89 @@ class _HomeTabState extends ConsumerState<HomeTab> {
 
   Widget _buildCourseItem(BuildContext context, Course course, double progress) {
     final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CourseDetailScreen(course: course),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.class_,
+                    color: AppTheme.primaryColor,
+                    size: 20,
+                  ),
                 ),
-                child: Icon(
-                  Icons.class_,
-                  color: AppTheme.primaryColor,
-                  size: 20,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        course.name,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        course.code,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Row(
                   children: [
                     Text(
-                      course.name,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
+                      '${(progress * 100).toStringAsFixed(0)}%',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryColor,
                       ),
                     ),
-                    Text(
-                      course.code,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      size: 14,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                     ),
                   ],
                 ),
-              ),
-              Text(
-                '${(progress * 100).toStringAsFixed(0)}%',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryColor,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: theme.colorScheme.surfaceContainerHighest,
-              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-              minHeight: 6,
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: progress,
+                backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                minHeight: 6,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -538,6 +561,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
               ...recentAttempts.take(3).map((attempt) {
                 final attemptMap = attempt as Map<String, dynamic>;
                 final quizTitle = attemptMap['quizTitle'] as String;
+                final quizId = attemptMap['quizId'] as int;
                 final submittedAt = attemptMap['submittedAt'] as DateTime;
                 final rawScore = attemptMap['score'] as double?;
                 final totalQuestions = attemptMap['totalQuestions'] as int?;
@@ -546,6 +570,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: _buildActivityItem(
                     context,
+                    quizId,
                     quizTitle,
                     rawScore,
                     totalQuestions,
@@ -561,6 +586,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
 
   Widget _buildActivityItem(
     BuildContext context,
+    int quizId,
     String quizTitle,
     double? rawScore,
     int? totalQuestions,
@@ -573,53 +599,91 @@ class _HomeTabState extends ConsumerState<HomeTab> {
             ? '${rawScore.toInt()}'
             : 'N/A';
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.green.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+    return GestureDetector(
+      onTap: () async {
+        // Load quiz details and navigate
+        final quizState = ref.read(quizProvider);
+        final quiz = quizState.allQuizzes.firstWhere(
+          (q) => q.quizId == quizId,
+          orElse: () => throw Exception('Quiz not found'),
+        );
+        
+        // Get course for the quiz
+        final course = await ref.read(quizProvider.notifier).getCourseForQuiz(quizId);
+        
+        if (context.mounted) {
+          final authState = ref.read(authProvider);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => QuizDetailScreen(
+                quiz: quiz,
+                course: course,
+                currentUserId: authState.user?.userId ?? 0,
+              ),
             ),
-            child: const Icon(
-              Icons.quiz,
-              color: Colors.green,
-              size: 20,
+          );
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.quiz,
+                color: Colors.green,
+                size: 20,
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    quizTitle,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    'Score: $scoreText',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  quizTitle,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
+                  _formatDate(submittedAt),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
-                Text(
-                  'Score: $scoreText',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
+                const SizedBox(height: 4),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 14,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                 ),
               ],
             ),
-          ),
-          Text(
-            _formatDate(submittedAt),
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
