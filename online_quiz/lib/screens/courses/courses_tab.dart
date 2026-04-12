@@ -227,16 +227,26 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
       itemCount: courses.length,
       itemBuilder: (context, index) {
         final course = courses[index];
-        return _buildCourseCard(context, course);
+        return CourseCard(course: course);
       },
     );
   }
-  
-  Widget _buildCourseCard(BuildContext context, Course course) {
+}
+
+// Standalone widget for proper theme reactivity
+class CourseCard extends ConsumerWidget {
+  final Course course;
+
+  const CourseCard({super.key, required this.course});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final courseState = ref.watch(courseProvider);
     final progress = courseState.getCourseProgress(course.courseId);
     final totalQuizzes = courseState.getCourseQuizCount(course.courseId);
     final completedQuizzes = (progress * totalQuizzes).round();
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     
     return GestureDetector(
       onTap: () {
@@ -247,12 +257,21 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
           ),
         );
       },
-      child: Card(
-        elevation: 2,
-        shadowColor: Colors.black.withValues(alpha: 0.1),
-        color: Theme.of(context).colorScheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
         margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: isDark 
+                  ? Colors.black.withValues(alpha: 0.3)
+                  : Colors.black.withValues(alpha: 0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -280,8 +299,10 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
                       children: [
                         Text(
                           course.name,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          style: TextStyle(
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.black87,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -289,9 +310,12 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
                         const SizedBox(height: 4),
                         Text(
                           course.code,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          style: TextStyle(
+                            fontSize: 14,
                             fontWeight: FontWeight.w500,
+                            color: isDark 
+                                ? Colors.white.withValues(alpha: 0.6)
+                                : Colors.black.withValues(alpha: 0.6),
                           ),
                         ),
                       ],
@@ -300,7 +324,9 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
                   Icon(
                     Icons.arrow_forward_ios,
                     size: 16,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                    color: isDark 
+                        ? Colors.white.withValues(alpha: 0.4)
+                        : Colors.black.withValues(alpha: 0.4),
                   ),
                 ],
               ),
@@ -309,6 +335,7 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
               // Course Info
               _buildInfoRow(
                 context,
+                isDark,
                 'Instructor',
                 FutureBuilder<User?>(
                   future: ref.read(courseProvider.notifier).getCourseInstructor(course.instructorUserId),
@@ -316,16 +343,24 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
                     return Text(
                       snapshot.data?.fullName ?? 'Loading...',
                       textAlign: TextAlign.end,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      style: TextStyle(
+                        fontSize: 14,
                         fontWeight: FontWeight.w500,
+                        color: isDark ? Colors.white : Colors.black87,
                       ),
                     );
                   },
                 ),
               ),
-              _buildDivider(context),
+              Divider(
+                color: isDark 
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : Colors.black.withValues(alpha: 0.1),
+                height: 16,
+              ),
               _buildInfoRow(
                 context,
+                isDark,
                 'Status',
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -343,15 +378,23 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
                   ),
                 ),
               ),
-              _buildDivider(context),
+              Divider(
+                color: isDark 
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : Colors.black.withValues(alpha: 0.1),
+                height: 16,
+              ),
               _buildInfoRow(
                 context,
+                isDark,
                 'Quizzes',
                 Text(
                   '$completedQuizzes of $totalQuizzes completed',
                   textAlign: TextAlign.end,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  style: TextStyle(
+                    fontSize: 14,
                     fontWeight: FontWeight.w500,
+                    color: isDark ? Colors.white : Colors.black87,
                   ),
                 ),
               ),
@@ -364,13 +407,17 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
                 children: [
                   Text(
                     'Progress',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark 
+                          ? Colors.white.withValues(alpha: 0.6)
+                          : Colors.black.withValues(alpha: 0.6),
                     ),
                   ),
                   Text(
                     '${(progress * 100).toInt()}%',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    style: TextStyle(
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                       color: _getProgressColor(progress),
                     ),
@@ -382,7 +429,9 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
                 borderRadius: BorderRadius.circular(8),
                 child: LinearProgressIndicator(
                   value: progress,
-                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  backgroundColor: isDark 
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.black.withValues(alpha: 0.1),
                   valueColor: AlwaysStoppedAnimation<Color>(_getProgressColor(progress)),
                   minHeight: 6,
                 ),
@@ -394,8 +443,7 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
     );
   }
   
-  Widget _buildInfoRow(BuildContext context, String label, Widget valueWidget) {
-    final theme = Theme.of(context);
+  Widget _buildInfoRow(BuildContext context, bool isDark, String label, Widget valueWidget) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -404,8 +452,11 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
         children: [
           Text(
             label,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark 
+                  ? Colors.white.withValues(alpha: 0.6)
+                  : Colors.black.withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(width: 16),
@@ -414,15 +465,6 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
       ),
     );
   }
-
-  Widget _buildDivider(BuildContext context) {
-    return Divider(
-      color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
-      height: 16,
-    );
-  }
-  
-
   
   Color _getCourseColor(String courseCode) {
     return AppTheme.getCourseColor(courseCode);
