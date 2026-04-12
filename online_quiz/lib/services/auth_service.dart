@@ -327,6 +327,7 @@ class AuthService {
     required int createdBy,
     String? contactNumber,
     String? emergencyContactNumber,
+    String? emergencyContactPerson,
     String? department, // For teachers
     String? studentId, // For students
     String? section, // For students
@@ -349,6 +350,7 @@ class AuthService {
             'FullName': fullName,
             'ContactNumber': contactNumber ?? '',
             'EmergencyContactNumber': emergencyContactNumber ?? '',
+            'EmergencyContactPerson': emergencyContactPerson ?? '',
             'Status': 'Active',
             'CreatedBy': createdBy,
             'CreatedAt': DateTime.now().toIso8601String(),
@@ -402,6 +404,7 @@ class AuthService {
     String? fullName,
     String? contactNumber,
     String? emergencyContactNumber,
+    String? emergencyContactPerson,
     String? status,
     String? department, // For teachers
     String? studentId, // For students
@@ -420,6 +423,9 @@ class AuthService {
       if (contactNumber != null) updateData['ContactNumber'] = contactNumber;
       if (emergencyContactNumber != null) {
         updateData['EmergencyContactNumber'] = emergencyContactNumber;
+      }
+      if (emergencyContactPerson != null) {
+        updateData['EmergencyContactPerson'] = emergencyContactPerson;
       }
       if (status != null) updateData['Status'] = status;
 

@@ -23,6 +23,7 @@ class _EditUserScreenState extends ConsumerState<EditUserScreen> {
   final _fullNameController = TextEditingController();
   final _contactController = TextEditingController();
   final _emergencyController = TextEditingController();
+  final _emergencyPersonController = TextEditingController();
   final _departmentController = TextEditingController();
   final _studentIdController = TextEditingController();
   final _sectionController = TextEditingController();
@@ -70,6 +71,7 @@ class _EditUserScreenState extends ConsumerState<EditUserScreen> {
     _fullNameController.text = widget.user.fullName;
     _contactController.text = widget.user.contactNumber;
     _emergencyController.text = widget.user.emergencyContactNumber;
+    _emergencyPersonController.text = widget.user.emergencyContactPerson;
     _selectedStatus = widget.user.status;
 
     // Determine user role and set role-specific data
@@ -276,6 +278,19 @@ class _EditUserScreenState extends ConsumerState<EditUserScreen> {
                         keyboardType: TextInputType.phone,
                         prefixIcon: Icons.emergency_outlined,
                         validator: _validatePhone,
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        controller: _emergencyPersonController,
+                        labelText: 'Emergency Contact Person',
+                        hintText: 'Enter name of emergency contact',
+                        prefixIcon: Icons.person_outline,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Emergency contact person is required';
+                          }
+                          return null;
+                        },
                       ),
                     ],
                   ),
@@ -617,6 +632,7 @@ class _EditUserScreenState extends ConsumerState<EditUserScreen> {
         fullName: _fullNameController.text.trim(),
         contactNumber: _contactController.text.trim(),
         emergencyContactNumber: _emergencyController.text.trim(),
+        emergencyContactPerson: _emergencyPersonController.text.trim(),
         status: _selectedStatus,
         // Student-specific fields
         studentId: _userRole == 'Student'

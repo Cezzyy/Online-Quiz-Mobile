@@ -21,6 +21,7 @@ class _CreateUserScreenState extends ConsumerState<CreateUserScreen> {
   final _fullNameController = TextEditingController();
   final _contactController = TextEditingController();
   final _emergencyController = TextEditingController();
+  final _emergencyPersonController = TextEditingController();
   final _studentIdController = TextEditingController();
   final _sectionController = TextEditingController();
 
@@ -193,6 +194,19 @@ class _CreateUserScreenState extends ConsumerState<CreateUserScreen> {
                         keyboardType: TextInputType.phone,
                         prefixIcon: Icons.emergency_outlined,
                         validator: _validatePhone,
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        controller: _emergencyPersonController,
+                        labelText: 'Emergency Contact Person',
+                        hintText: 'Enter name of emergency contact',
+                        prefixIcon: Icons.person_outline,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Emergency contact person is required';
+                          }
+                          return null;
+                        },
                       ),
                     ],
                   ),
@@ -577,6 +591,7 @@ class _CreateUserScreenState extends ConsumerState<CreateUserScreen> {
         fullName: _fullNameController.text.trim(),
         contactNumber: _contactController.text.trim(),
         emergencyContactNumber: _emergencyController.text.trim(),
+        emergencyContactPerson: _emergencyPersonController.text.trim(),
         userType: _selectedUserType,
         createdBy: currentUser.userId,
         // Student-specific fields

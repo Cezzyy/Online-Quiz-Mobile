@@ -6,6 +6,7 @@ class User {
   final String status;
   final String contactNumber;
   final String emergencyContactNumber;
+  final String emergencyContactPerson;
   final DateTime createdAt;
   final DateTime updatedAt;
   final int? createdBy;
@@ -18,6 +19,7 @@ class User {
     required this.status,
     this.contactNumber = '',
     this.emergencyContactNumber = '',
+    this.emergencyContactPerson = '',
     required this.createdAt,
     required this.updatedAt,
     this.createdBy,
@@ -34,6 +36,7 @@ class User {
       updatedAt: DateTime.parse(json['UpdatedAt'] as String),
       contactNumber: json['ContactNumber'] as String? ?? '',
       emergencyContactNumber: json['EmergencyContactNumber'] as String? ?? '',
+      emergencyContactPerson: json['EmergencyContactPerson'] as String? ?? '',
       createdBy: json['CreatedBy'] as int?,
     );
   }
@@ -49,6 +52,7 @@ class User {
       'UpdatedAt': updatedAt.toIso8601String(),
       'ContactNumber': contactNumber,
       'EmergencyContactNumber': emergencyContactNumber,
+      'EmergencyContactPerson': emergencyContactPerson,
       'CreatedBy': createdBy,
     };
   }
@@ -63,6 +67,7 @@ class User {
     DateTime? updatedAt,
     String? contactNumber,
     String? emergencyContactNumber,
+    String? emergencyContactPerson,
     int? createdBy,
   }) {
     return User(
@@ -75,6 +80,7 @@ class User {
       updatedAt: updatedAt ?? this.updatedAt,
       contactNumber: contactNumber ?? this.contactNumber,
       emergencyContactNumber: emergencyContactNumber ?? this.emergencyContactNumber,
+      emergencyContactPerson: emergencyContactPerson ?? this.emergencyContactPerson,
       createdBy: createdBy ?? this.createdBy,
     );
   }

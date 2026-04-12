@@ -16,6 +16,7 @@ class UserProfileState {
   final bool hasChanges;
   final String originalContactNumber;
   final String originalEmergencyContactNumber;
+  final String originalEmergencyContactPerson;
 
   const UserProfileState({
     this.user,
@@ -28,6 +29,7 @@ class UserProfileState {
     this.hasChanges = false,
     this.originalContactNumber = '',
     this.originalEmergencyContactNumber = '',
+    this.originalEmergencyContactPerson = '',
   });
 
   UserProfileState copyWith({
@@ -41,6 +43,7 @@ class UserProfileState {
     bool? hasChanges,
     String? originalContactNumber,
     String? originalEmergencyContactNumber,
+    String? originalEmergencyContactPerson,
   }) {
     return UserProfileState(
       user: user ?? this.user,
@@ -53,6 +56,7 @@ class UserProfileState {
       hasChanges: hasChanges ?? this.hasChanges,
       originalContactNumber: originalContactNumber ?? this.originalContactNumber,
       originalEmergencyContactNumber: originalEmergencyContactNumber ?? this.originalEmergencyContactNumber,
+      originalEmergencyContactPerson: originalEmergencyContactPerson ?? this.originalEmergencyContactPerson,
     );
   }
 }
@@ -91,6 +95,7 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
         isLoading: false,
         originalContactNumber: user.contactNumber,
         originalEmergencyContactNumber: user.emergencyContactNumber,
+        originalEmergencyContactPerson: user.emergencyContactPerson,
         hasChanges: false,
       );
     } catch (e) {
@@ -118,6 +123,7 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
         hasChanges: _checkForChanges(
           contactNumber: formattedPhone,
           emergencyContactNumber: updatedUser.emergencyContactNumber,
+          emergencyContactPerson: updatedUser.emergencyContactPerson,
         ),
       );
     }
@@ -140,11 +146,29 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
         hasChanges: _checkForChanges(
           contactNumber: updatedUser.contactNumber,
           emergencyContactNumber: formattedEmergency,
+          emergencyContactPerson: updatedUser.emergencyContactPerson,
         ),
       );
     }
   }
 
+  // Update emergency contact person and check for changes
+  void updateEmergencyContactPerson(String emergencyContactPerson) {
+    if (state.user != null) {
+      final updatedUser = state.user!.copyWith(
+        emergencyContactPerson: emergencyContactPerson.trim(),
+      );
+      
+      state = state.copyWith(
+        user: updatedUser,
+        hasChanges: _checkForChanges(
+          contactNumber: updatedUser.contactNumber,
+          emergencyContactNumber: updatedUser.emergencyContactNumber,
+          emergencyContactPerson: emergencyContactPerson.trim(),
+        ),
+      );
+    }
+  }
 
 
   // Save profile changes
@@ -159,6 +183,7 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
         userId: state.user!.userId,
         contactNumber: state.user!.contactNumber,
         emergencyContactNumber: state.user!.emergencyContactNumber,
+        emergencyContactPerson: state.user!.emergencyContactPerson,
       );
 
       // Reload user data to reflect changes
@@ -169,6 +194,7 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
         hasChanges: false,
         originalContactNumber: state.user!.contactNumber,
         originalEmergencyContactNumber: state.user!.emergencyContactNumber,
+        originalEmergencyContactPerson: state.user!.emergencyContactPerson,
       );
     } catch (e) {
       state = state.copyWith(
@@ -182,9 +208,11 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
   bool _checkForChanges({
     required String contactNumber,
     required String emergencyContactNumber,
+    required String emergencyContactPerson,
   }) {
     return contactNumber != state.originalContactNumber ||
-           emergencyContactNumber != state.originalEmergencyContactNumber;
+           emergencyContactNumber != state.originalEmergencyContactNumber ||
+           emergencyContactPerson != state.originalEmergencyContactPerson;
   }
 
   // Reset to original values
@@ -193,6 +221,7 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
       final resetUser = state.user!.copyWith(
         contactNumber: state.originalContactNumber,
         emergencyContactNumber: state.originalEmergencyContactNumber,
+        emergencyContactPerson: state.originalEmergencyContactPerson,
       );
       
       state = state.copyWith(

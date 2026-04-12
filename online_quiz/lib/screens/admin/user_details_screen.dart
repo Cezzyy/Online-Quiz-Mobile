@@ -302,6 +302,15 @@ class _UserDetailsScreenState extends ConsumerState<UserDetailsScreen> {
                           : 'Not provided',
                       color: Colors.red,
                     ),
+                    const SizedBox(height: 12),
+                    InfoCardPresets.compact(
+                      icon: Icons.person_outline,
+                      title: 'Emergency Contact Person',
+                      value: widget.user.emergencyContactPerson.isNotEmpty
+                          ? widget.user.emergencyContactPerson
+                          : 'Not provided',
+                      color: Colors.red,
+                    ),
                   ],
                 ),
               ),

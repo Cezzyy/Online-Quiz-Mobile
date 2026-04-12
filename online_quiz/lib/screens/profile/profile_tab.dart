@@ -260,6 +260,14 @@ class _ProfileTabState extends ConsumerState<ProfileTab> {
                             ? user.emergencyContactNumber
                             : 'Not set',
                       ),
+                      _buildDivider(context),
+                      _buildInfoRow(
+                        context,
+                        'Emergency Contact Person',
+                        user.emergencyContactPerson.isNotEmpty
+                            ? user.emergencyContactPerson
+                            : 'Not set',
+                      ),
                     ],
                   ),
 

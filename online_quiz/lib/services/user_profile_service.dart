@@ -209,6 +209,7 @@ class UserProfileService {
     required int userId,
     String? contactNumber,
     String? emergencyContactNumber,
+    String? emergencyContactPerson,
   }) async {
     try {
       final updates = <String, dynamic>{};
@@ -218,6 +219,9 @@ class UserProfileService {
       }
       if (emergencyContactNumber != null) {
         updates['EmergencyContactNumber'] = emergencyContactNumber;
+      }
+      if (emergencyContactPerson != null) {
+        updates['EmergencyContactPerson'] = emergencyContactPerson;
       }
 
       if (updates.isEmpty) {
