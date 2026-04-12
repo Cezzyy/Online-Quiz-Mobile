@@ -53,7 +53,7 @@ jobs:
           dart --version
 
       - name: Cache pub packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.pub-cache
           key: ${{ runner.os }}-pub-${{ hashFiles('online_quiz/pubspec.lock') }}
