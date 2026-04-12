@@ -86,20 +86,16 @@ class _QuizDetailScreenState extends ConsumerState<QuizDetailScreen> {
 
   Widget _buildQuizHeader(BuildContext context, bool isCompleted, bool isOverdue, int daysUntilDue) {
     Color statusColor;
-    String statusText;
     IconData statusIcon;
     
     if (isCompleted) {
       statusColor = Colors.green;
-      statusText = 'Completed';
       statusIcon = Icons.check_circle;
     } else if (isOverdue) {
       statusColor = Colors.red;
-      statusText = 'Overdue';
       statusIcon = Icons.error;
     } else {
       statusColor = Colors.orange;
-      statusText = daysUntilDue == 0 ? 'Due Today' : 'Due in $daysUntilDue ${daysUntilDue == 1 ? 'day' : 'days'}';
       statusIcon = Icons.schedule;
     }
 
@@ -109,7 +105,7 @@ class _QuizDetailScreenState extends ConsumerState<QuizDetailScreen> {
       children: [
         // Gradient Background
         Container(
-          height: 220,
+          height: 260,
           width: double.infinity,
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -190,22 +186,6 @@ class _QuizDetailScreenState extends ConsumerState<QuizDetailScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  statusText,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
             ],
           ),
         ),
@@ -584,6 +564,7 @@ class _QuizDetailScreenState extends ConsumerState<QuizDetailScreen> {
     return Card(
       elevation: 2,
       shadowColor: Colors.black.withValues(alpha: 0.1),
+      color: theme.colorScheme.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),

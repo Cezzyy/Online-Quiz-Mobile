@@ -213,32 +213,6 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      _getStatusIcon(course.status),
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      course.status,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ],
           ),
         ),
@@ -568,19 +542,6 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     }
   }
 
-  IconData _getStatusIcon(String status) {
-    switch (status.toLowerCase()) {
-      case 'active':
-        return Icons.check_circle;
-      case 'inactive':
-        return Icons.pause_circle;
-      case 'archived':
-        return Icons.archive;
-      default:
-        return Icons.info;
-    }
-  }
-
   Widget _buildCourseInfo(BuildContext context, Course course) {
     return _buildInfoCard(
       context,
@@ -703,6 +664,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     return Card(
       elevation: 2,
       shadowColor: Colors.black.withValues(alpha: 0.1),
+      color: theme.colorScheme.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),

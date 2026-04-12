@@ -386,6 +386,7 @@ class _ProfileTabState extends ConsumerState<ProfileTab> {
     return Card(
       elevation: 2,
       shadowColor: Colors.black.withValues(alpha: 0.1),
+      color: theme.colorScheme.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),

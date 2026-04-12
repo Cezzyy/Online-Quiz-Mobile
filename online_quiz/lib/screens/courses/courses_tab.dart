@@ -250,6 +250,7 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
       child: Card(
         elevation: 2,
         shadowColor: Colors.black.withValues(alpha: 0.1),
+        color: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         margin: const EdgeInsets.only(bottom: 12),
         child: Padding(
