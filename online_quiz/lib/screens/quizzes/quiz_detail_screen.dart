@@ -343,7 +343,7 @@ class _QuizDetailScreenState extends ConsumerState<QuizDetailScreen> {
         _buildInfoRow(
           context,
           'Time Spent',
-          '${attempt.timeSpentMinutes} minutes',
+          _formatTimeSpent(attempt.timeSpentMinutes),
         ),
         _buildDivider(context),
         _buildInfoRow(
@@ -650,6 +650,22 @@ class _QuizDetailScreenState extends ConsumerState<QuizDetailScreen> {
       color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
       height: 16,
     );
+  }
+
+  String _formatTimeSpent(int minutes) {
+    if (minutes == 0) {
+      return 'Less than 1 minute';
+    } else if (minutes < 60) {
+      return '$minutes ${minutes == 1 ? 'minute' : 'minutes'}';
+    } else {
+      final hours = minutes ~/ 60;
+      final remainingMinutes = minutes % 60;
+      if (remainingMinutes == 0) {
+        return '$hours ${hours == 1 ? 'hour' : 'hours'}';
+      } else {
+        return '$hours ${hours == 1 ? 'hour' : 'hours'} $remainingMinutes ${remainingMinutes == 1 ? 'minute' : 'minutes'}';
+      }
+    }
   }
 
   String _formatDateTime(DateTime dateTime) {
