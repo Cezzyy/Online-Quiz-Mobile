@@ -87,44 +87,53 @@ class _HomeTabState extends ConsumerState<HomeTab> {
     final recentAttempts = stats['recentAttempts'] as List? ?? [];
 
     return Scaffold(
-      body: SingleChildScrollView(
-        padding: EdgeInsets.zero,
-        child: Column(
-          children: [
-            // Header Section with Gradient
-            _buildHeader(context, user),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final authState = ref.read(authProvider);
+          if (authState.user != null) {
+            await ref.read(userProfileProvider.notifier).loadUserData(authState.user!.userId);
+          }
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              // Header Section with Gradient
+              _buildHeader(context, user),
 
-            // Content
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Statistics Cards
-                  _buildStatsCard(
-                    context,
-                    totalQuizzes,
-                    completedAttempts,
-                    averageScore,
-                    userCourses.length,
-                  ),
+              // Content
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Statistics Cards
+                    _buildStatsCard(
+                      context,
+                      totalQuizzes,
+                      completedAttempts,
+                      averageScore,
+                      userCourses.length,
+                    ),
 
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                  // Enrolled Courses
-                  if (userCourses.isNotEmpty)
-                    _buildCoursesCard(context, userCourses, courseProgress),
+                    // Enrolled Courses
+                    if (userCourses.isNotEmpty)
+                      _buildCoursesCard(context, userCourses, courseProgress),
 
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                  // Recent Activity
-                  _buildRecentActivityCard(context, recentAttempts),
+                    // Recent Activity
+                    _buildRecentActivityCard(context, recentAttempts),
 
-                  const SizedBox(height: 24),
-                ],
+                    const SizedBox(height: 24),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

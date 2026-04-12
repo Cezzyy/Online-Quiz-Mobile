@@ -83,285 +83,294 @@ class _ProfileTabState extends ConsumerState<ProfileTab> {
     final student = profileState.student;
 
     return Scaffold(
-      body: SingleChildScrollView(
-        padding: EdgeInsets.zero,
-        child: Column(
-          children: [
-            // Header Section with Gradient and Profile Picture
-            Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.center,
-              children: [
-                // Gradient Background
-                Container(
-                  height: 200,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
-                    ),
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(30),
-                      bottomRight: Radius.circular(30),
-                    ),
-                  ),
-                ),
-                // Decorative Circles
-                Positioned(
-                  top: -50,
-                  right: -50,
-                  child: Container(
-                    width: 150,
-                    height: 150,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: 0.1),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  bottom: 50,
-                  left: -30,
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: 0.1),
-                    ),
-                  ),
-                ),
-                // Profile Picture
-                Positioned(
-                  bottom: -60,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: theme.scaffoldBackgroundColor,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: CircleAvatar(
-                      radius: 60,
-                      backgroundColor:
-                          theme.colorScheme.surfaceContainerHighest,
-                      backgroundImage: const AssetImage(
-                        'assets/images/aclclogo-nobg.png',
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 70),
-
-            // User Name and ID
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final authState = ref.read(authProvider);
+          if (authState.user != null) {
+            await ref.read(userProfileProvider.notifier).loadUserData(authState.user!.userId);
+          }
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              // Header Section with Gradient and Profile Picture
+              Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
                 children: [
-                  Text(
-                    user.fullName,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
+                  // Gradient Background
+                  Container(
+                    height: 200,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+                      ),
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(30),
+                        bottomRight: Radius.circular(30),
+                      ),
                     ),
-                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 4),
-                  if (student != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 4,
-                      ),
+                  // Decorative Circles
+                  Positioned(
+                    top: -50,
+                    right: -50,
+                    child: Container(
+                      width: 150,
+                      height: 150,
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: 0.1),
                       ),
-                      child: Text(
-                        'ID: ${student.studentId}',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.primaryColor,
-                          fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 50,
+                    left: -30,
+                    child: Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: 0.1),
+                      ),
+                    ),
+                  ),
+                  // Profile Picture
+                  Positioned(
+                    bottom: -60,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: theme.scaffoldBackgroundColor,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: CircleAvatar(
+                        radius: 60,
+                        backgroundColor:
+                            theme.colorScheme.surfaceContainerHighest,
+                        backgroundImage: const AssetImage(
+                          'assets/images/aclclogo-nobg.png',
                         ),
                       ),
                     ),
+                  ),
                 ],
               ),
-            ),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 70),
 
-            // Info Cards
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: [
-                  // Academic Information
-                  if (student != null)
+              // User Name and ID
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: [
+                    Text(
+                      user.fullName,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    if (student != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'ID: ${student.studentId}',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.primaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Info Cards
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    // Academic Information
+                    if (student != null)
+                      _buildInfoCard(
+                        context,
+                        title: 'Academic Information',
+                        icon: Icons.school,
+                        children: [
+                          _buildInfoRow(
+                            context,
+                            'Course',
+                            student.course ?? 'Not set',
+                          ),
+                          _buildDivider(context),
+                          _buildInfoRow(
+                            context,
+                            'Year Level',
+                            student.yearLevel != null
+                                ? _getYearLevelText(student.yearLevel!)
+                                : 'Not set',
+                          ),
+                          _buildDivider(context),
+                          _buildInfoRow(
+                            context,
+                            'Section',
+                            student.section ?? 'Not set',
+                          ),
+                        ],
+                      ),
+
+                    const SizedBox(height: 16),
+
+                    // Contact Information
                     _buildInfoCard(
                       context,
-                      title: 'Academic Information',
-                      icon: Icons.school,
+                      title: 'Contact Information',
+                      icon: Icons.contact_phone,
                       children: [
-                        _buildInfoRow(
-                          context,
-                          'Course',
-                          student.course ?? 'Not set',
-                        ),
+                        _buildInfoRow(context, 'Email', user.email),
                         _buildDivider(context),
                         _buildInfoRow(
                           context,
-                          'Year Level',
-                          student.yearLevel != null
-                              ? _getYearLevelText(student.yearLevel!)
+                          'Phone',
+                          user.contactNumber.isNotEmpty
+                              ? user.contactNumber
                               : 'Not set',
                         ),
                         _buildDivider(context),
                         _buildInfoRow(
                           context,
-                          'Section',
-                          student.section ?? 'Not set',
+                          'Emergency Contact Person',
+                          user.emergencyContactPerson.isNotEmpty
+                              ? user.emergencyContactPerson
+                              : 'Not set',
+                        ),
+                        _buildDivider(context),
+                        _buildInfoRow(
+                          context,
+                          'Emergency Contact Number',
+                          user.emergencyContactNumber.isNotEmpty
+                              ? user.emergencyContactNumber
+                              : 'Not set',
                         ),
                       ],
                     ),
 
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                  // Contact Information
-                  _buildInfoCard(
-                    context,
-                    title: 'Contact Information',
-                    icon: Icons.contact_phone,
-                    children: [
-                      _buildInfoRow(context, 'Email', user.email),
-                      _buildDivider(context),
-                      _buildInfoRow(
-                        context,
-                        'Phone',
-                        user.contactNumber.isNotEmpty
-                            ? user.contactNumber
-                            : 'Not set',
-                      ),
-                      _buildDivider(context),
-                      _buildInfoRow(
-                        context,
-                        'Emergency Contact Person',
-                        user.emergencyContactPerson.isNotEmpty
-                            ? user.emergencyContactPerson
-                            : 'Not set',
-                      ),
-                      _buildDivider(context),
-                      _buildInfoRow(
-                        context,
-                        'Emergency Contact Number',
-                        user.emergencyContactNumber.isNotEmpty
-                            ? user.emergencyContactNumber
-                            : 'Not set',
-                      ),
-                    ],
-                  ),
+                    // Account Status
+                    _buildInfoCard(
+                      context,
+                      title: 'Account Status',
+                      icon: Icons.verified_user,
+                      children: [
+                        _buildInfoRow(
+                          context,
+                          'Status',
+                          user.status,
+                          valueColor: user.isActive ? Colors.green : Colors.red,
+                        ),
+                        _buildDivider(context),
+                        _buildInfoRow(
+                          context,
+                          'Member Since',
+                          DateFormat('MMMM d, yyyy').format(user.createdAt),
+                        ),
+                      ],
+                    ),
 
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 24),
 
-                  // Account Status
-                  _buildInfoCard(
-                    context,
-                    title: 'Account Status',
-                    icon: Icons.verified_user,
-                    children: [
-                      _buildInfoRow(
-                        context,
-                        'Status',
-                        user.status,
-                        valueColor: user.isActive ? Colors.green : Colors.red,
-                      ),
-                      _buildDivider(context),
-                      _buildInfoRow(
-                        context,
-                        'Member Since',
-                        DateFormat('MMMM d, yyyy').format(user.createdAt),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Action Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const EditProfileScreen(),
+                    // Action Buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const EditProfileScreen(),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryColor,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              elevation: 2,
                             ),
-                            elevation: 2,
-                          ),
-                          child: const Text(
-                            'Edit Profile',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            child: const Text(
+                              'Edit Profile',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const SettingsScreen(),
-                              ),
-                            );
-                          },
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: isDark
-                                ? Colors.white
-                                : AppTheme.primaryColor,
-                            side: BorderSide(
-                              color: isDark
-                                  ? Colors.white54
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const SettingsScreen(),
+                                ),
+                              );
+                            },
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: isDark
+                                  ? Colors.white
                                   : AppTheme.primaryColor,
+                              side: BorderSide(
+                                color: isDark
+                                    ? Colors.white54
+                                    : AppTheme.primaryColor,
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                            child: const Text(
+                              'Settings',
+                              style: TextStyle(fontWeight: FontWeight.bold),
                             ),
-                          ),
-                          child: const Text(
-                            'Settings',
-                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 40),
-                ],
+                      ],
+                    ),
+                    const SizedBox(height: 40),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

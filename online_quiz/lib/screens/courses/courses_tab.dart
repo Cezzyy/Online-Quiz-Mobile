@@ -84,23 +84,33 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
     final userCourses = courseState.userCourses;
     
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 20),
-            // Header Section
-            _buildHeader(context, userCourses),
-            const SizedBox(height: 30),
-            
-            // Courses Grid
-            Expanded(
-              child: userCourses.isEmpty 
-                  ? _buildEmptyState()
-                  : _buildCoursesGrid(context, userCourses),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final currentUser = ref.read(currentUserProvider);
+          final userRole = ref.read(currentUserRoleProvider);
+          if (currentUser != null) {
+            await ref.read(courseProvider.notifier).refreshCourses(currentUser.userId, userRole: userRole);
+          }
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
+                // Header Section
+                _buildHeader(context, userCourses),
+                const SizedBox(height: 30),
+                
+                // Courses Grid
+                userCourses.isEmpty 
+                    ? _buildEmptyState()
+                    : _buildCoursesGrid(context, userCourses),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -136,6 +146,8 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
 
   Widget _buildCoursesGrid(BuildContext context, List<Course> courses) {
     return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 1,
         childAspectRatio: 2.2, // Reduced from 2.5 to give more height

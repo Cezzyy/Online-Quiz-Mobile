@@ -94,20 +94,27 @@ class _QuizTabState extends ConsumerState<QuizTab> {
     }
 
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            if (allQuizzes.isNotEmpty) ...[
-              _buildFilterTabs(selectedFilter),
-              _buildQuizStats(quizStats),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          if (user != null) {
+            await ref.read(quizProvider.notifier).refreshQuizzes(user.userId);
+          }
+        },
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(),
+              if (allQuizzes.isNotEmpty) ...[
+                _buildFilterTabs(selectedFilter),
+                _buildQuizStats(quizStats),
+              ],
+              Expanded(
+                child: allQuizzes.isEmpty
+                    ? _buildEmptyState()
+                    : _buildQuizList(paginatedQuizzes),
+              ),
             ],
-            Expanded(
-              child: allQuizzes.isEmpty
-                  ? _buildEmptyState()
-                  : _buildQuizList(paginatedQuizzes),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -238,33 +245,39 @@ class _QuizTabState extends ConsumerState<QuizTab> {
     final filteredQuizzes = ref.watch(filteredQuizzesProvider);
     
     if (quizzes.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.quiz_outlined,
-              size: 64,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.5,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.quiz_outlined,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No ${selectedFilter.toLowerCase()} quizzes found',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Check back later for new quizzes',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              'No ${selectedFilter.toLowerCase()} quizzes found',
-              style: TextStyle(
-                fontSize: 18,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Check back later for new quizzes',
-              style: TextStyle(
-                fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-            ),
-          ],
+          ),
         ),
       );
     }
@@ -273,6 +286,7 @@ class _QuizTabState extends ConsumerState<QuizTab> {
       children: [
         Expanded(
           child: ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 20),
             itemCount: quizzes.length,
             itemBuilder: (context, index) {
