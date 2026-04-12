@@ -14,6 +14,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final settingsState = ref.watch(settingsProvider);
+    final isDarkMode = settingsState.themeMode == ThemeMode.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -34,12 +35,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         children: [
           // App Preferences Section
           _buildSectionHeader('App Preferences'),
-          _buildSettingsTile(
-            icon: Icons.palette,
-            title: 'Theme Mode',
-            subtitle: _getThemeModeSubtitle(settingsState.themeMode),
-            onTap: () {
-              _showThemeModeDialog();
+          _buildThemeSwitchTile(
+            isDarkMode: isDarkMode,
+            onChanged: (value) {
+              ref.read(settingsProvider.notifier).toggleDarkMode(value);
             },
           ),
 
@@ -83,6 +82,53 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  Widget _buildThemeSwitchTile({
+    required bool isDarkMode,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8.0),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        child: Row(
+          children: [
+            Icon(
+              isDarkMode ? Icons.dark_mode : Icons.light_mode,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Dark Mode',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    isDarkMode ? 'Dark theme enabled' : 'Light theme enabled',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Switch(
+              value: isDarkMode,
+              onChanged: onChanged,
+              activeTrackColor: Theme.of(context).colorScheme.primary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
@@ -91,7 +137,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         style: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: Theme.of(context).primaryColor,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
     );
@@ -104,10 +150,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     required VoidCallback onTap,
     Color? textColor,
   }) {
+    final defaultIconColor = textColor ?? Theme.of(context).colorScheme.primary;
+    
     return Card(
       margin: const EdgeInsets.only(bottom: 8.0),
       child: ListTile(
-        leading: Icon(icon, color: textColor ?? Colors.blue),
+        leading: Icon(icon, color: defaultIconColor),
         title: Text(
           title,
           style: TextStyle(fontWeight: FontWeight.w500, color: textColor),
@@ -130,148 +178,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           'A comprehensive quiz application for ACLC students to practice and improve their knowledge across various subjects.',
         ),
       ],
-    );
-  }
-
-  String _getThemeModeSubtitle(ThemeMode themeMode) {
-    switch (themeMode) {
-      case ThemeMode.light:
-        return 'Light theme';
-      case ThemeMode.dark:
-        return 'Dark theme';
-      case ThemeMode.system:
-        return 'Follow system setting';
-    }
-  }
-
-  void _showThemeModeDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Consumer(
-          builder: (context, ref, child) {
-            final settingsState = ref.watch(settingsProvider);
-
-            return AlertDialog(
-              title: const Text('Choose Theme'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildThemeOption(
-                    context: context,
-                    ref: ref,
-                    themeMode: ThemeMode.light,
-                    title: 'Light',
-                    subtitle: 'Light theme',
-                    icon: Icons.light_mode,
-                    isSelected: settingsState.themeMode == ThemeMode.light,
-                  ),
-                  _buildThemeOption(
-                    context: context,
-                    ref: ref,
-                    themeMode: ThemeMode.dark,
-                    title: 'Dark',
-                    subtitle: 'Dark theme',
-                    icon: Icons.dark_mode,
-                    isSelected: settingsState.themeMode == ThemeMode.dark,
-                  ),
-                  _buildThemeOption(
-                    context: context,
-                    ref: ref,
-                    themeMode: ThemeMode.system,
-                    title: 'System',
-                    subtitle: 'Follow system setting',
-                    icon: Icons.settings_system_daydream,
-                    isSelected: settingsState.themeMode == ThemeMode.system,
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Cancel'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildThemeOption({
-    required BuildContext context,
-    required WidgetRef ref,
-    required ThemeMode themeMode,
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required bool isSelected,
-  }) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      margin: const EdgeInsets.symmetric(vertical: 2),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        color: isSelected
-            ? Theme.of(
-                context,
-              ).colorScheme.primaryContainer.withValues(alpha: 0.3)
-            : Colors.transparent,
-      ),
-      child: ListTile(
-        leading: Icon(
-          icon,
-          color: isSelected
-              ? Theme.of(context).colorScheme.primary
-              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-        ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title),
-                  Text(
-                    subtitle,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              child: Icon(
-                isSelected
-                    ? Icons.radio_button_checked
-                    : Icons.radio_button_unchecked,
-                key: ValueKey(isSelected),
-                color: isSelected
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-            ),
-          ],
-        ),
-        onTap: () {
-          ref.read(settingsProvider.notifier).setThemeMode(themeMode);
-          // Add a small delay before closing to show the selection animation
-          Future.delayed(const Duration(milliseconds: 150), () {
-            if (context.mounted) {
-              Navigator.of(context).pop();
-            }
-          });
-        },
-      ),
     );
   }
 
