@@ -473,9 +473,18 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                                   ),
                                 ),
                                 Text(
-                                  percentageScore != null
-                                      ? 'Score: ${percentageScore.toStringAsFixed(1)}%'
-                                      : 'Score: ${(attemptMap['score'] as double?)?.toStringAsFixed(1) ?? 'N/A'}',
+                                  () {
+                                    final rawScore = attemptMap['score'] as double?;
+                                    final totalQuestions = attemptMap['totalQuestions'] as int?;
+                                    
+                                    if (rawScore != null && totalQuestions != null) {
+                                      return 'Score: ${rawScore.toInt()}/$totalQuestions';
+                                    } else if (rawScore != null) {
+                                      return 'Score: ${rawScore.toInt()}';
+                                    } else {
+                                      return 'Score: N/A';
+                                    }
+                                  }(),
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: Theme.of(context)
