@@ -203,23 +203,37 @@ class QuizNotifier extends StateNotifier<QuizState> {
     
     switch (filter) {
       case 'Pending':
-        filtered = state.allQuizzes.where((quiz) => !state.isQuizCompleted(quiz.quizId)).toList();
+        // Only show quizzes that are not completed and not overdue
+        filtered = state.allQuizzes.where((quiz) => 
+          !state.isQuizCompleted(quiz.quizId) && !quiz.isOverdue
+        ).toList();
+        break;
+      case 'Overdue':
+        // Only show quizzes that are not completed and overdue
+        filtered = state.allQuizzes.where((quiz) => 
+          !state.isQuizCompleted(quiz.quizId) && quiz.isOverdue
+        ).toList();
         break;
       case 'Completed':
         filtered = state.allQuizzes.where((quiz) => state.isQuizCompleted(quiz.quizId)).toList();
         break;
       default:
-        // For 'All', prioritize pending quizzes first
-        final pending = state.allQuizzes.where((quiz) => !state.isQuizCompleted(quiz.quizId)).toList();
+        // For 'All', prioritize pending, then overdue, then completed
+        final pending = state.allQuizzes.where((quiz) => 
+          !state.isQuizCompleted(quiz.quizId) && !quiz.isOverdue
+        ).toList();
+        final overdue = state.allQuizzes.where((quiz) => 
+          !state.isQuizCompleted(quiz.quizId) && quiz.isOverdue
+        ).toList();
         final completed = state.allQuizzes.where((quiz) => state.isQuizCompleted(quiz.quizId)).toList();
-        filtered = [...pending, ...completed];
+        filtered = [...pending, ...overdue, ...completed];
         break;
     }
     
     // Sort filtered quizzes
-    if (filter == 'Pending' || filter == 'All') {
-      final pendingQuizzes = filtered.where((quiz) => !state.isQuizCompleted(quiz.quizId)).toList();
-      pendingQuizzes.sort((a, b) {
+    if (filter == 'Pending' || filter == 'Overdue' || filter == 'All') {
+      final incompleteQuizzes = filtered.where((quiz) => !state.isQuizCompleted(quiz.quizId)).toList();
+      incompleteQuizzes.sort((a, b) {
         if (a.dueAt == null && b.dueAt == null) return 0;
         if (a.dueAt == null) return 1;
         if (b.dueAt == null) return -1;
@@ -234,9 +248,9 @@ class QuizNotifier extends StateNotifier<QuizState> {
           if (attemptA?.submittedAt == null || attemptB?.submittedAt == null) return 0;
           return attemptB!.submittedAt!.compareTo(attemptA!.submittedAt!);
         });
-        filtered = [...pendingQuizzes, ...completedQuizzes];
+        filtered = [...incompleteQuizzes, ...completedQuizzes];
       } else {
-        filtered = pendingQuizzes;
+        filtered = incompleteQuizzes;
       }
     } else if (filter == 'Completed') {
       filtered.sort((a, b) {
@@ -767,10 +781,17 @@ final quizFilterProvider = Provider<String>((ref) {
 
 final quizStatsProvider = Provider<Map<String, int>>((ref) {
   final state = ref.watch(quizProvider);
+  
+  // Calculate overdue and pending counts
+  final incompleteQuizzes = state.allQuizzes.where((quiz) => !state.isQuizCompleted(quiz.quizId)).toList();
+  final overdueCount = incompleteQuizzes.where((quiz) => quiz.isOverdue).length;
+  final pendingCount = incompleteQuizzes.where((quiz) => !quiz.isOverdue).length;
+  
   return {
     'total': state.totalQuizzes,
     'completed': state.completedQuizzes,
-    'pending': state.pendingQuizzes,
+    'pending': pendingCount,
+    'overdue': overdueCount,
   };
 });
 

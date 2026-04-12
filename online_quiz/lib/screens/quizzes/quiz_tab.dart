@@ -16,7 +16,7 @@ class QuizTab extends ConsumerStatefulWidget {
 }
 
 class _QuizTabState extends ConsumerState<QuizTab> {
-  final List<String> _filterOptions = ['All', 'Pending', 'Completed'];
+  final List<String> _filterOptions = ['All', 'Pending', 'Overdue', 'Completed'];
 
   @override
   void initState() {
@@ -195,7 +195,15 @@ class _QuizTabState extends ConsumerState<QuizTab> {
             color: Colors.grey.withValues(alpha: 0.3),
           ),
           Expanded(
-            child: _buildStatItem('Completed', stats['completed'].toString(), Colors.green),
+            child: _buildStatItem('Overdue', stats['overdue'].toString(), Colors.red),
+          ),
+          Container(
+            width: 1,
+            height: 40,
+            color: Colors.grey.withValues(alpha: 0.3),
+          ),
+          Expanded(
+            child: _buildStatItem('Done', stats['completed'].toString(), Colors.green),
           ),
         ],
       ),
