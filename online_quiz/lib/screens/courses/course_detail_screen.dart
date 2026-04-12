@@ -82,31 +82,37 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                     ],
                   ),
                 )
-              : SingleChildScrollView(
-                  padding: EdgeInsets.zero,
-                  child: Column(
-                    children: [
-                      // Course Header with gradient
-                      _buildCourseHeader(context, course, progress, completedQuizzes, totalQuizzes),
-                      SizedBox(height: MediaQuery.of(context).size.height < 700 ? 20 : 24),
-                      
-                      // Course Information Card
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Column(
-                          children: [
-                            _buildCourseInfo(context, course),
-                            const SizedBox(height: 16),
-                            _buildProgressCard(context, progress, completedQuizzes, totalQuizzes),
-                            SizedBox(height: MediaQuery.of(context).size.height < 700 ? 20 : 24),
-                            
-                            // Quizzes Section
-                            _buildQuizzesList(context, courseQuizzes, course),
-                            const SizedBox(height: 40),
-                          ],
+              : RefreshIndicator(
+                  onRefresh: () async {
+                    await ref.read(courseProvider.notifier).loadCourseDetails(course.courseId);
+                  },
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.zero,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Column(
+                      children: [
+                        // Course Header with gradient
+                        _buildCourseHeader(context, course, progress, completedQuizzes, totalQuizzes),
+                        SizedBox(height: MediaQuery.of(context).size.height < 700 ? 20 : 24),
+                        
+                        // Course Information Card
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Column(
+                            children: [
+                              _buildCourseInfo(context, course),
+                              const SizedBox(height: 16),
+                              _buildProgressCard(context, progress, completedQuizzes, totalQuizzes),
+                              SizedBox(height: MediaQuery.of(context).size.height < 700 ? 20 : 24),
+                              
+                              // Quizzes Section
+                              _buildQuizzesList(context, courseQuizzes, course),
+                              const SizedBox(height: 40),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
     );
@@ -169,17 +175,6 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
           child: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        // Refresh Button
-        Positioned(
-          top: MediaQuery.of(context).padding.top + 8,
-          right: 8,
-          child: IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: () {
-              ref.read(courseProvider.notifier).loadCourseDetails(course.courseId);
-            },
           ),
         ),
         // Content
