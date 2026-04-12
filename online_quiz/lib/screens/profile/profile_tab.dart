@@ -255,17 +255,17 @@ class _ProfileTabState extends ConsumerState<ProfileTab> {
                       _buildDivider(context),
                       _buildInfoRow(
                         context,
-                        'Emergency',
-                        user.emergencyContactNumber.isNotEmpty
-                            ? user.emergencyContactNumber
+                        'Emergency Contact Person',
+                        user.emergencyContactPerson.isNotEmpty
+                            ? user.emergencyContactPerson
                             : 'Not set',
                       ),
                       _buildDivider(context),
                       _buildInfoRow(
                         context,
-                        'Emergency Contact Person',
-                        user.emergencyContactPerson.isNotEmpty
-                            ? user.emergencyContactPerson
+                        'Emergency Contact Number',
+                        user.emergencyContactNumber.isNotEmpty
+                            ? user.emergencyContactNumber
                             : 'Not set',
                       ),
                     ],

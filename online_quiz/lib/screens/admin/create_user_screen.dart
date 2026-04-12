@@ -188,15 +188,6 @@ class _CreateUserScreenState extends ConsumerState<CreateUserScreen> {
                       ),
                       const SizedBox(height: 16),
                       CustomTextField(
-                        controller: _emergencyController,
-                        labelText: 'Emergency Contact',
-                        hintText: '+639987654321',
-                        keyboardType: TextInputType.phone,
-                        prefixIcon: Icons.emergency_outlined,
-                        validator: _validatePhone,
-                      ),
-                      const SizedBox(height: 16),
-                      CustomTextField(
                         controller: _emergencyPersonController,
                         labelText: 'Emergency Contact Person',
                         hintText: 'Enter name of emergency contact',
@@ -207,6 +198,15 @@ class _CreateUserScreenState extends ConsumerState<CreateUserScreen> {
                           }
                           return null;
                         },
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        controller: _emergencyController,
+                        labelText: 'Emergency Contact Number',
+                        hintText: '+639987654321',
+                        keyboardType: TextInputType.phone,
+                        prefixIcon: Icons.emergency_outlined,
+                        validator: _validatePhone,
                       ),
                     ],
                   ),

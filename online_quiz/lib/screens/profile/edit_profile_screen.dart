@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/user_profile_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/app_theme.dart';
+import '../../widgets/custom_text_field.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -91,7 +92,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.close),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            // Reset changes before closing
+            ref.read(userProfileProvider.notifier).resetChanges();
+            Navigator.pop(context);
+          },
         ),
         actions: [
           Padding(
@@ -307,10 +312,31 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
                           const SizedBox(height: 20),
 
+                          CustomTextField(
+                            controller: _emergencyContactPersonController,
+                            labelText: 'Emergency Contact Person',
+                            hintText: 'Enter name of emergency contact',
+                            prefixIcon: Icons.person_outline,
+                            keyboardType: TextInputType.text,
+                            onChanged: (value) {
+                              ref
+                                  .read(userProfileProvider.notifier)
+                                  .updateEmergencyContactPerson(value);
+                            },
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Emergency contact person is required';
+                              }
+                              return null;
+                            },
+                          ),
+
+                          const SizedBox(height: 20),
+
                           _buildPhoneField(
                             context,
                             controller: _emergencyContactController,
-                            label: 'Emergency Contact',
+                            label: 'Emergency Contact Number',
                             icon: Icons.contact_phone_outlined,
                             onChanged: (value) {
                               ref
@@ -329,27 +355,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                               if (value.trim() ==
                                   _phoneController.text.trim()) {
                                 return 'Cannot be same as contact';
-                              }
-                              return null;
-                            },
-                          ),
-
-                          const SizedBox(height: 20),
-
-                          _buildTextField(
-                            context,
-                            controller: _emergencyContactPersonController,
-                            label: 'Emergency Contact Person',
-                            icon: Icons.person_outline,
-                            hintText: 'Enter name of emergency contact',
-                            onChanged: (value) {
-                              ref
-                                  .read(userProfileProvider.notifier)
-                                  .updateEmergencyContactPerson(value);
-                            },
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Emergency contact person is required';
                               }
                               return null;
                             },
@@ -439,49 +444,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           fontWeight: FontWeight.w500,
         ),
         hintText: 'XXX XXX XXXX',
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: theme.colorScheme.outline),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: theme.colorScheme.outline.withValues(alpha: 0.3),
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
-        ),
-        filled: true,
-        fillColor: theme.colorScheme.surface,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
-      ),
-      validator: validator,
-    );
-  }
-
-  Widget _buildTextField(
-    BuildContext context, {
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required String hintText,
-    required Function(String) onChanged,
-    required String? Function(String?) validator,
-  }) {
-    final theme = Theme.of(context);
-    return TextFormField(
-      controller: controller,
-      onChanged: onChanged,
-      style: TextStyle(fontWeight: FontWeight.w500),
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: theme.colorScheme.primary),
-        hintText: hintText,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: theme.colorScheme.outline),
