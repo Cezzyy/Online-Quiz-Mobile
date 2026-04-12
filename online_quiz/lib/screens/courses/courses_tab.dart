@@ -94,22 +94,26 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 20),
-                // Header Section
-                _buildHeader(context, userCourses),
-                const SizedBox(height: 30),
-                
-                // Courses Grid
-                userCourses.isEmpty 
-                    ? _buildEmptyState()
-                    : _buildCoursesGrid(context, userCourses),
-              ],
-            ),
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              // Header Section with Gradient
+              _buildHeader(context, userCourses),
+              const SizedBox(height: 24),
+              
+              // Courses List
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    userCourses.isEmpty 
+                        ? _buildEmptyState()
+                        : _buildCoursesList(context, userCourses),
+                    const SizedBox(height: 40),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -117,23 +121,94 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
   }
   
   Widget _buildHeader(BuildContext context, List<Course> userCourses) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final screenHeight = MediaQuery.of(context).size.height;
+    final headerHeight = screenHeight < 700 ? 200.0 : 220.0;
+    
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.center,
       children: [
-        Text(
-          'My Courses',
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
+        // Gradient Background
+        Container(
+          height: headerHeight,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+            ),
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(30),
+              bottomRight: Radius.circular(30),
+            ),
           ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          'You are enrolled in ${userCourses.length} courses',
-          style: TextStyle(
-            fontSize: 16,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+        // Decorative Circles
+        Positioned(
+          top: -50,
+          right: -50,
+          child: Container(
+            width: 150,
+            height: 150,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.1),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 50,
+          left: -30,
+          child: Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.1),
+            ),
+          ),
+        ),
+        // Content
+        Positioned(
+          top: MediaQuery.of(context).padding.top + 40,
+          left: 24,
+          right: 24,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.school,
+                color: Colors.white,
+                size: screenHeight < 700 ? 40 : 48,
+              ),
+              SizedBox(height: screenHeight < 700 ? 12 : 16),
+              Text(
+                'My Courses',
+                style: TextStyle(
+                  fontSize: screenHeight < 700 ? 24 : 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${userCourses.length} ${userCourses.length == 1 ? 'Course' : 'Courses'} Enrolled',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -144,16 +219,11 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
     return EmptyStatePresets.courses();
   }
 
-  Widget _buildCoursesGrid(BuildContext context, List<Course> courses) {
-    return GridView.builder(
+  Widget _buildCoursesList(BuildContext context, List<Course> courses) {
+    return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 1,
-        childAspectRatio: 2.2, // Reduced from 2.5 to give more height
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-      ),
+      padding: EdgeInsets.zero,
       itemCount: courses.length,
       itemBuilder: (context, index) {
         final course = courses[index];
@@ -166,6 +236,7 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
     final courseState = ref.watch(courseProvider);
     final progress = courseState.getCourseProgress(course.courseId);
     final totalQuizzes = courseState.getCourseQuizCount(course.courseId);
+    final completedQuizzes = (progress * totalQuizzes).round();
     
     return GestureDetector(
       onTap: () {
@@ -176,24 +247,15 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
           ),
         );
       },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
-              spreadRadius: 1,
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+      child: Card(
+        elevation: 2,
+        shadowColor: Colors.black.withValues(alpha: 0.1),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        margin: const EdgeInsets.only(bottom: 12),
         child: Padding(
-          padding: const EdgeInsets.all(12), // Reduced padding from 14 to 12
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
             children: [
               // Course Header
               Row(
@@ -201,7 +263,7 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                  color: _getCourseColor(course.code).withValues(alpha: 0.1),
+                      color: _getCourseColor(course.code).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
@@ -210,26 +272,23 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
                       size: 24,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           course.name,
-                          style: TextStyle(
-                            fontSize: 18,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
                           ),
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 4),
                         Text(
                           course.code,
-                          style: TextStyle(
-                            fontSize: 14,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                             fontWeight: FontWeight.w500,
                           ),
@@ -239,103 +298,126 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
                   ),
                   Icon(
                     Icons.arrow_forward_ios,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                     size: 16,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                   ),
                 ],
               ),
-              const SizedBox(height: 4), // Reduced from 6 to 4
+              const SizedBox(height: 16),
               
               // Course Info
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        FutureBuilder<User?>(
-                          future: ref.read(courseProvider.notifier).getCourseInstructor(course.instructorUserId),
-                          builder: (context, snapshot) {
-                            return Text(
-                              'Instructor: ${snapshot.data?.fullName ?? 'Loading...'}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 1), // Reduced from 2 to 1
-                        Text(
-                          '$totalQuizzes Quizzes',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                          ),
-                        ),
-                        if (course.category != null) ...[
-                          const SizedBox(height: 1), // Reduced from 2 to 1
-                          Text(
-                            'Category: ${course.category}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                            ),
-                          ),
-                        ],
-                      ],
+              _buildInfoRow(
+                context,
+                'Instructor',
+                FutureBuilder<User?>(
+                  future: ref.read(courseProvider.notifier).getCourseInstructor(course.instructorUserId),
+                  builder: (context, snapshot) {
+                    return Text(
+                      snapshot.data?.fullName ?? 'Loading...',
+                      textAlign: TextAlign.end,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              _buildDivider(context),
+              _buildInfoRow(
+                context,
+                'Status',
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(course.status).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    course.status,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: _getStatusColor(course.status),
                     ),
                   ),
-                  Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _getStatusColor(course.status).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          course.status,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: _getStatusColor(course.status),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 2), // Reduced from 4 to 2
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _getProgressColor(progress).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          '${(progress * 100).toInt()}% Complete',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: _getProgressColor(progress),
-                          ),
-                        ),
-                      ),
-                    ],
+                ),
+              ),
+              _buildDivider(context),
+              _buildInfoRow(
+                context,
+                'Quizzes',
+                Text(
+                  '$completedQuizzes of $totalQuizzes completed',
+                  textAlign: TextAlign.end,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Progress Section
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Progress',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                  Text(
+                    '${(progress * 100).toInt()}%',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: _getProgressColor(progress),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 4), // Reduced from 6 to 4
-              
-              // Progress Bar
-              LinearProgressIndicator(
-                value: progress,
-                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                valueColor: AlwaysStoppedAnimation<Color>(_getProgressColor(progress)),
-                minHeight: 4,
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  valueColor: AlwaysStoppedAnimation<Color>(_getProgressColor(progress)),
+                  minHeight: 6,
+                ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+  
+  Widget _buildInfoRow(BuildContext context, String label, Widget valueWidget) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Flexible(child: valueWidget),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDivider(BuildContext context) {
+    return Divider(
+      color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+      height: 16,
     );
   }
   
