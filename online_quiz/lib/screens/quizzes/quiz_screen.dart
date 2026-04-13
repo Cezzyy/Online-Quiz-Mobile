@@ -7,6 +7,7 @@ import '../../models/attempt.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/dialog.dart';
 import '../../providers/quiz_provider.dart';
+import '../../providers/local_auth_provider.dart';
 import 'quiz_result_screen.dart';
 
 class QuizScreen extends ConsumerStatefulWidget {
@@ -38,6 +39,14 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
   @override
   void initState() {
     super.initState();
+    
+    // Mark quiz as started - prevent app locking during quiz
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(localAuthProvider.notifier).startQuiz();
+      }
+    });
+    
     questions = [];
     pageController = PageController();
     startTime = DateTime.now();
@@ -128,6 +137,8 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
         if (!didPop) {
           final shouldPop = await _showExitConfirmation();
           if (shouldPop && context.mounted) {
+            // End quiz session before popping
+            ref.read(localAuthProvider.notifier).endQuiz();
             Navigator.of(context).pop();
           }
         }
@@ -790,6 +801,9 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
       
       navigator.pop(); // Close loading dialog
       
+      // End quiz session
+      ref.read(localAuthProvider.notifier).endQuiz();
+      
       if (attempt == null) {
         scaffoldMessenger.showSnackBar(
           const SnackBar(
@@ -853,6 +867,9 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
     } catch (e) {
       if (mounted) {
         navigator.pop(); // Close loading dialog
+        
+        // End quiz session
+        ref.read(localAuthProvider.notifier).endQuiz();
         
         // Show error and exit quiz screen to prevent retaking
         scaffoldMessenger.showSnackBar(

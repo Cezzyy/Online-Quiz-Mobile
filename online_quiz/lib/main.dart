@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/onboarding/splash_screen.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/auth/biometric_lock_screen.dart';
 import 'screens/home/main_screen.dart';
 import 'screens/home/teacher_main_screen.dart';
 import 'screens/home/admin_main_screen.dart';
 import 'utils/app_routes.dart';
 import 'utils/app_theme.dart';
 import 'providers/auth_provider.dart';
+import 'providers/local_auth_provider.dart';
 import 'providers/settings_provider.dart';
 import 'services/local_notification_service.dart';
 import 'services/notification_navigation_service.dart';
@@ -64,9 +66,7 @@ class ACLCQuizApp extends ConsumerWidget {
       darkTheme: AppTheme.darkTheme,
       themeMode: settingsState.themeMode,
       debugShowCheckedModeBanner: false,
-      // Global navigator key for notification navigation
       navigatorKey: NotificationNavigationService.navigatorKey,
-      // Minimize theme transition duration for near-instant switching
       themeAnimationDuration: const Duration(milliseconds: 50),
       themeAnimationCurve: Curves.linear,
       home: const AuthWrapper(),
@@ -87,32 +87,87 @@ class AuthWrapper extends ConsumerStatefulWidget {
   ConsumerState<AuthWrapper> createState() => _AuthWrapperState();
 }
 
-class _AuthWrapperState extends ConsumerState<AuthWrapper> {
+class _AuthWrapperState extends ConsumerState<AuthWrapper> with WidgetsBindingObserver {
   bool _hasShownSplash = false;
+  bool _isAppInBackground = false;
+  bool _hasCompletedInitialAuth = false;
 
   @override
   void initState() {
     super.initState();
-    // Initialize auth and check for existing session
-    Future.microtask(() {
-      ref.read(authProvider.notifier).initialize();
+    WidgetsBinding.instance.addObserver(this);
+    
+    Future.microtask(() async {
+      await ref.read(authProvider.notifier).initialize();
+      
+      final authState = ref.read(authProvider);
+      if (authState.isAuthenticated && authState.user != null) {
+        debugPrint('User is authenticated on app start - locking app');
+        ref.read(localAuthProvider.notifier).lockApp();
+      } else {
+        debugPrint('User is not authenticated - no lock needed');
+      }
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    final authState = ref.read(authProvider);
+    final localAuthState = ref.read(localAuthProvider);
+    if (!authState.isAuthenticated || !_hasCompletedInitialAuth) return;
+
+    if (localAuthState.isInQuiz) {
+      debugPrint('User is in quiz - skipping lock');
+      return;
+    }
+
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+        debugPrint('App going to background');
+        _isAppInBackground = true;
+        break;
+      case AppLifecycleState.resumed:
+        debugPrint('App resumed, _isAppInBackground: $_isAppInBackground');
+        if (_isAppInBackground) {
+          _isAppInBackground = false;
+          debugPrint('Locking app on resume');
+          ref.read(localAuthProvider.notifier).lockApp();
+        }
+        break;
+      default:
+        break;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    final localAuthState = ref.watch(localAuthProvider);
 
-    // Show splash screen only once on initial app startup
     if (!authState.isInitialized && !_hasShownSplash) {
       _hasShownSplash = true;
       return const SplashScreen();
     }
-
-    // If authenticated, return the appropriate screen based on user role
     if (authState.isAuthenticated &&
         authState.user != null &&
         authState.role != null) {
+      if (localAuthState.isLocked) {
+        return const BiometricLockScreen();
+      }
+
+      if (!_hasCompletedInitialAuth) {
+        debugPrint('Initial authentication completed');
+        _hasCompletedInitialAuth = true;
+      }
       switch (authState.role?.toLowerCase()) {
         case 'teacher':
           return const TeacherMainScreen();
@@ -124,7 +179,6 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
       }
     }
 
-    // Show login screen for unauthenticated users
     return const LoginScreen();
   }
 }

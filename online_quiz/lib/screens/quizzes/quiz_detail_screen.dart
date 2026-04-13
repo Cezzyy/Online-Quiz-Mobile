@@ -8,6 +8,7 @@ import '../../widgets/dialog.dart';
 import '../../utils/app_theme.dart';
 import '../../providers/quiz_provider.dart';
 import '../../providers/course_provider.dart';
+import '../../providers/local_auth_provider.dart';
 import 'quiz_screen.dart';
 
 class QuizDetailScreen extends ConsumerStatefulWidget {
@@ -504,16 +505,44 @@ class _QuizDetailScreenState extends ConsumerState<QuizDetailScreen> {
           icon: Icons.play_arrow,
           color: Colors.green,
           flex: 2,
-          onPressed: () {
-            Navigator.of(context).pop();
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => QuizScreen(
-                  quiz: widget.quiz,
-                  currentUserId: widget.currentUserId,
+          onPressed: () async {
+            final navigator = Navigator.of(context);
+            final scaffoldMessenger = ScaffoldMessenger.of(context);
+            
+            navigator.pop();
+            
+            // Require biometric authentication before starting quiz
+            final authenticated = await ref
+                .read(localAuthProvider.notifier)
+                .authenticateForQuiz(widget.quiz.title);
+            
+            if (authenticated && mounted) {
+              navigator.push(
+                MaterialPageRoute(
+                  builder: (context) => QuizScreen(
+                    quiz: widget.quiz,
+                    currentUserId: widget.currentUserId,
+                  ),
                 ),
-              ),
-            );
+              );
+            } else if (mounted) {
+              // Show error if authentication failed
+              scaffoldMessenger.showSnackBar(
+                const SnackBar(
+                  content: Row(
+                    children: [
+                      Icon(Icons.error_outline, color: Colors.white),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text('Authentication required to start quiz'),
+                      ),
+                    ],
+                  ),
+                  backgroundColor: Colors.red,
+                  duration: Duration(seconds: 3),
+                ),
+              );
+            }
           },
         ),
       ],
