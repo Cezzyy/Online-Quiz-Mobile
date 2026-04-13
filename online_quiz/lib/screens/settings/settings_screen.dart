@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/settings_provider.dart';
+import 'about_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -51,7 +52,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: 'About',
             subtitle: 'App version and information',
             onTap: () {
-              _showAboutDialog();
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AboutScreen(),
+                ),
+              );
             },
           ),
           _buildSettingsTile(
@@ -164,20 +170,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
         onTap: onTap,
       ),
-    );
-  }
-
-  void _showAboutDialog() {
-    showAboutDialog(
-      context: context,
-      applicationName: 'ACLC Online Quiz',
-      applicationVersion: '1.0.0',
-      applicationIcon: const Icon(Icons.quiz, size: 48, color: Colors.blue),
-      children: [
-        const Text(
-          'A comprehensive quiz application for ACLC students to practice and improve their knowledge across various subjects.',
-        ),
-      ],
     );
   }
 
