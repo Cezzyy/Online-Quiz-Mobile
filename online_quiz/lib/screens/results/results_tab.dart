@@ -4,8 +4,9 @@ import '../../models/quiz.dart';
 import '../../models/course.dart';
 import '../../models/attempt.dart';
 import '../../providers/quiz_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../utils/app_theme.dart';
 import '../quizzes/quiz_result_screen.dart';
-import '../../widgets/empty_state_widget.dart';
 import '../../widgets/filter_tab_widget.dart';
 import '../../widgets/results_skeleton_loader.dart';
 
@@ -20,178 +21,197 @@ class _ResultsTabState extends ConsumerState<ResultsTab> {
   String _selectedFilter = 'All';
   int _currentPage = 0;
   final int _itemsPerPage = 10;
+  List<QuizResultWithDetails> _allResults = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    // Initialize quiz provider data when the screen loads
-    Future.microtask(() {
-      ref.read(quizProvider.notifier).initializeQuizzes(4); // Default student user ID
+    // Load results once when the widget is first created
+    Future.microtask(() async {
+      final authState = ref.read(authProvider);
+      if (authState.user != null) {
+        // Ensure quiz data is initialized
+        await ref.read(quizProvider.notifier).initializeQuizzes(authState.user!.userId);
+        // Load all results once
+        final results = await _getAllQuizResults();
+        if (mounted) {
+          setState(() {
+            _allResults = results;
+            _isLoading = false;
+          });
+        }
+      }
     });
+  }
+
+  Future<void> _refreshResults() async {
+    final authState = ref.read(authProvider);
+    if (authState.user != null) {
+      setState(() {
+        _isLoading = true;
+      });
+      
+      // Refresh quiz data
+      await ref.read(quizProvider.notifier).refreshQuizzes(authState.user!.userId);
+      
+      // Reload results
+      final results = await _getAllQuizResults();
+      
+      if (mounted) {
+        setState(() {
+          _allResults = results;
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final quizState = ref.watch(quizProvider);
-    
     // Show loading state while data is being fetched
-    if (quizState.isLoading) {
+    if (_isLoading) {
       return const ResultsSkeletonLoader();
     }
-    
-    // Show error state if there's an error
-    if (quizState.error != null) {
-      return Scaffold(
-        body: Center(
+
+    // Filter results locally without reloading
+    final filteredResults = _getFilteredResults(_allResults);
+    final totalPages = filteredResults.isEmpty ? 1 : (filteredResults.length / _itemsPerPage).ceil();
+
+    return Scaffold(
+      body: RefreshIndicator(
+        onRefresh: _refreshResults,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Error loading results',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Theme.of(context).colorScheme.onSurface,
+              _buildHeader(_allResults),
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    if (_allResults.isNotEmpty) _buildFilterTabs(),
+                    if (_allResults.isNotEmpty) const SizedBox(height: 16),
+                    _allResults.isEmpty
+                        ? _buildEmptyState()
+                        : _buildResultsList(filteredResults, totalPages),
+                    const SizedBox(height: 40),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                quizState.error!,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  ref.read(quizProvider.notifier).initializeQuizzes(4);
-                },
-                child: const Text('Retry'),
               ),
             ],
           ),
         ),
-      );
-    }
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      body: SafeArea(
-        child: FutureBuilder<List<QuizResultWithDetails>>(
-          future: _getAllQuizResults(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const ResultsSkeletonLoader();
-            }
-
-            if (snapshot.hasError) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 64,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Error loading results',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      snapshot.error.toString(),
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            final allQuizResults = snapshot.data ?? [];
-            final filteredResults = _getFilteredResults(allQuizResults);
-            final totalPages = (filteredResults.length / _itemsPerPage).ceil();
-
-            return Column(
-              children: [
-                // Header
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.analytics,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 24,
-                      ),
-                      const SizedBox(width: 10),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Quiz Results',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                          Text(
-                            'View your quiz performance and scores',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                // Filter Tabs
-                _buildFilterTabs(),
-                // Stats Overview
-                _buildStatsOverview(allQuizResults),
-                // Results List
-                Expanded(
-                  child: _buildResultsList(filteredResults, totalPages),
-                ),
-              ],
-            );
-          },
-        ),
       ),
+    );
+  }
+
+  Widget _buildHeader(List<QuizResultWithDetails> allResults) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final headerHeight = screenHeight < 700 ? 200.0 : 220.0;
+    
+    final totalQuizzes = allResults.length;
+    final averageScore = totalQuizzes > 0 
+        ? allResults.map((r) => r.percentage).reduce((a, b) => a + b) / totalQuizzes
+        : 0.0;
+    
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.center,
+      children: [
+        // Gradient Background
+        Container(
+          height: headerHeight,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+            ),
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(30),
+              bottomRight: Radius.circular(30),
+            ),
+          ),
+        ),
+        // Decorative Circles
+        Positioned(
+          top: -50,
+          right: -50,
+          child: Container(
+            width: 150,
+            height: 150,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.1),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 50,
+          left: -30,
+          child: Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.1),
+            ),
+          ),
+        ),
+        // Content
+        Positioned(
+          top: MediaQuery.of(context).padding.top + 30,
+          left: 24,
+          right: 24,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.analytics,
+                color: Colors.white,
+                size: screenHeight < 700 ? 40 : 48,
+              ),
+              SizedBox(height: screenHeight < 700 ? 12 : 16),
+              Text(
+                'Quiz Results',
+                style: TextStyle(
+                  fontSize: screenHeight < 700 ? 24 : 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '$totalQuizzes ${totalQuizzes == 1 ? 'Result' : 'Results'} - ${averageScore.round()}% Average',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildFilterTabs() {
     final filters = ['All', 'Excellent', 'Good', 'Fair', 'Poor'];
     
-    return FilterTabPresets.resultsStyle(
+    return FilterTabPresets.quizStyle(
       context: context,
       options: filters,
       selectedFilter: _selectedFilter,
@@ -204,82 +224,84 @@ class _ResultsTabState extends ConsumerState<ResultsTab> {
     );
   }
 
-  Widget _buildStatsOverview(List<QuizResultWithDetails> allResults) {
-    final totalQuizzes = allResults.length;
-    final averageScore = totalQuizzes > 0 
-        ? allResults.map((r) => r.percentage).reduce((a, b) => a + b) / totalQuizzes
-        : 0.0;
-    final excellentCount = allResults.where((r) => r.percentage >= 90).length;
-    final goodCount = allResults.where((r) => r.percentage >= 75 && r.percentage < 90).length;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).shadowColor.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          _buildStatItem(context, totalQuizzes.toString(), 'Total', Theme.of(context).colorScheme.primary),
-          _buildStatItem(context, '${averageScore.round()}%', 'Average', Colors.green),
-          _buildStatItem(context, excellentCount.toString(), 'Excellent', Colors.purple),
-          _buildStatItem(context, goodCount.toString(), 'Good', Colors.orange),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatItem(BuildContext context, String value, String label, Color color) {
-    return Expanded(
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: color,
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.analytics_outlined,
+              size: 64,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
             ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-              fontWeight: FontWeight.w500,
+            const SizedBox(height: 16),
+            Text(
+              'No quiz results yet',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              'Complete quizzes to see your results here',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildResultsList(List<QuizResultWithDetails> results, int totalPages) {
     if (results.isEmpty) {
-      return EmptyStatePresets.quizResults();
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.analytics_outlined,
+                size: 64,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No ${_selectedFilter.toLowerCase()} results found',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Try selecting a different filter',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     final paginatedResults = _getPaginatedResults(results);
 
     return Column(
       children: [
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: paginatedResults.length,
-            itemBuilder: (context, index) {
-              return _buildResultCard(paginatedResults[index]);
-            },
-          ),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          itemCount: paginatedResults.length,
+          itemBuilder: (context, index) {
+            return _buildResultCard(paginatedResults[index]);
+          },
         ),
         if (results.length > _itemsPerPage) _buildPaginationControls(totalPages),
       ],
@@ -316,163 +338,165 @@ class _ResultsTabState extends ConsumerState<ResultsTab> {
 
     return GestureDetector(
       onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => QuizResultScreen(
-                quiz: quiz,
-                course: course,
-                attempt: attempt,
-              ),
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => QuizResultScreen(
+              quiz: quiz,
+              course: course,
+              attempt: attempt,
             ),
-          );
-        },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Theme.of(context).shadowColor.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+          ),
+        );
+      },
+      child: Card(
+        elevation: 2,
+        shadowColor: Colors.black.withValues(alpha: 0.1),
+        color: Theme.of(context).colorScheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        margin: const EdgeInsets.only(bottom: 12),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            // Header with score
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                  color: scoreColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
+              // Header with score
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: scoreColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      gradeIcon,
+                      color: scoreColor,
+                      size: 20,
+                    ),
                   ),
-                  child: Icon(
-                    gradeIcon,
-                    color: scoreColor,
-                    size: 20,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          quiz.title,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${course.code} - ${course.name}',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        quiz.title,
+                        '${percentage.toStringAsFixed(1)}%',
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
+                          color: scoreColor,
                         ),
                       ),
                       Text(
-                        '${course.code} - ${course.name}',
+                        grade,
                         style: TextStyle(
-                          fontSize: 14,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          fontSize: 12,
+                          color: scoreColor,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '${percentage.toStringAsFixed(1)}%',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: scoreColor,
-                      ),
-                    ),
-                    Text(
-                      grade,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: scoreColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // Score details
-            Row(
-              children: [
-                _buildDetailItem(
-                  Icons.check_circle_outline,
-                  'Score',
-                  '${resultDetails.correctAnswers}/${resultDetails.totalQuestions}',
-                ),
-                _buildDetailItem(
-                   Icons.access_time,
-                   'Time',
-                   '${(attempt.timeSpentSeconds ?? 0) ~/ 60} min',
-                 ),
-                _buildDetailItem(
-                  Icons.calendar_today,
-                  'Completed',
-                  _formatDate(attempt.submittedAt!),
-                ),
-              ],
-            ),
-          ],
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Score details
+              _buildInfoRow(
+                Icons.check_circle_outline,
+                'Score',
+                '${resultDetails.correctAnswers}/${resultDetails.totalQuestions}',
+              ),
+              _buildDivider(context),
+              _buildInfoRow(
+                Icons.access_time,
+                'Time',
+                _formatTimeSpent((attempt.timeSpentSeconds ?? 0) ~/ 60),
+              ),
+              _buildDivider(context),
+              _buildInfoRow(
+                Icons.calendar_today,
+                'Completed',
+                _formatDate(attempt.submittedAt!),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 
-  Widget _buildDetailItem(IconData icon, String label, String value) {
-    return Expanded(
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(
-            icon,
-            size: 16,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
-          const SizedBox(width: 6),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
+              Icon(
+                icon,
+                size: 16,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+              const SizedBox(width: 8),
               Text(
                 label,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
-              ),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Theme.of(context).colorScheme.onSurface,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
             ],
           ),
+          const SizedBox(width: 16),
+          Text(
+            value,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ],
       ),
-      );
+    );
   }
 
-  List<QuizResultWithDetails> _getPaginatedResults(List<QuizResultWithDetails> results) {
-    final startIndex = _currentPage * _itemsPerPage;
-    final endIndex = (startIndex + _itemsPerPage).clamp(0, results.length);
-    return results.sublist(startIndex, endIndex);
+  Widget _buildDivider(BuildContext context) {
+    return Divider(
+      color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+      height: 16,
+    );
   }
 
   Widget _buildPaginationControls(int totalPages) {
@@ -499,9 +523,9 @@ class _ResultsTabState extends ConsumerState<ResultsTab> {
             margin: const EdgeInsets.symmetric(horizontal: 12),
             child: Text(
               '${_currentPage + 1} / $totalPages',
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Colors.grey,
               ),
             ),
           ),
@@ -522,6 +546,12 @@ class _ResultsTabState extends ConsumerState<ResultsTab> {
         ],
       ),
     );
+  }
+
+  List<QuizResultWithDetails> _getPaginatedResults(List<QuizResultWithDetails> results) {
+    final startIndex = _currentPage * _itemsPerPage;
+    final endIndex = (startIndex + _itemsPerPage).clamp(0, results.length);
+    return results.sublist(startIndex, endIndex);
   }
 
   Future<List<QuizResultWithDetails>> _getAllQuizResults() async {
@@ -584,6 +614,22 @@ class _ResultsTabState extends ConsumerState<ResultsTab> {
       return '$difference ${difference == 1 ? 'day' : 'days'} ago';
     } else {
       return '${date.day}/${date.month}/${date.year}';
+    }
+  }
+
+  String _formatTimeSpent(int minutes) {
+    if (minutes == 0) {
+      return 'Less than 1 minute';
+    } else if (minutes < 60) {
+      return '$minutes ${minutes == 1 ? 'minute' : 'minutes'}';
+    } else {
+      final hours = minutes ~/ 60;
+      final remainingMinutes = minutes % 60;
+      if (remainingMinutes == 0) {
+        return '$hours ${hours == 1 ? 'hour' : 'hours'}';
+      } else {
+        return '$hours ${hours == 1 ? 'hour' : 'hours'} $remainingMinutes ${remainingMinutes == 1 ? 'minute' : 'minutes'}';
+      }
     }
   }
 }
