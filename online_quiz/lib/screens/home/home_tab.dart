@@ -5,6 +5,7 @@ import '../../utils/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/user_profile_provider.dart';
 import '../../providers/quiz_provider.dart';
+import '../../providers/local_auth_provider.dart';
 import '../../widgets/home_skeleton_loader.dart';
 import '../courses/course_detail_screen.dart';
 import '../quizzes/quiz_detail_screen.dart';
@@ -23,7 +24,14 @@ class _HomeTabState extends ConsumerState<HomeTab> {
     // Load user profile data when tab is initialized
     Future.microtask(() {
       final authState = ref.read(authProvider);
+      final localAuthState = ref.read(localAuthProvider);
+      
       if (authState.user != null) {
+        // If app was just unlocked, reset to loading state first
+        if (localAuthState.shouldReloadData) {
+          ref.read(userProfileProvider.notifier).resetToLoading();
+        }
+        
         ref
             .read(userProfileProvider.notifier)
             .loadUserData(authState.user!.userId);
@@ -35,10 +43,11 @@ class _HomeTabState extends ConsumerState<HomeTab> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final profileState = ref.watch(userProfileProvider);
+    final localAuthState = ref.watch(localAuthProvider);
     final theme = Theme.of(context);
 
     // Show loading indicator
-    if (profileState.isLoading || authState.user == null) {
+    if (profileState.isLoading || authState.user == null || localAuthState.shouldReloadData) {
       return const HomeSkeletonLoader();
     }
 

@@ -12,6 +12,7 @@ import 'utils/app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/local_auth_provider.dart';
 import 'providers/settings_provider.dart';
+import 'providers/user_profile_provider.dart';
 import 'services/local_notification_service.dart';
 import 'services/notification_navigation_service.dart';
 import 'services/deadline_reminder_service.dart';
@@ -104,6 +105,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> with WidgetsBindingOb
       if (authState.isAuthenticated && authState.user != null) {
         debugPrint('User is authenticated on app start - locking app');
         ref.read(localAuthProvider.notifier).lockApp();
+        // Reset user profile to loading state
+        ref.read(userProfileProvider.notifier).resetToLoading();
       } else {
         debugPrint('User is not authenticated - no lock needed');
       }
@@ -141,6 +144,8 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> with WidgetsBindingOb
           _isAppInBackground = false;
           debugPrint('Locking app on resume');
           ref.read(localAuthProvider.notifier).lockApp();
+          // Reset user profile to loading state
+          ref.read(userProfileProvider.notifier).resetToLoading();
         }
         break;
       default:

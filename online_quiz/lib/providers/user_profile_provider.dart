@@ -230,6 +230,11 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
       );
     }
   }
+
+  // Reset to loading state (used when app is locked)
+  void resetToLoading() {
+    state = const UserProfileState(isLoading: true);
+  }
 }
 
 // Provider for user profile state management

@@ -11,6 +11,7 @@ class LocalAuthState {
   final DateTime? lastAuthTime;
   final Map<String, dynamic>? authInfo;
   final bool isInQuiz; // Track if user is taking a quiz
+  final bool shouldReloadData; // Flag to indicate data should be reloaded after unlock
 
   const LocalAuthState({
     this.isAuthenticated = false,
@@ -20,6 +21,7 @@ class LocalAuthState {
     this.lastAuthTime,
     this.authInfo,
     this.isInQuiz = false,
+    this.shouldReloadData = false,
   });
 
   LocalAuthState copyWith({
@@ -30,6 +32,7 @@ class LocalAuthState {
     DateTime? lastAuthTime,
     Map<String, dynamic>? authInfo,
     bool? isInQuiz,
+    bool? shouldReloadData,
     bool clearError = false,
   }) {
     return LocalAuthState(
@@ -40,6 +43,7 @@ class LocalAuthState {
       lastAuthTime: lastAuthTime ?? this.lastAuthTime,
       authInfo: authInfo ?? this.authInfo,
       isInQuiz: isInQuiz ?? this.isInQuiz,
+      shouldReloadData: shouldReloadData ?? this.shouldReloadData,
     );
   }
 }
@@ -64,6 +68,7 @@ class LocalAuthNotifier extends StateNotifier<LocalAuthState> {
     state = state.copyWith(
       isLocked: true,
       isAuthenticated: false,
+      shouldReloadData: true, // Flag to indicate data should be reloaded
     );
   }
 
@@ -74,6 +79,7 @@ class LocalAuthNotifier extends StateNotifier<LocalAuthState> {
       isLocked: false,
       isAuthenticated: true,
       lastAuthTime: DateTime.now(),
+      shouldReloadData: false, // Reset the flag
       clearError: true,
     );
   }
