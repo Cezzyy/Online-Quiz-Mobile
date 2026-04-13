@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
+import '../utils/app_theme.dart';
 
 class ResultsSkeletonLoader extends StatelessWidget {
   const ResultsSkeletonLoader({super.key});
@@ -12,27 +13,36 @@ class ResultsSkeletonLoader extends StatelessWidget {
     final highlightColor = isDark ? Colors.grey[700]! : Colors.grey[100]!;
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
-      body: SafeArea(
+      body: SingleChildScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.zero,
         child: Column(
           children: [
-            // Header Skeleton
-            _buildHeaderSkeleton(context, baseColor, highlightColor),
+            // Gradient Header Skeleton
+            _buildGradientHeaderSkeleton(context, baseColor, highlightColor),
             
-            // Filter Tabs Skeleton
-            _buildFilterTabsSkeleton(baseColor, highlightColor),
+            const SizedBox(height: 24),
             
-            // Stats Overview Skeleton
-            _buildStatsOverviewSkeleton(context, baseColor, highlightColor),
-            
-            // Results List Skeleton
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: 3,
-                itemBuilder: (context, index) {
-                  return _buildResultCardSkeleton(context, baseColor, highlightColor);
-                },
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: [
+                  // Filter Tabs Skeleton
+                  _buildFilterTabsSkeleton(baseColor, highlightColor),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Results List Skeleton
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: EdgeInsets.zero,
+                    itemCount: 3,
+                    itemBuilder: (context, index) {
+                      return _buildResultCardSkeleton(context, baseColor, highlightColor);
+                    },
+                  ),
+                ],
               ),
             ),
           ],
@@ -41,135 +51,123 @@ class ResultsSkeletonLoader extends StatelessWidget {
     );
   }
 
-  Widget _buildHeaderSkeleton(BuildContext context, Color baseColor, Color highlightColor) {
-    final theme = Theme.of(context);
+  Widget _buildGradientHeaderSkeleton(BuildContext context, Color baseColor, Color highlightColor) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final headerHeight = screenHeight < 700 ? 200.0 : 220.0;
     
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: theme.shadowColor.withValues(alpha: 0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Shimmer.fromColors(
-            baseColor: baseColor,
-            highlightColor: highlightColor,
-            child: Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(4),
-              ),
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.center,
+      children: [
+        // Gradient Background
+        Container(
+          height: headerHeight,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+            ),
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(30),
+              bottomRight: Radius.circular(30),
             ),
           ),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        // Decorative Circles
+        Positioned(
+          top: -50,
+          right: -50,
+          child: Container(
+            width: 150,
+            height: 150,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.1),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 50,
+          left: -30,
+          child: Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.1),
+            ),
+          ),
+        ),
+        // Content
+        Positioned(
+          top: MediaQuery.of(context).padding.top + 30,
+          left: 24,
+          right: 24,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              // Icon
               Shimmer.fromColors(
-                baseColor: baseColor,
-                highlightColor: highlightColor,
+                baseColor: Colors.white.withValues(alpha: 0.3),
+                highlightColor: Colors.white.withValues(alpha: 0.5),
                 child: Container(
-                  width: 120,
-                  height: 20,
+                  width: screenHeight < 700 ? 40 : 48,
+                  height: screenHeight < 700 ? 40 : 48,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                 ),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: screenHeight < 700 ? 12 : 16),
+              // Title
               Shimmer.fromColors(
-                baseColor: baseColor,
-                highlightColor: highlightColor,
+                baseColor: Colors.white.withValues(alpha: 0.3),
+                highlightColor: Colors.white.withValues(alpha: 0.5),
                 child: Container(
-                  width: 200,
-                  height: 13,
+                  width: 150,
+                  height: screenHeight < 700 ? 24 : 28,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Stats Badge
+              Shimmer.fromColors(
+                baseColor: Colors.white.withValues(alpha: 0.2),
+                highlightColor: Colors.white.withValues(alpha: 0.4),
+                child: Container(
+                  width: 180,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
                   ),
                 ),
               ),
             ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildFilterTabsSkeleton(Color baseColor, Color highlightColor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      child: Shimmer.fromColors(
-        baseColor: baseColor,
-        highlightColor: highlightColor,
-        child: Row(
-          children: List.generate(5, (index) => Expanded(
-            child: Container(
-              height: 36,
-              margin: EdgeInsets.only(right: index < 4 ? 8 : 0),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
-          )),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatsOverviewSkeleton(BuildContext context, Color baseColor, Color highlightColor) {
-    final theme = Theme.of(context);
-    
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: theme.shadowColor.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    return Shimmer.fromColors(
+      baseColor: baseColor,
+      highlightColor: highlightColor,
       child: Row(
-        children: List.generate(4, (index) => Expanded(
-          child: Shimmer.fromColors(
-            baseColor: baseColor,
-            highlightColor: highlightColor,
-            child: Column(
-              children: [
-                Container(
-                  width: 40,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Container(
-                  width: 50,
-                  height: 11,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ],
+        children: List.generate(5, (index) => Expanded(
+          child: Container(
+            height: 36,
+            margin: EdgeInsets.only(right: index < 4 ? 8 : 0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
             ),
           ),
         )),
@@ -180,21 +178,14 @@ class ResultsSkeletonLoader extends StatelessWidget {
   Widget _buildResultCardSkeleton(BuildContext context, Color baseColor, Color highlightColor) {
     final theme = Theme.of(context);
     
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: theme.shadowColor.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      color: theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -236,7 +227,7 @@ class ResultsSkeletonLoader extends StatelessWidget {
                         highlightColor: highlightColor,
                         child: Container(
                           width: 150,
-                          height: 14,
+                          height: 12,
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(4),
@@ -246,6 +237,7 @@ class ResultsSkeletonLoader extends StatelessWidget {
                     ],
                   ),
                 ),
+                const SizedBox(width: 12),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -253,7 +245,7 @@ class ResultsSkeletonLoader extends StatelessWidget {
                       baseColor: baseColor,
                       highlightColor: highlightColor,
                       child: Container(
-                        width: 50,
+                        width: 60,
                         height: 20,
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -266,7 +258,7 @@ class ResultsSkeletonLoader extends StatelessWidget {
                       baseColor: baseColor,
                       highlightColor: highlightColor,
                       child: Container(
-                        width: 60,
+                        width: 50,
                         height: 12,
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -276,55 +268,88 @@ class ResultsSkeletonLoader extends StatelessWidget {
                     ),
                   ],
                 ),
+                const SizedBox(width: 8),
+                Shimmer.fromColors(
+                  baseColor: baseColor,
+                  highlightColor: highlightColor,
+                  child: Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 16),
-            // Score details
-            Row(
-              children: List.generate(3, (index) => Expanded(
-                child: Shimmer.fromColors(
-                  baseColor: baseColor,
-                  highlightColor: highlightColor,
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 16,
-                        height: 16,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 12,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Container(
-                            width: 50,
-                            height: 14,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              )),
+            // Score details rows
+            _buildInfoRowSkeleton(baseColor, highlightColor),
+            Divider(
+              color: theme.dividerColor.withValues(alpha: 0.1),
+              height: 16,
             ),
+            _buildInfoRowSkeleton(baseColor, highlightColor),
+            Divider(
+              color: theme.dividerColor.withValues(alpha: 0.1),
+              height: 16,
+            ),
+            _buildInfoRowSkeleton(baseColor, highlightColor),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRowSkeleton(Color baseColor, Color highlightColor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Shimmer.fromColors(
+                baseColor: baseColor,
+                highlightColor: highlightColor,
+                child: Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Shimmer.fromColors(
+                baseColor: baseColor,
+                highlightColor: highlightColor,
+                child: Container(
+                  width: 60,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          Shimmer.fromColors(
+            baseColor: baseColor,
+            highlightColor: highlightColor,
+            child: Container(
+              width: 80,
+              height: 14,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

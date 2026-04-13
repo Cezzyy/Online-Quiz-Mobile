@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
+import '../utils/app_theme.dart';
 
 class HomeSkeletonLoader extends StatelessWidget {
   const HomeSkeletonLoader({super.key});
@@ -59,77 +60,88 @@ class HomeSkeletonLoader extends StatelessWidget {
   ) {
     final screenWidth = MediaQuery.of(context).size.width;
     
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.fromLTRB(
-        screenWidth < 360 ? 16 : 24,
-        screenWidth < 360 ? 50 : 60,
-        screenWidth < 360 ? 16 : 24,
-        screenWidth < 360 ? 30 : 40,
-      ),
-      decoration: BoxDecoration(
-        color: baseColor.withValues(alpha: 0.3),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(30),
-          bottomRight: Radius.circular(30),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Shimmer.fromColors(
-            baseColor: baseColor,
-            highlightColor: highlightColor,
-            child: Row(
-              children: [
-                Container(
-                  width: screenWidth < 360 ? 24 : 28,
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.center,
+      children: [
+        // Gradient Background (keep intact like results tab)
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.fromLTRB(
+            screenWidth < 360 ? 16 : 24,
+            screenWidth < 360 ? 50 : 60,
+            screenWidth < 360 ? 16 : 24,
+            screenWidth < 360 ? 30 : 40,
+          ),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+            ),
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(30),
+              bottomRight: Radius.circular(30),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Shimmer.fromColors(
+                baseColor: Colors.white.withValues(alpha: 0.3),
+                highlightColor: Colors.white.withValues(alpha: 0.5),
+                child: Row(
+                  children: [
+                    Container(
+                      width: screenWidth < 360 ? 24 : 28,
+                      height: screenWidth < 360 ? 24 : 28,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      width: 120,
+                      height: screenWidth < 360 ? 16 : 18,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Shimmer.fromColors(
+                baseColor: Colors.white.withValues(alpha: 0.3),
+                highlightColor: Colors.white.withValues(alpha: 0.5),
+                child: Container(
+                  width: screenWidth * 0.6,
                   height: screenWidth < 360 ? 24 : 28,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Container(
-                  width: 120,
-                  height: screenWidth < 360 ? 16 : 18,
+              ),
+              const SizedBox(height: 4),
+              Shimmer.fromColors(
+                baseColor: Colors.white.withValues(alpha: 0.3),
+                highlightColor: Colors.white.withValues(alpha: 0.5),
+                child: Container(
+                  width: screenWidth * 0.7,
+                  height: screenWidth < 360 ? 12 : 14,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Shimmer.fromColors(
-            baseColor: baseColor,
-            highlightColor: highlightColor,
-            child: Container(
-              width: screenWidth * 0.6,
-              height: screenWidth < 360 ? 24 : 28,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(4),
               ),
-            ),
+            ],
           ),
-          const SizedBox(height: 4),
-          Shimmer.fromColors(
-            baseColor: baseColor,
-            highlightColor: highlightColor,
-            child: Container(
-              width: screenWidth * 0.7,
-              height: screenWidth < 360 ? 12 : 14,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

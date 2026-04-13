@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
+import '../utils/app_theme.dart';
 
 class ProfileSkeletonLoader extends StatelessWidget {
   const ProfileSkeletonLoader({super.key});
@@ -54,15 +55,44 @@ class ProfileSkeletonLoader extends StatelessWidget {
       clipBehavior: Clip.none,
       alignment: Alignment.center,
       children: [
-        // Gradient Background
+        // Gradient Background (keep intact like other tabs)
         Container(
           height: 200,
           width: double.infinity,
           decoration: BoxDecoration(
-            color: baseColor.withValues(alpha: 0.3),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+            ),
             borderRadius: const BorderRadius.only(
               bottomLeft: Radius.circular(30),
               bottomRight: Radius.circular(30),
+            ),
+          ),
+        ),
+        // Decorative Circles
+        Positioned(
+          top: -50,
+          right: -50,
+          child: Container(
+            width: 150,
+            height: 150,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.1),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 50,
+          left: -30,
+          child: Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.1),
             ),
           ),
         ),
@@ -70,13 +100,20 @@ class ProfileSkeletonLoader extends StatelessWidget {
         Positioned(
           bottom: -60,
           child: Shimmer.fromColors(
-            baseColor: baseColor,
-            highlightColor: highlightColor,
+            baseColor: Colors.white.withValues(alpha: 0.3),
+            highlightColor: Colors.white.withValues(alpha: 0.5),
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Container(
                 width: 120,

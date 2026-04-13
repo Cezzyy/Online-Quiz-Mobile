@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
+import '../utils/app_theme.dart';
 
 class QuizSkeletonLoader extends StatelessWidget {
   const QuizSkeletonLoader({super.key});
@@ -59,15 +60,44 @@ class QuizSkeletonLoader extends StatelessWidget {
       clipBehavior: Clip.none,
       alignment: Alignment.center,
       children: [
-        // Gradient Background
+        // Gradient Background (keep intact like results tab)
         Container(
           height: headerHeight,
           width: double.infinity,
           decoration: BoxDecoration(
-            color: baseColor.withValues(alpha: 0.3),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+            ),
             borderRadius: const BorderRadius.only(
               bottomLeft: Radius.circular(30),
               bottomRight: Radius.circular(30),
+            ),
+          ),
+        ),
+        // Decorative Circles
+        Positioned(
+          top: -50,
+          right: -50,
+          child: Container(
+            width: 150,
+            height: 150,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.1),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 50,
+          left: -30,
+          child: Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.1),
             ),
           ),
         ),
@@ -79,9 +109,10 @@ class QuizSkeletonLoader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              // Icon
               Shimmer.fromColors(
-                baseColor: baseColor,
-                highlightColor: highlightColor,
+                baseColor: Colors.white.withValues(alpha: 0.3),
+                highlightColor: Colors.white.withValues(alpha: 0.5),
                 child: Container(
                   width: screenHeight < 700 ? 40 : 48,
                   height: screenHeight < 700 ? 40 : 48,
@@ -92,25 +123,27 @@ class QuizSkeletonLoader extends StatelessWidget {
                 ),
               ),
               SizedBox(height: screenHeight < 700 ? 12 : 16),
+              // Title
               Shimmer.fromColors(
-                baseColor: baseColor,
-                highlightColor: highlightColor,
+                baseColor: Colors.white.withValues(alpha: 0.3),
+                highlightColor: Colors.white.withValues(alpha: 0.5),
                 child: Container(
                   width: 120,
                   height: screenHeight < 700 ? 24 : 28,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                 ),
               ),
               const SizedBox(height: 8),
+              // Stats Badge
               Shimmer.fromColors(
-                baseColor: baseColor,
-                highlightColor: highlightColor,
+                baseColor: Colors.white.withValues(alpha: 0.2),
+                highlightColor: Colors.white.withValues(alpha: 0.4),
                 child: Container(
                   width: 180,
-                  height: 14,
+                  height: 30,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
@@ -256,11 +289,17 @@ class QuizSkeletonLoader extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             
-            // Quiz Info Rows
+            // Quiz Info Rows with dividers
             _buildInfoRowSkeleton(baseColor, highlightColor),
-            const SizedBox(height: 8),
+            Divider(
+              color: theme.dividerColor.withValues(alpha: 0.1),
+              height: 16,
+            ),
             _buildInfoRowSkeleton(baseColor, highlightColor),
-            const SizedBox(height: 8),
+            Divider(
+              color: theme.dividerColor.withValues(alpha: 0.1),
+              height: 16,
+            ),
             _buildInfoRowSkeleton(baseColor, highlightColor),
           ],
         ),
@@ -269,26 +308,33 @@ class QuizSkeletonLoader extends StatelessWidget {
   }
 
   Widget _buildInfoRowSkeleton(Color baseColor, Color highlightColor) {
-    return Shimmer.fromColors(
-      baseColor: baseColor,
-      highlightColor: highlightColor,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Container(
-            width: 80,
-            height: 14,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(4),
+          Shimmer.fromColors(
+            baseColor: baseColor,
+            highlightColor: highlightColor,
+            child: Container(
+              width: 80,
+              height: 14,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(4),
+              ),
             ),
           ),
-          Container(
-            width: 120,
-            height: 14,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(4),
+          Shimmer.fromColors(
+            baseColor: baseColor,
+            highlightColor: highlightColor,
+            child: Container(
+              width: 120,
+              height: 14,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(4),
+              ),
             ),
           ),
         ],
