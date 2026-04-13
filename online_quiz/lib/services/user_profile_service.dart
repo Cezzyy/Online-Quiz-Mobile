@@ -108,7 +108,7 @@ class UserProfileService {
       // Calculate statistics
       int totalAttempts = attemptsResponse.length;
       int completedAttempts = 0;
-      double totalScore = 0.0;
+      double totalPercentage = 0.0;
       int totalTimeSpent = 0;
 
       final recentAttempts = <Map<String, dynamic>>[];
@@ -116,18 +116,35 @@ class UserProfileService {
       for (var attempt in attemptsResponse) {
         if (attempt['SubmittedAt'] != null) {
           completedAttempts++;
-          totalScore += (attempt['Score'] as num).toDouble();
+          
+          // Get quiz questions to calculate total possible points
+          final quizId = attempt['QuizId'] as int;
+          final questionsResponse = await _supabase
+              .from('Question')
+              .select('Points')
+              .eq('QuizId', quizId);
+          
+          double totalPoints = 0.0;
+          for (var question in questionsResponse) {
+            totalPoints += (question['Points'] as num).toDouble();
+          }
+          
+          // Calculate percentage for this attempt
+          final score = (attempt['Score'] as num).toDouble();
+          final percentage = totalPoints > 0 ? (score / totalPoints) * 100 : 0.0;
+          totalPercentage += percentage;
           
           if (attempt['Time_Spent_Seconds'] != null) {
             totalTimeSpent += (attempt['Time_Spent_Seconds'] as int);
           }
 
-          // Add to recent attempts
+          // Add to recent attempts with total questions count
           recentAttempts.add({
             'attemptId': attempt['AttemptId'],
             'quizId': attempt['QuizId'],
             'quizTitle': attempt['Quiz']['Title'],
-            'score': (attempt['Score'] as num).toDouble(),
+            'score': score,
+            'totalQuestions': questionsResponse.length,
             'submittedAt': DateTime.parse(attempt['SubmittedAt'] as String),
           });
         }
@@ -156,7 +173,7 @@ class UserProfileService {
         'totalQuizzes': totalQuizzes,
         'completedAttempts': completedAttempts,
         'totalAttempts': totalAttempts,
-        'averageScore': completedAttempts > 0 ? totalScore / completedAttempts : 0.0,
+        'averageScore': completedAttempts > 0 ? totalPercentage / completedAttempts : 0.0,
         'totalTimeSpent': totalTimeSpent,
         'recentAttempts': recentAttempts.take(5).toList(),
       };
