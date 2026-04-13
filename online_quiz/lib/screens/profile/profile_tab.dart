@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/user_profile_provider.dart';
 import '../../utils/app_theme.dart';
+import '../../widgets/profile_skeleton_loader.dart';
 import 'edit_profile_screen.dart';
 import '../settings/settings_screen.dart';
 
@@ -38,7 +39,7 @@ class _ProfileTabState extends ConsumerState<ProfileTab> {
 
     // Show loading indicator while data is being fetched
     if (profileState.isLoading || authState.user == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const ProfileSkeletonLoader();
     }
 
     // Show error if any

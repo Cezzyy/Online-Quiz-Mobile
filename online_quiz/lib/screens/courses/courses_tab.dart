@@ -4,6 +4,7 @@ import '../../models/course.dart';
 import '../../models/user.dart';
 import 'course_detail_screen.dart';
 import '../../widgets/empty_state_widget.dart';
+import '../../widgets/courses_skeleton_loader.dart';
 import '../../utils/app_theme.dart';
 import '../../providers/course_provider.dart';
 import '../../providers/auth_provider.dart';
@@ -36,11 +37,7 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
     
     // Show loading indicator while courses are being loaded
     if (courseState.isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const CoursesSkeletonLoader();
     }
     
     // Show error if there's an error

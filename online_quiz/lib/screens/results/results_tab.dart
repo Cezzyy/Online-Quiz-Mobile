@@ -7,6 +7,7 @@ import '../../providers/quiz_provider.dart';
 import '../quizzes/quiz_result_screen.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/filter_tab_widget.dart';
+import '../../widgets/results_skeleton_loader.dart';
 
 class ResultsTab extends ConsumerStatefulWidget {
   const ResultsTab({super.key});
@@ -35,9 +36,7 @@ class _ResultsTabState extends ConsumerState<ResultsTab> {
     
     // Show loading state while data is being fetched
     if (quizState.isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const ResultsSkeletonLoader();
     }
     
     // Show error state if there's an error
@@ -88,7 +87,7 @@ class _ResultsTabState extends ConsumerState<ResultsTab> {
           future: _getAllQuizResults(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return const ResultsSkeletonLoader();
             }
 
             if (snapshot.hasError) {

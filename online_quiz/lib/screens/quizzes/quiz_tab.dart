@@ -4,6 +4,7 @@ import '../../models/quiz.dart';
 import '../../models/course.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/filter_tab_widget.dart';
+import '../../widgets/quiz_skeleton_loader.dart';
 import '../../utils/app_theme.dart';
 import '../../providers/quiz_provider.dart';
 import '../../providers/auth_provider.dart';
@@ -43,11 +44,7 @@ class _QuizTabState extends ConsumerState<QuizTab> {
     final quizStats = ref.watch(quizStatsProvider);
 
     if (isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const QuizSkeletonLoader();
     }
 
     if (error != null) {
