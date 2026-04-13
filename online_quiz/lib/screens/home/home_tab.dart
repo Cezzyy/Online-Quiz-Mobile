@@ -5,6 +5,7 @@ import '../../utils/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/user_profile_provider.dart';
 import '../../providers/quiz_provider.dart';
+import '../../widgets/home_skeleton_loader.dart';
 import '../courses/course_detail_screen.dart';
 import '../quizzes/quiz_detail_screen.dart';
 
@@ -38,7 +39,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
 
     // Show loading indicator
     if (profileState.isLoading || authState.user == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const HomeSkeletonLoader();
     }
 
     // Show error if any
