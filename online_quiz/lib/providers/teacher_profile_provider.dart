@@ -124,6 +124,11 @@ class TeacherProfileNotifier extends StateNotifier<TeacherProfileState> {
     }
   }
 
+  // Reset to loading state (useful for biometric unlock)
+  void resetToLoading() {
+    state = state.copyWith(isLoading: true, clearError: true);
+  }
+
   // Refresh teacher data
   Future<void> refreshTeacherData(int userId) async {
     await loadTeacherData(userId);

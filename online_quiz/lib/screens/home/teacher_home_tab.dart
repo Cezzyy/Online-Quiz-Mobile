@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/course.dart';
 import '../../models/user.dart';
-import '../../widgets/stat_card.dart';
-import '../../widgets/info_card.dart';
-import '../../widgets/empty_state_widget.dart';
 import '../../utils/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/teacher_profile_provider.dart';
+import '../../providers/local_auth_provider.dart';
 import '../../services/teacher_service.dart';
 import '../../services/quiz_service.dart';
+import '../../widgets/home_skeleton_loader.dart';
+import '../courses/manage_course_screen.dart';
 
 class TeacherHomeTab extends ConsumerStatefulWidget {
   final Function(int)? onNavigateToTab;
@@ -30,7 +30,20 @@ class _TeacherHomeTabState extends ConsumerState<TeacherHomeTab> {
     super.initState();
     Future.microtask(() {
       final currentUser = ref.read(currentUserProvider);
+      final localAuthState = ref.read(localAuthProvider);
+      
       if (currentUser != null && mounted) {
+        // If app was just unlocked, reset to loading state first
+        if (localAuthState.shouldReloadData) {
+          ref.read(teacherProfileProvider.notifier).resetToLoading();
+          // Also reset local state
+          setState(() {
+            _recentActivity = [];
+            _isLoadingActivity = false;
+            _activityError = null;
+          });
+        }
+        
         ref.read(teacherProfileProvider.notifier).loadTeacherData(currentUser.userId);
         _loadRecentActivityData(currentUser.userId);
       }
@@ -88,21 +101,16 @@ class _TeacherHomeTabState extends ConsumerState<TeacherHomeTab> {
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
     final teacherState = ref.watch(teacherProfileProvider);
+    final localAuthState = ref.watch(localAuthProvider);
+    final theme = Theme.of(context);
     
-    if (currentUser == null) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    if (teacherState.isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+    // Show loading indicator
+    if (teacherState.isLoading || 
+        currentUser == null || 
+        localAuthState.shouldReloadData ||
+        teacherState.user == null ||
+        teacherState.user?.userId != currentUser.userId) {
+      return const HomeSkeletonLoader();
     }
 
     if (teacherState.error != null) {
@@ -111,13 +119,20 @@ class _TeacherHomeTabState extends ConsumerState<TeacherHomeTab> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline, size: 64, color: AppTheme.errorColor),
+              Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
               const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  teacherState.error!,
-                  textAlign: TextAlign.center,
+              Text(
+                'Error loading data',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                teacherState.error!,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               const SizedBox(height: 16),
@@ -144,25 +159,37 @@ class _TeacherHomeTabState extends ConsumerState<TeacherHomeTab> {
           await _loadRecentActivityData(currentUser.userId);
         },
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 20),
-              // Welcome Section
-              _buildWelcomeSection(context, currentUser),
-              const SizedBox(height: 30),
-              
-              // Statistics Cards
-              _buildStatsSection(context, statistics, teacherState.totalStudents),
-              const SizedBox(height: 30),
-              
-              // Course Overview
-              _buildCourseOverview(context, courses, quizzes),
-              const SizedBox(height: 30),
-              
-              // Recent Quiz Activity
-              _buildRecentQuizActivity(context),
+              // Header Section with Gradient
+              _buildHeader(context, currentUser),
+
+              // Content
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Statistics Cards
+                    _buildStatsCard(context, statistics, teacherState.totalStudents),
+
+                    const SizedBox(height: 16),
+
+                    // Course Overview
+                    if (courses.isNotEmpty)
+                      _buildCoursesCard(context, courses, quizzes),
+
+                    const SizedBox(height: 16),
+
+                    // Recent Quiz Activity
+                    _buildRecentActivityCard(context),
+
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -170,402 +197,541 @@ class _TeacherHomeTabState extends ConsumerState<TeacherHomeTab> {
     );
   }
   
-  Widget _buildWelcomeSection(BuildContext context, User user) {
+  Widget _buildHeader(BuildContext context, User user) {
+    final screenWidth = MediaQuery.of(context).size.width;
     final hour = DateTime.now().hour;
     String greeting;
+    IconData greetingIcon;
+    
     if (hour < 12) {
       greeting = 'Good Morning';
+      greetingIcon = Icons.wb_sunny;
     } else if (hour < 17) {
       greeting = 'Good Afternoon';
+      greetingIcon = Icons.wb_sunny_outlined;
     } else {
       greeting = 'Good Evening';
+      greetingIcon = Icons.nights_stay;
     }
-    
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = AppTheme.secondaryColor;
-    final onPrimaryColor = Colors.white;
-    
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.fromLTRB(
+        screenWidth < 360 ? 16 : 24,
+        screenWidth < 360 ? 50 : 60,
+        screenWidth < 360 ? 16 : 24,
+        screenWidth < 360 ? 30 : 40,
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: isDark 
-            ? [
-                primaryColor.withValues(alpha: 0.9),
-                primaryColor.withValues(alpha: 0.7),
-              ]
-            : [
-                primaryColor,
-                primaryColor.withValues(alpha: 0.8),
-              ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
+          colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '$greeting,',
-            style: TextStyle(
-              color: onPrimaryColor.withValues(alpha: 0.7),
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Instructor ${user.fullName.split(' ')[0]}',
-            style: TextStyle(
-              color: onPrimaryColor,
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            children: [
+              Icon(
+                greetingIcon,
+                color: Colors.white,
+                size: screenWidth < 360 ? 24 : 28,
+              ),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  greeting,
+                  style: TextStyle(
+                    fontSize: screenWidth < 360 ? 16 : 18,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Text(
-            'Ready to inspire and educate your students?',
+            'Instructor ${user.fullName}',
             style: TextStyle(
-              color: onPrimaryColor.withValues(alpha: 0.9),
-              fontSize: 16,
+              fontSize: screenWidth < 360 ? 24 : 28,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Ready to inspire and educate your students',
+            style: TextStyle(
+              fontSize: screenWidth < 360 ? 12 : 14,
+              color: Colors.white.withValues(alpha: 0.9),
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsCard(
+    BuildContext context,
+    Map<String, num> stats,
+    double totalStudents,
+  ) {
+    final theme = Theme.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+    
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      color: theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.analytics, color: AppTheme.primaryColor, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Teaching Overview',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatItem(
+                    context,
+                    icon: Icons.book,
+                    label: 'Courses',
+                    value: stats['courses'].toString(),
+                    color: Colors.blue,
+                    isSmallScreen: isSmallScreen,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildStatItem(
+                    context,
+                    icon: Icons.people,
+                    label: 'Students',
+                    value: totalStudents.toInt().toString(),
+                    color: Colors.green,
+                    isSmallScreen: isSmallScreen,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatItem(
+                    context,
+                    icon: Icons.quiz,
+                    label: 'Quizzes',
+                    value: stats['quizzes'].toString(),
+                    color: Colors.orange,
+                    isSmallScreen: isSmallScreen,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildStatItem(
+                    context,
+                    icon: Icons.assignment_turned_in,
+                    label: 'Submissions',
+                    value: _recentActivity.length.toString(),
+                    color: Colors.amber,
+                    isSmallScreen: isSmallScreen,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatItem(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+    bool isSmallScreen = false,
+  }) {
+    final theme = Theme.of(context);
+    final iconSize = isSmallScreen ? 24.0 : 28.0;
+    final valueFontSize = isSmallScreen ? 20.0 : 24.0;
+    
+    return Container(
+      padding: EdgeInsets.symmetric(
+        vertical: isSmallScreen ? 12 : 16,
+        horizontal: isSmallScreen ? 8 : 12,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: iconSize),
+          SizedBox(height: isSmallScreen ? 6 : 8),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: valueFontSize,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+          ),
+          SizedBox(height: isSmallScreen ? 2 : 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                fontSize: isSmallScreen ? 11 : 12,
+              ),
+              textAlign: TextAlign.center,
             ),
           ),
         ],
       ),
     );
   }
-  
-  Widget _buildStatsSection(BuildContext context, Map<String, num> stats, double totalStudents) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Teaching Overview',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.getTextColor(context),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Row(
+
+  Widget _buildCoursesCard(
+    BuildContext context,
+    List<Course> courses,
+    List<dynamic> allQuizzes,
+  ) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      color: theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: StatCard(
-                icon: Icons.book_outlined,
-                title: 'Courses',
-                value: stats['courses'].toString(),
-                color: AppTheme.getQuizTypeColor('course'),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: StatCard(
-                icon: Icons.people_outline,
-                title: 'Students',
-                value: totalStudents.toInt().toString(),
-                color: AppTheme.successColor,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: StatCard(
-                icon: Icons.quiz_outlined,
-                title: 'Quizzes',
-                value: stats['quizzes'].toString(),
-                color: AppTheme.getQuizTypeColor('quiz'),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: StatCard(
-                icon: Icons.assignment_turned_in_outlined,
-                title: 'Quizzes',
-                value: stats['quizzes'].toString(),
-                color: AppTheme.getQuizTypeColor('system'),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-  
-  Widget _buildCourseOverview(BuildContext context, List<Course> courses, List<dynamic> allQuizzes) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Your Courses',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.getTextColor(context),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                // Navigate to courses tab (index 1)
-                widget.onNavigateToTab?.call(1);
-              },
-              child: Text(
-                'View All',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        if (courses.isEmpty)
-          EmptyStateWidget(
-            icon: Icons.book_outlined,
-            title: 'No Courses Yet',
-            message: 'You haven\'t been assigned to any courses yet.',
-            iconSize: 64,
-            titleFontSize: 18,
-            messageFontSize: 14,
-            padding: const EdgeInsets.all(24),
-          )
-        else
-          Column(
-            children: courses.take(5).map((course) {
-              final courseQuizzes = allQuizzes.where((q) => q.courseId == course.courseId).toList();
-              final courseColor = AppTheme.getCourseColor(course.code);
-              
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: InfoCard(
-                  icon: Icons.book,
-                  title: '${course.code} • ${courseQuizzes.length} Quizzes',
-                  value: course.name,
-                  iconColor: courseColor,
-                ),
-              );
-            }).toList(),
-          ),
-      ],
-    );
-  }
-  
-  Widget _buildRecentQuizActivity(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Recent Quiz Activity',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.getTextColor(context),
-          ),
-        ),
-        const SizedBox(height: 16),
-        if (_isLoadingActivity)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.all(20.0),
-              child: CircularProgressIndicator(),
-            ),
-          )
-        else if (_activityError != null)
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppTheme.getCardColor(context),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              'Error loading activity: $_activityError',
-              style: TextStyle(color: AppTheme.errorColor),
-            ),
-          )
-        else if (_recentActivity.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppTheme.getCardColor(context),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.getDividerColor(context).withValues(alpha: 0.1),
-                  spreadRadius: 1,
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
+            Row(
+              children: [
+                Icon(Icons.book, color: AppTheme.primaryColor, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Your Courses',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
-            child: const EmptyStateWidget(
-              icon: Icons.quiz_outlined,
-              title: 'No Recent Activity',
-              message: 'No quiz submissions yet. Students will appear here once they start taking quizzes.',
-              iconSize: 48,
-              titleFontSize: 16,
-              messageFontSize: 14,
-              padding: EdgeInsets.all(16),
-            ),
-          )
-        else
-          Column(
-            children: _recentActivity.map((activity) {
-              final scorePercentage = (activity['ScorePercentage'] as num?)?.toDouble() ?? 0.0;
-              final submittedAt = activity['SubmittedAt'] != null 
-                  ? DateTime.parse(activity['SubmittedAt'] as String)
-                  : DateTime.now();
-              
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: AppTheme.getCardColor(context),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: AppTheme.getDividerColor(context).withValues(alpha: 0.2),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.getDividerColor(context).withValues(alpha: 0.05),
-                      spreadRadius: 0,
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () {
-                      // Navigate to attempt details
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          // Icon with score color
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: AppTheme.getScoreColor(scorePercentage).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Icon(
-                              Icons.assignment_turned_in,
-                              color: AppTheme.getScoreColor(scorePercentage),
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          // Student and quiz info
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  activity['StudentName'] as String? ?? 'Unknown Student',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.getTextColor(context),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  activity['QuizName'] as String? ?? 'Quiz',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: AppTheme.getSecondaryTextColor(context),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 2),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.book_outlined,
-                                      size: 14,
-                                      color: AppTheme.getSecondaryTextColor(context),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      activity['CourseCode'] as String? ?? 'Course',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: AppTheme.getSecondaryTextColor(context),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          // Score and date
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.getScoreColor(scorePercentage).withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  '${scorePercentage.round()}%',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppTheme.getScoreColor(scorePercentage),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.access_time,
-                                    size: 12,
-                                    color: AppTheme.getSecondaryTextColor(context),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    _formatDate(submittedAt),
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: AppTheme.getSecondaryTextColor(context),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+            const SizedBox(height: 16),
+            ...courses.take(3).map((course) {
+              final courseQuizzes = allQuizzes.where((q) => q.courseId == course.courseId).toList();
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _buildCourseItem(context, course, courseQuizzes.length),
               );
-            }).toList(),
-          ),
-      ],
+            }),
+            if (courses.length > 3)
+              Center(
+                child: TextButton(
+                  onPressed: () {
+                    widget.onNavigateToTab?.call(1);
+                  },
+                  child: const Text('View All Courses'),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
-  
 
-  
+  Widget _buildCourseItem(BuildContext context, Course course, int quizCount) {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ManageCourseScreen(course: course),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.class_,
+                color: AppTheme.primaryColor,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    course.name,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    '${course.code} • $quizCount Quizzes',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 14,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentActivityCard(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      color: theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.history, color: AppTheme.primaryColor, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Recent Quiz Activity',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (_isLoadingActivity)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (_activityError != null)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32.0),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: theme.colorScheme.error,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Error loading activity',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else if (_recentActivity.isEmpty)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32.0),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.quiz_outlined,
+                        size: 48,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No recent activity',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              ...(_recentActivity.take(3).map((activity) {
+                final scorePercentage = (activity['ScorePercentage'] as num?)?.toDouble() ?? 0.0;
+                final submittedAt = activity['SubmittedAt'] != null 
+                    ? DateTime.parse(activity['SubmittedAt'] as String)
+                    : DateTime.now();
+                
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildActivityItem(
+                    context,
+                    activity['StudentName'] as String? ?? 'Unknown Student',
+                    activity['QuizName'] as String? ?? 'Quiz',
+                    activity['CourseCode'] as String? ?? 'Course',
+                    scorePercentage,
+                    submittedAt,
+                  ),
+                );
+              })),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActivityItem(
+    BuildContext context,
+    String studentName,
+    String quizName,
+    String courseCode,
+    double scorePercentage,
+    DateTime submittedAt,
+  ) {
+    final theme = Theme.of(context);
+    final scoreColor = scorePercentage >= 75 
+        ? Colors.green 
+        : scorePercentage >= 50 
+            ? Colors.orange 
+            : Colors.red;
+    
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: scoreColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              Icons.assignment_turned_in,
+              color: scoreColor,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  studentName,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  quizName,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+                Text(
+                  courseCode,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: scoreColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${scorePercentage.round()}%',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: scoreColor,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _formatDate(submittedAt),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date).inDays;
