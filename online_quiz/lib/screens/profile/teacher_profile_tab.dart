@@ -245,19 +245,19 @@ class _TeacherProfileTabState extends ConsumerState<TeacherProfileTab> {
                         _buildInfoRow(
                           context,
                           'Courses',
-                          '${statistics['courses']} courses',
+                          '${statistics['courses']}',
                         ),
                         _buildDivider(context),
                         _buildInfoRow(
                           context,
                           'Quizzes',
-                          '${statistics['quizzes']} quizzes',
+                          '${statistics['quizzes']}',
                         ),
                         _buildDivider(context),
                         _buildInfoRow(
                           context,
                           'Students',
-                          '${statistics['students']?.toInt() ?? 0} students',
+                          '${statistics['students']?.toInt() ?? 0}',
                         ),
                       ],
                     ),
