@@ -4,7 +4,6 @@ import '../../models/quiz.dart';
 import '../../models/course.dart';
 import '../../models/attempt.dart';
 import '../../models/user.dart';
-import '../../widgets/dialog.dart';
 import '../../utils/app_theme.dart';
 import '../../providers/quiz_provider.dart';
 import '../../providers/course_provider.dart';
@@ -427,125 +426,221 @@ class _QuizDetailScreenState extends ConsumerState<QuizDetailScreen> {
     final quizState = ref.watch(quizProvider);
     final questions = quizState.selectedQuizQuestions;
     
-    AppDialog.show(
+    showModalBottomSheet(
       context: context,
-      title: 'Start Quiz',
-      subtitle: 'Are you ready to start "${widget.quiz.title}"?',
-      type: DialogType.confirmation,
-      icon: Icons.quiz_outlined,
-      iconColor: Colors.blue,
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildQuizInfoRow(
-             context,
-             Icons.access_time,
-             'Time Limit',
-             '${widget.quiz.timeLimitMinutes ?? 'No limit'} minutes',
-             Theme.of(context).colorScheme.primary,
-           ),
-          const SizedBox(height: 12),
-          _buildQuizInfoRow(
-            context,
-            Icons.quiz,
-            'Questions',
-            '${questions.length}',
-            Theme.of(context).colorScheme.secondary,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
           ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.errorContainer,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.3)),
+        ),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Drag handle
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: Theme.of(context).colorScheme.onErrorContainer,
-                      size: 20,
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Important Notice',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onErrorContainer,
-                        fontSize: 14,
+                    child: const Icon(
+                      Icons.quiz_outlined,
+                      color: Colors.blue,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Start Quiz',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Are you ready to start "${widget.quiz.title}"?',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 24),
+            // Content
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildQuizInfoRow(
+                    context,
+                    Icons.access_time,
+                    'Time Limit',
+                    '${widget.quiz.timeLimitMinutes ?? 'No limit'} minutes',
+                    Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildQuizInfoRow(
+                    context,
+                    Icons.quiz,
+                    'Questions',
+                    '${questions.length}',
+                    Theme.of(context).colorScheme.secondary,
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.errorContainer,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.error.withValues(alpha: 0.3),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Once you start, the timer will begin and you cannot pause the quiz.',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onErrorContainer,
-                    fontSize: 13,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              color: Theme.of(context).colorScheme.onErrorContainer,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Important Notice',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.onErrorContainer,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Once you start, the timer will begin and you cannot pause the quiz.',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onErrorContainer,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+            // Actions
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final navigator = Navigator.of(context);
+                        final scaffoldMessenger = ScaffoldMessenger.of(context);
+                        
+                        navigator.pop();
+                        
+                        // Require biometric authentication before starting quiz
+                        final authenticated = await ref
+                            .read(localAuthProvider.notifier)
+                            .authenticateForQuiz(widget.quiz.title);
+                        
+                        if (authenticated && mounted) {
+                          navigator.push(
+                            MaterialPageRoute(
+                              builder: (context) => QuizScreen(
+                                quiz: widget.quiz,
+                                currentUserId: widget.currentUserId,
+                              ),
+                            ),
+                          );
+                        } else if (mounted) {
+                          // Show error if authentication failed
+                          scaffoldMessenger.showSnackBar(
+                            const SnackBar(
+                              content: Row(
+                                children: [
+                                  Icon(Icons.error_outline, color: Colors.white),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text('Authentication required to start quiz'),
+                                  ),
+                                ],
+                              ),
+                              backgroundColor: Colors.red,
+                              duration: Duration(seconds: 3),
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.play_arrow),
+                      label: const Text('Start Quiz'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-      actions: [
-        DialogAction.cancel(
-          text: 'Cancel',
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        DialogAction(
-          text: 'Start Quiz',
-          icon: Icons.play_arrow,
-          color: Colors.green,
-          flex: 2,
-          onPressed: () async {
-            final navigator = Navigator.of(context);
-            final scaffoldMessenger = ScaffoldMessenger.of(context);
-            
-            navigator.pop();
-            
-            // Require biometric authentication before starting quiz
-            final authenticated = await ref
-                .read(localAuthProvider.notifier)
-                .authenticateForQuiz(widget.quiz.title);
-            
-            if (authenticated && mounted) {
-              navigator.push(
-                MaterialPageRoute(
-                  builder: (context) => QuizScreen(
-                    quiz: widget.quiz,
-                    currentUserId: widget.currentUserId,
-                  ),
-                ),
-              );
-            } else if (mounted) {
-              // Show error if authentication failed
-              scaffoldMessenger.showSnackBar(
-                const SnackBar(
-                  content: Row(
-                    children: [
-                      Icon(Icons.error_outline, color: Colors.white),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text('Authentication required to start quiz'),
-                      ),
-                    ],
-                  ),
-                  backgroundColor: Colors.red,
-                  duration: Duration(seconds: 3),
-                ),
-              );
-            }
-          },
-        ),
-      ],
     );
   }
 
