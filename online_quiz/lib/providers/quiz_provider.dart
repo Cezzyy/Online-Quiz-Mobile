@@ -470,6 +470,16 @@ class QuizNotifier extends StateNotifier<QuizState> {
     }
   }
 
+  // Get all quiz results for a user
+  Future<List<Map<String, dynamic>>> getAllQuizResults(int userId) async {
+    try {
+      return await _quizService.getAllQuizResults(userId);
+    } catch (e) {
+      state = state.copyWith(error: 'Failed to load quiz results: $e');
+      return [];
+    }
+  }
+
   // ==================== TEACHER QUIZ MANAGEMENT ====================
 
   /// Create a new quiz (Teacher)

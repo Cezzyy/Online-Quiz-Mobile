@@ -555,36 +555,41 @@ class _ResultsTabState extends ConsumerState<ResultsTab> {
   }
 
   Future<List<QuizResultWithDetails>> _getAllQuizResults() async {
-    final quizState = ref.read(quizProvider);
     final quizNotifier = ref.read(quizProvider.notifier);
-    final completedAttempts = quizState.userAttempts.where((attempt) => attempt.isCompleted).toList();
+    final authState = ref.read(authProvider);
     
-    final results = <QuizResultWithDetails>[];
+    if (authState.user == null) return [];
     
-    for (final attempt in completedAttempts) {
-      try {
-        // Get quiz result details from Supabase
-        final resultData = await quizNotifier.getQuizResultDetails(attempt);
-        
-        if (resultData != null) {
-          results.add(QuizResultWithDetails(
-            attempt: resultData['attempt'],
-            quiz: resultData['quiz'],
-            course: resultData['course'],
-            percentage: resultData['percentage'],
-            correctAnswers: resultData['correctAnswers'],
-            totalQuestions: resultData['totalQuestions'],
-          ));
-        }
-      } catch (e) {
-        // Skip this attempt if there's an error loading its details
-        continue;
+    try {
+      final resultsData = await quizNotifier.getAllQuizResults(authState.user!.userId);
+      
+      final results = <QuizResultWithDetails>[];
+      
+      for (final data in resultsData) {
+        final courseData = data['course'] as Map<String, dynamic>;
+        results.add(QuizResultWithDetails(
+          attempt: data['attempt'],
+          quiz: data['quiz'],
+          course: Course(
+            courseId: courseData['courseId'],
+            name: courseData['name'],
+            code: courseData['code'],
+            instructorUserId: 0,
+            createdBy: 0,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+          percentage: data['percentage'],
+          correctAnswers: data['correctAnswers'],
+          totalQuestions: data['totalQuestions'],
+        ));
       }
+      
+      return results;
+    } catch (e) {
+      debugPrint('Error loading quiz results: $e');
+      return [];
     }
-    
-    // Sort by submission date (newest first)
-    results.sort((a, b) => b.attempt.submittedAt!.compareTo(a.attempt.submittedAt!));
-    return results;
   }
 
   List<QuizResultWithDetails> _getFilteredResults(List<QuizResultWithDetails> allResults) {

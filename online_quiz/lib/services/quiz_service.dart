@@ -524,4 +524,142 @@ class QuizService {
       throw Exception('Failed to fetch attempt details: $e');
     }
   }
+
+  // Get all quiz results for a user with an optimized query
+  Future<List<Map<String, dynamic>>> getAllQuizResults(int userId) async {
+    try {
+      // Fetch all completed attempts with quiz and course data in a single query
+      final response = await _supabase
+          .from('Attempt')
+          .select('''
+            *,
+            Quiz!QuizId (
+              *,
+              Course!CourseId (
+                CourseId,
+                Name,
+                Code
+              )
+            )
+          ''')
+          .eq('UserId', userId)
+          .not('SubmittedAt', 'is', null)
+          .order('SubmittedAt', ascending: false);
+
+      debugPrint('getAllQuizResults: Fetched ${response.length} attempts');
+
+      if (response.isEmpty) {
+        return [];
+      }
+
+      // Extract all unique quiz IDs and attempt IDs
+      final quizIds = <int>{};
+      final attemptIds = <int>[];
+      
+      for (final attemptData in response) {
+        final attempt = Attempt.fromJson(attemptData);
+        quizIds.add(attempt.quizId);
+        attemptIds.add(attempt.attemptId);
+      }
+
+      debugPrint('getAllQuizResults: Processing ${quizIds.length} unique quizzes and ${attemptIds.length} attempts');
+
+      // Bulk fetch questions for all quizzes
+      final questionsResponse = await _supabase
+          .from('Question')
+          .select('QuizId, QuestionId, Points')
+          .inFilter('QuizId', quizIds.toList());
+
+      debugPrint('getAllQuizResults: Fetched ${questionsResponse.length} questions');
+
+      // Group questions by quiz ID
+      final Map<int, List<Map<String, dynamic>>> questionsByQuiz = {};
+      for (final q in questionsResponse) {
+        final quizId = q['QuizId'] as int;
+        if (!questionsByQuiz.containsKey(quizId)) {
+          questionsByQuiz[quizId] = [];
+        }
+        questionsByQuiz[quizId]!.add(q);
+      }
+
+      // Bulk fetch answers for all attempts
+      final answersResponse = await _supabase
+          .from('AttemptAnswer')
+          .select('AttemptId, Is_Correct')
+          .inFilter('AttemptId', attemptIds);
+
+      debugPrint('getAllQuizResults: Fetched ${answersResponse.length} answers');
+
+      // Group answers by attempt ID
+      final Map<int, List<Map<String, dynamic>>> answersByAttempt = {};
+      for (final a in answersResponse) {
+        final attemptId = a['AttemptId'] as int;
+        if (!answersByAttempt.containsKey(attemptId)) {
+          answersByAttempt[attemptId] = [];
+        }
+        answersByAttempt[attemptId]!.add(a);
+      }
+
+      // Build results
+      final List<Map<String, dynamic>> results = [];
+
+      for (final attemptData in response) {
+        try {
+          final attempt = Attempt.fromJson(attemptData);
+          
+          // Check if Quiz data exists
+          if (attemptData['Quiz'] == null) {
+            debugPrint('getAllQuizResults: Quiz data is null for attempt ${attempt.attemptId}');
+            continue;
+          }
+          
+          final quizData = attemptData['Quiz'] as Map<String, dynamic>;
+          
+          // Check if Course data exists
+          if (quizData['Course'] == null) {
+            debugPrint('getAllQuizResults: Course data is null for quiz ${attempt.quizId}');
+            continue;
+          }
+          
+          final courseData = quizData['Course'] as Map<String, dynamic>;
+
+          final questions = questionsByQuiz[attempt.quizId] ?? [];
+          final answers = answersByAttempt[attempt.attemptId] ?? [];
+
+          final totalQuestions = questions.length;
+          final totalPoints = questions.fold<double>(
+            0.0,
+            (sum, q) => sum + (q['Points'] as num).toDouble(),
+          );
+          final correctAnswers = answers.where((a) => a['Is_Correct'] == true).length;
+          final percentage = totalPoints > 0 ? (attempt.score / totalPoints) * 100 : 0.0;
+
+          results.add({
+            'attempt': attempt,
+            'quiz': Quiz.fromJson(quizData),
+            'course': {
+              'courseId': courseData['CourseId'],
+              'name': courseData['Name'],
+              'code': courseData['Code'],
+            },
+            'percentage': percentage,
+            'correctAnswers': correctAnswers,
+            'totalQuestions': totalQuestions,
+          });
+        } catch (e) {
+          debugPrint('Error processing attempt: $e');
+          continue;
+        }
+      }
+
+      debugPrint('getAllQuizResults: Successfully processed ${results.length} results');
+      return results;
+    } on PostgrestException catch (e) {
+      debugPrint('getAllQuizResults: PostgrestException - ${e.message}');
+      throw Exception('Failed to fetch quiz results: ${e.message}');
+    } catch (e) {
+      debugPrint('getAllQuizResults: Exception - $e');
+      throw Exception('Failed to fetch quiz results: $e');
+    }
+  }
 }
