@@ -5,7 +5,6 @@ import '../../models/quiz.dart';
 import '../../models/question.dart';
 import '../../models/attempt.dart';
 import '../../utils/app_theme.dart';
-import '../../widgets/dialog.dart';
 import '../../providers/quiz_provider.dart';
 import '../../providers/local_auth_provider.dart';
 import 'quiz_result_screen.dart';
@@ -35,6 +34,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
   int timeRemainingSeconds = 0;
   bool isSubmitting = false;
   int? attemptId; // Track the current attempt ID
+  bool isLoading = true; // Track loading state
 
   @override
   void initState() {
@@ -72,10 +72,19 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
       if (attempt != null) {
         setState(() {
           attemptId = attempt.attemptId;
+          isLoading = false; // Mark loading as complete
         });
+        
+        // Start timer after loading is complete
+        if (widget.quiz.timeLimitMinutes != null && mounted) {
+          _startTimer();
+        }
       } else {
         // Failed to create attempt - show error
         if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
           final quizState = ref.read(quizProvider);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -89,14 +98,13 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
       }
     });
     
-    // Initialize timer
+    // Initialize timer controller but don't start it yet
     if (widget.quiz.timeLimitMinutes != null) {
       timeRemainingSeconds = widget.quiz.timeLimitMinutes! * 60;
       timerAnimationController = AnimationController(
         duration: Duration(seconds: timeRemainingSeconds),
         vsync: this,
       );
-      _startTimer();
     } else {
       timerAnimationController = AnimationController(vsync: this);
     }
@@ -135,11 +143,10 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (!didPop) {
-          final shouldPop = await _showExitConfirmation();
-          if (shouldPop && context.mounted) {
-            // End quiz session before popping
-            ref.read(localAuthProvider.notifier).endQuiz();
-            Navigator.of(context).pop();
+          final shouldSubmit = await _showExitConfirmation();
+          if (shouldSubmit && context.mounted) {
+            // Submit quiz and navigate to results
+            _submitQuiz(autoSubmit: true, isEarlyExit: true);
           }
         }
       },
@@ -151,18 +158,20 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
             _buildProgressIndicator(),
             _buildTimerSection(),
             Expanded(
-              child: PageView.builder(
-                controller: pageController,
-                onPageChanged: (index) {
-                  setState(() {
-                    currentQuestionIndex = index;
-                  });
-                },
-                itemCount: questions.length,
-                itemBuilder: (context, index) {
-                  return _buildQuestionCard(questions[index], index);
-                },
-              ),
+              child: isLoading 
+                  ? _buildSkeletonLoader()
+                  : PageView.builder(
+                      controller: pageController,
+                      onPageChanged: (index) {
+                        setState(() {
+                          currentQuestionIndex = index;
+                        });
+                      },
+                      itemCount: questions.length,
+                      itemBuilder: (context, index) {
+                        return _buildQuestionCard(questions[index], index);
+                      },
+                    ),
             ),
             _buildNavigationButtons(),
           ],
@@ -179,10 +188,10 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
       leading: IconButton(
         icon: const Icon(Icons.arrow_back),
         onPressed: () async {
-          final navigator = Navigator.of(context);
-          final shouldPop = await _showExitConfirmation();
-          if (shouldPop && context.mounted) {
-            navigator.pop();
+          final shouldSubmit = await _showExitConfirmation();
+          if (shouldSubmit && context.mounted) {
+            // Submit quiz and navigate to results
+            _submitQuiz(autoSubmit: true, isEarlyExit: true);
           }
         },
       ),
@@ -245,6 +254,78 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
             minHeight: 6,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSkeletonLoader() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Question header skeleton
+              Row(
+                children: [
+                  _buildShimmerBox(width: 120, height: 28, radius: 20),
+                  const Spacer(),
+                  _buildShimmerBox(width: 80, height: 28, radius: 20),
+                ],
+              ),
+              const SizedBox(height: 24),
+              // Question body skeleton
+              _buildShimmerBox(width: double.infinity, height: 20, radius: 4),
+              const SizedBox(height: 12),
+              _buildShimmerBox(width: double.infinity, height: 20, radius: 4),
+              const SizedBox(height: 12),
+              _buildShimmerBox(width: 200, height: 20, radius: 4),
+              const SizedBox(height: 24),
+              // Answer section skeleton
+              _buildShimmerBox(width: 150, height: 16, radius: 4),
+              const SizedBox(height: 12),
+              // Choice options skeleton
+              ...List.generate(4, (index) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _buildShimmerBox(
+                  width: double.infinity,
+                  height: 56,
+                  radius: 12,
+                ),
+              )),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShimmerBox({
+    required double width,
+    required double height,
+    required double radius,
+  }) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        gradient: LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [
+            Colors.grey.shade300,
+            Colors.grey.shade100,
+            Colors.grey.shade300,
+          ],
+          stops: const [0.0, 0.5, 1.0],
+        ),
       ),
     );
   }
@@ -605,6 +686,36 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
   }
 
   Widget _buildNavigationButtons() {
+    // Disable navigation buttons while loading
+    if (isLoading) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 4,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: null,
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Loading...'),
+          ),
+        ),
+      );
+    }
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -688,20 +799,81 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
   void _showSubmitConfirmation() {
     final unansweredCount = questions.length - _getAnsweredCount();
     
-    AppDialog.show(
+    showModalBottomSheet(
       context: context,
-      title: 'Submit Quiz',
-      subtitle: unansweredCount > 0 
-          ? 'You have $unansweredCount unanswered question${unansweredCount == 1 ? '' : 's'}.'
-          : 'Are you sure you want to submit your quiz?',
-      type: DialogType.confirmation,
-      icon: Icons.send,
-      iconColor: Colors.green,
-      content: unansweredCount > 0
-          ? Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      isDismissible: true,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Drag handle
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.send,
+                      color: Colors.green,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Submit Quiz',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          unansweredCount > 0 
+                              ? 'You have $unansweredCount unanswered question${unansweredCount == 1 ? '' : 's'}.'
+                              : 'Are you sure you want to submit your quiz?',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 24),
+            // Warning content
+            if (unansweredCount > 0)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.orange.shade50,
@@ -727,28 +899,55 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
                     ],
                   ),
                 ),
-              ],
-            )
-          : null,
-      actions: [
-        DialogAction.cancel(
-          text: 'Review',
-          onPressed: () => Navigator.of(context).pop(),
+              ),
+            if (unansweredCount > 0) const SizedBox(height: 16),
+            // Actions
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Review'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _submitQuiz();
+                      },
+                      icon: const Icon(Icons.send),
+                      label: const Text('Submit'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        DialogAction(
-          text: 'Submit',
-          icon: Icons.send,
-          color: Colors.green,
-          onPressed: () {
-            Navigator.of(context).pop();
-            _submitQuiz();
-          },
-        ),
-      ],
+      ),
     );
   }
 
-  void _submitQuiz({bool autoSubmit = false}) async {
+  void _submitQuiz({bool autoSubmit = false, bool isEarlyExit = false}) async {
     if (isSubmitting) return;
     
     setState(() {
@@ -821,11 +1020,13 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
       scaffoldMessenger.showSnackBar(
         SnackBar(
           content: Text(
-            autoSubmit 
-                ? 'Quiz auto-submitted due to time limit'
-                : 'Quiz submitted successfully!',
+            isEarlyExit
+                ? 'Quiz submitted successfully!'
+                : autoSubmit 
+                    ? 'Quiz auto-submitted due to time limit'
+                    : 'Quiz submitted successfully!',
           ),
-          backgroundColor: autoSubmit ? Colors.orange : Colors.green,
+          backgroundColor: autoSubmit && !isEarlyExit ? Colors.orange : Colors.green,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
@@ -891,58 +1092,263 @@ class _QuizScreenState extends ConsumerState<QuizScreen> with TickerProviderStat
   }
 
   Future<bool> _showExitConfirmation() async {
-    final result = await AppDialog.show<bool>(
+    final unansweredCount = questions.length - _getAnsweredCount();
+    
+    final result = await showModalBottomSheet<bool>(
       context: context,
-      title: 'Exit Quiz',
-      subtitle: 'Are you sure you want to exit? Your progress will be lost.',
-      type: DialogType.confirmation,
-      icon: Icons.exit_to_app,
-      iconColor: Colors.red,
-      actions: [
-        DialogAction.cancel(
-          text: 'Stay',
-          onPressed: () => Navigator.of(context).pop(false),
+      backgroundColor: Colors.transparent,
+      isDismissible: true,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
         ),
-        DialogAction(
-          text: 'Exit',
-          icon: Icons.exit_to_app,
-          color: Colors.red,
-          onPressed: () => Navigator.of(context).pop(true),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Drag handle
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.warning_amber,
+                      color: Colors.orange,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Submit & Exit Quiz',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          unansweredCount > 0
+                              ? 'Exiting will submit your quiz. You have $unansweredCount unanswered question${unansweredCount == 1 ? '' : 's'}.'
+                              : 'Exiting will submit your quiz. You cannot retake it.',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 24),
+            // Warning content
+            if (unansweredCount > 0)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        color: Colors.orange.shade700,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Unanswered questions will be marked as incorrect.',
+                          style: TextStyle(
+                            color: Colors.orange.shade700,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            if (unansweredCount > 0) const SizedBox(height: 16),
+            // Actions
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Continue Quiz'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      icon: const Icon(Icons.send),
+                      label: const Text('Submit'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.orange,
+                        side: const BorderSide(color: Colors.orange),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
     return result ?? false;
   }
 
   void _showInstructions() {
-    AppDialog.show(
+    showModalBottomSheet(
       context: context,
-      title: 'Quiz Instructions',
-      subtitle: 'How to take this quiz',
-      type: DialogType.info,
-      icon: Icons.help_outline,
-      iconColor: Colors.blue,
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildInstructionItem('Navigate between questions using the Previous/Next buttons'),
-          _buildInstructionItem('For single choice questions, select one answer'),
-          _buildInstructionItem('For multiple choice questions, select all correct answers'),
-          _buildInstructionItem('For text questions, type your answer in the text field'),
-          _buildInstructionItem('You can review and change your answers before submitting'),
-          if (widget.quiz.timeLimitMinutes != null)
-            _buildInstructionItem('The quiz will auto-submit when time runs out'),
-        ],
-      ),
-      actions: [
-        DialogAction(
-          text: 'Got it',
-          icon: Icons.check,
-          color: Colors.blue,
-          onPressed: () => Navigator.of(context).pop(),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
         ),
-      ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Drag handle
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.help_outline,
+                      color: Colors.blue,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Quiz Instructions',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'How to take this quiz',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 24),
+            // Content
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildInstructionItem('Navigate between questions using the Previous/Next buttons'),
+                  _buildInstructionItem('For single choice questions, select one answer'),
+                  _buildInstructionItem('For multiple choice questions, select all correct answers'),
+                  _buildInstructionItem('For text questions, type your answer in the text field'),
+                  _buildInstructionItem('You can review and change your answers before submitting'),
+                  if (widget.quiz.timeLimitMinutes != null)
+                    _buildInstructionItem('The quiz will auto-submit when time runs out'),
+                ],
+              ),
+            ),
+            // Action button
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.check),
+                  label: const Text('Got it'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
