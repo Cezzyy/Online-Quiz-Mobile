@@ -577,7 +577,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                 final quizId = attemptMap['quizId'] as int;
                 final submittedAt = attemptMap['submittedAt'] as DateTime;
                 final rawScore = attemptMap['score'] as double?;
-                final totalQuestions = attemptMap['totalQuestions'] as int?;
+                final totalPoints = attemptMap['totalPoints'] as double?;
 
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
@@ -586,7 +586,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                     quizId,
                     quizTitle,
                     rawScore,
-                    totalQuestions,
+                    totalPoints,
                     submittedAt,
                   ),
                 );
@@ -602,15 +602,26 @@ class _HomeTabState extends ConsumerState<HomeTab> {
     int quizId,
     String quizTitle,
     double? rawScore,
-    int? totalQuestions,
+    double? totalPoints,
     DateTime submittedAt,
   ) {
     final theme = Theme.of(context);
-    final scoreText = (rawScore != null && totalQuestions != null)
-        ? '${rawScore.toInt()}/$totalQuestions'
-        : rawScore != null
-            ? '${rawScore.toInt()}'
-            : 'N/A';
+    
+    // Format score - show decimals only if needed
+    String scoreText = 'N/A';
+    if (rawScore != null && totalPoints != null) {
+      final scoreStr = rawScore % 1 == 0 
+          ? rawScore.toInt().toString()
+          : rawScore.toStringAsFixed(1);
+      final totalStr = totalPoints % 1 == 0 
+          ? totalPoints.toInt().toString()
+          : totalPoints.toStringAsFixed(1);
+      scoreText = '$scoreStr/$totalStr';
+    } else if (rawScore != null) {
+      scoreText = rawScore % 1 == 0 
+          ? rawScore.toInt().toString()
+          : rawScore.toStringAsFixed(1);
+    }
 
     return GestureDetector(
       onTap: () async {

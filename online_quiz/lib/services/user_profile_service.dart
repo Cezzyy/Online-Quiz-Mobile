@@ -138,12 +138,13 @@ class UserProfileService {
             totalTimeSpent += (attempt['Time_Spent_Seconds'] as int);
           }
 
-          // Add to recent attempts with total questions count
+          // Add to recent attempts with total points
           recentAttempts.add({
             'attemptId': attempt['AttemptId'],
             'quizId': attempt['QuizId'],
             'quizTitle': attempt['Quiz']['Title'],
             'score': score,
+            'totalPoints': totalPoints,
             'totalQuestions': questionsResponse.length,
             'submittedAt': DateTime.parse(attempt['SubmittedAt'] as String),
           });
