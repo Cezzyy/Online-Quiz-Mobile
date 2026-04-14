@@ -1,76 +1,70 @@
-# ACLC Quiz Mobile Application
+# ACLC Online Quiz Application
 
-A comprehensive mobile quiz application built with Flutter for ACLC (AMA Computer Learning Center) students and faculty. This application provides an intuitive platform for creating, managing, and taking quizzes with role-based access control.
+A comprehensive Flutter mobile application designed for ACLC students to take online quizzes and track their academic progress.
 
-## 🚀 Features
+## 📱 Features
 
-### ✅ Implemented Features
+### ✅ Implemented
+- **Onboarding Flow**: Welcome slides with app introduction
+- **Authentication**: 
+  - Login screen with form validation
+  - Biometric authentication (fingerprint/face recognition)
+  - Session management with auto-lock on app background
+- **Dashboard**: Home tab with quick stats and recent activity
+- **Course Management**: 
+  - Browse enrolled courses
+  - View detailed course information
+  - Track course progress
+- **Quiz System**: 
+  - Browse available quizzes with filters (All, Pending, Completed, Overdue)
+  - Detailed quiz information screens
+  - **Quiz taking interface with:**
+    - Multiple question types (single choice, multiple choice, text)
+    - Real-time timer with auto-submit
+    - Progress tracking
+    - Skeleton loading states
+    - Exit protection (auto-submit on exit)
+  - Quiz result screens with detailed analytics
+- **Results Tracking**: 
+  - Performance analytics dashboard
+  - Quiz history with scores
+  - Detailed answer review
+- **User Profile**: 
+  - Profile management with personal information
+  - Edit profile functionality
+  - Emergency contact management
+  - Statistics and progress tracking
+- **Notifications**: 
+  - Local notifications for quiz deadlines
+  - Notification center with read/unread status
+- **Settings**: 
+  - Theme customization (Light/Dark mode)
+  - Notification preferences
+  - About screen
+  - Privacy policy
+- **Teacher/Admin Features**:
+  - Teacher dashboard with course and quiz management
+  - Student performance tracking
+  - Quiz creation and management
+  - Course analytics
+  - Admin dashboard with system overview
+- **Analytics & Reporting**:
+  - Student performance analytics
+  - Quiz statistics and trends
+  - Course progress tracking
+  - Detailed attempt history
+- **Backend Integration**: 
+  - Supabase integration for data persistence
+  - Real-time data synchronization
+- **State Management**: 
+  - Riverpod for state management
+  - Providers for auth, profile, quiz, and settings
 
-#### Authentication & User Management
-- **Multi-role Authentication**: Support for Students, Teachers, and Administrators
-- **Secure Login System**: Email-based authentication with password protection
-- **Role-based Access Control**: Different interfaces and permissions for each user type
-- **User Profile Management**: View and edit personal information with contact details
-- **Session Management**: Persistent login sessions with secure logout
-
-#### Student Features
-- **Dashboard**: Overview of enrolled courses, upcoming quizzes, and recent activities
-- **Course Browsing**: View available courses with detailed information
-- **Quiz Taking**: Interactive quiz interface with multiple-choice questions
-- **Real-time Progress**: Live progress tracking during quiz attempts with timer
-- **Results Viewing**: Quiz results with score and performance feedback
-- **Notifications**: System notifications for important updates
-
-#### Teacher Features
-- **Course Management**: View and manage assigned courses with student statistics
-- **Quiz Creation**: Create and manage quizzes with multiple-choice questions
-- **Student Management**: View enrolled students with detailed information
-- **Results Analytics**: View student quiz attempts and performance data
-- **Course Statistics**: Track student enrollment, quiz count, and submission metrics
-
-#### Admin Features
-- **System Dashboard**: Overview of platform usage and user statistics
-- **User Management**: Monitor system users and their activities
-- **Platform Analytics**: System-wide metrics and performance overview
-
-#### Technical Features
-- **Dark Mode**: Full dark mode support with automatic theme switching
-- **Responsive Design**: Optimized for various screen sizes and orientations
-- **State Management**: Efficient state management using Riverpod
-- **Mock Data**: Comprehensive sample data for development and testing
-- **Modern UI**: Material Design 3 with custom theming and animations
-
-### 🔄 In Development
-
-#### Enhanced Quiz Features
-- **Advanced Question Types**: Support for True/False, short answer, and essay questions
-- **Time Limits**: Configurable time limits for quizzes
-- **Quiz Scheduling**: Set availability windows for quizzes
-
-#### Backend Integration
-- **API Integration**: Connect to backend services for data persistence
-- **Real-time Sync**: Synchronize data across devices and users
-- **File Upload**: Support for image uploads in questions and answers
-- **Data Export**: Export quiz results and analytics
-
-#### Enhanced User Experience
-- **Push Notifications**: Real-time notifications for quiz availability and deadlines
-- **Search & Filter**: Advanced search and filtering for courses and quizzes
-- **Bulk Operations**: Import/export capabilities for quiz data
-
-### 📋 Planned Features
-
-#### Advanced Assessment Tools
-- **Proctoring Features**: Anti-cheating measures and monitoring tools
-
-#### Analytics & Reporting
-- **Learning Analytics**: Detailed insights into learning patterns and progress
-- **Performance Trends**: Historical performance tracking and analysis
-- **Custom Reports**: Generate custom reports for administrators and teachers
-- **Data Visualization**: Interactive charts and graphs for better insights
-
-#### Integration & API
-- **RESTful API**: Comprehensive API for third-party integrations
+### 🚧 Restrictions
+- **Registration Screen**: Currently users are created by admin, no self-registration UI
+- **Offline Mode Support**: App requires internet connection for all operations
+- **Push Notifications**: Currently using local notifications only
+- **Multi-language Support**: Currently English only
 
 ## 🏗️ Architecture
 
@@ -79,50 +73,22 @@ The project follows a feature-based folder structure for better organization:
 
 ```
 lib/
-├── screens/          # UI screens organized by feature
-│   ├── auth/         # Authentication screens
-│   ├── home/         # Dashboard and main screens
-│   ├── courses/      # Course-related screens
-│   ├── quizzes/      # Quiz-taking screens
-│   ├── quiz/         # Quiz management (teacher)
-│   ├── results/      # Results and analytics
-│   ├── profile/      # User profile screens
-│   ├── notifications/# Notification screens
-│   ├── settings/     # Settings screens
-│   └── onboarding/   # App introduction
-├── widgets/          # Reusable UI components
-│   ├── custom_text_field.dart
-│   ├── dialog.dart
-│   ├── empty_state_widget.dart
-│   ├── filter_tab_widget.dart
-│   ├── info_card.dart
-│   └── stat_card.dart
-├── models/           # Data models for all entities
-│   ├── user.dart
-│   ├── course.dart
-│   ├── quiz.dart
-│   ├── question.dart
-│   ├── attempt.dart
-│   └── ... (other models)
-├── providers/        # Riverpod state management
-│   ├── auth_provider.dart
-│   ├── course_provider.dart
-│   ├── quiz_provider.dart
-│   └── ... (other providers)
-├── data/             # Data layer
-│   └── mock_data.dart
-├── utils/            # Utility functions and constants
-│   ├── app_theme.dart
-│   └── app_routes.dart
-└── main.dart         # Application entry point
+├── models/          # Data models (User, Course, Quiz, Question, etc.)
+├── providers/       # Riverpod state management providers
+├── services/        # Backend services (Supabase, notifications, etc.)
+├── screens/         # UI screens organized by feature
+│   ├── auth/        # Authentication screens
+│   ├── home/        # Main navigation and dashboard
+│   ├── courses/     # Course-related screens
+│   ├── quizzes/     # Quiz-related screens (browse, take, results)
+│   ├── results/     # Results and analytics
+│   ├── profile/     # Profile management
+│   ├── settings/    # Settings screens
+│   └── notifications/ # Notification screens
+├── utils/           # Utilities and constants
+├── widgets/         # Reusable UI components
+└── config/          # Configuration files (Supabase, etc.)
 ```
-
-### Key Architecture Principles
-- **Separation of Concerns**: Clear separation between UI, business logic, and data
-- **State Management**: Centralized state management using Riverpod
-- **Reusable Components**: Modular widget design for consistency
-- **Role-based Architecture**: Different interfaces for different user types
-- **Mock Data Integration**: Comprehensive sample data for development
 
 ## 🎨 Design System
 
@@ -136,25 +102,27 @@ lib/
 ### UI/UX Features
 - Material Design 3 theming
 - Consistent university branding
-- Responsive design
+- Responsive design with skeleton loaders
 - Custom reusable widgets
 - Intuitive navigation flow
+- Bottom sheets for confirmations
+- Gradient headers for visual hierarchy
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Flutter SDK (3.8.1 or higher)
-- Dart SDK (3.0.0 or higher)
-- Android Studio / VS Code with Flutter extensions
-- Android SDK (for Android development)
-- Xcode (for iOS development, macOS only)
+- Flutter SDK (latest stable version)
+- Dart SDK
+- Android Studio / VS Code
+- Android/iOS device or emulator
+- Supabase account (for backend)
 
 ### Installation
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-username/Online-Quiz-Mobile.git
-   cd Online-Quiz-Mobile/online_quiz
+   git clone <repository-url>
+   cd online_quiz
    ```
 
 2. **Install dependencies**
@@ -162,159 +130,83 @@ lib/
    flutter pub get
    ```
 
-3. **Run the application**
+3. **Configure environment variables**
+   - Create a `.env` file in the root directory
+   - Add your Supabase credentials:
+     ```
+     SUPABASE_URL=your_supabase_url
+     SUPABASE_ANON_KEY=your_supabase_anon_key
+     ```
+
+4. **Run the application**
    ```bash
    flutter run
    ```
 
-### Demo Accounts
-
-The application includes mock data with the following test accounts:
-
-**Admin Account:**
-- Email: `admin.aclc@quiz.com`
-- Password: `admin123`
-
-**Teacher Account:**
-- Email: `donald.francisco@university.edu`
-- Password: `teacher123`
-
-**Student Account:**
-- Email: `jan.rosalijos@student.edu`
-- Password: `student123`
-
 ### Development Setup
 
-1. **Enable developer options** on your device
-2. **Connect your device** via USB or use an emulator
-3. **Verify device connection**
+1. **Check Flutter installation**
    ```bash
-   flutter devices
-   ```
-4. **Run in debug mode**
-   ```bash
-   flutter run --debug
+   flutter doctor
    ```
 
-### Code Quality
+2. **Run tests**
+   ```bash
+   flutter test
+   ```
 
-Run code analysis to ensure code quality:
-```bash
-flutter analyze
+3. **Build for production**
+   ```bash
+   # Android
+   flutter build apk --release
+   
+   # iOS
+   flutter build ios --release
+   ```
+
+## 📱 Navigation Flow (Student)
+
+```
+Splash Screen → Onboarding (first time) → Login Screen → Biometric Lock → Main Screen
+                                                                              ├── Home Tab
+                                                                              ├── Courses Tab → Course Details
+                                                                              ├── Quiz Tab → Quiz Details → Quiz Screen → Quiz Results
+                                                                              ├── Results Tab → Quiz Results
+                                                                              └── Profile Tab → Edit Profile/Settings
 ```
 
-Run tests:
-```bash
-flutter test
-```
+## 🔧 Technical Stack
 
-### Build for Production
-
-```bash
-# Android
-flutter build apk --release
-
-# iOS
-flutter build ios --release
-```
-
-## 📱 Navigation Flow
-
-### Student Flow
-```
-Onboarding → Login → Student Dashboard
-                ↓
-            Main Navigation:
-            ├── Home (Dashboard)
-            ├── Courses
-            ├── Quiz
-            ├── Results  
-            └── Profile
-```
-
-### Teacher Flow
-```
-Onboarding → Login → Teacher Dashboard
-                ↓
-            Main Navigation:
-            ├── Home (Dashboard)
-            ├── Courses (Management)
-            ├── Quizzes (Creation)
-            ├── Results (Analytics)
-            └── Profile
-```
-
-### Admin Flow
-```
-Onboarding → Login → Admin Dashboard
-                ↓
-            Admin Interface:
-            ├── User Management
-            ├── System Analytics
-            ├── Platform Overview
-            └── Settings
-```
-
-### Screen Hierarchy
-- **Onboarding**: App introduction with ACLC branding
-- **Authentication**: Role-based login system
-- **Role-based Navigation**: Different interfaces per user type
-  - **Student Interface**: Course browsing, quiz taking, results viewing
-  - **Teacher Interface**: Course management, quiz creation, student analytics
-  - **Admin Interface**: System management and user oversight
-- **Shared Features**: Profile management, notifications, settings
-
-## 🛠️ Technical Stack
-
-### Frontend
-- **Framework**: Flutter 3.8.1+
+- **Framework**: Flutter
 - **Language**: Dart
-- **State Management**: Riverpod 2.6.1
-- **UI Components**: Material Design 3
-- **Navigation**: Flutter Navigator
-- **Local Storage**: SharedPreferences 2.2.2
-- **Icons**: Cupertino Icons 1.0.8
-
-### Data Layer
-- **Data Models**: Comprehensive model classes for all entities
-- **Mock Data**: Sample data for development and testing
-- **Providers**: Riverpod providers for state management
-
-### Development Tools
-- **IDE**: VS Code / Android Studio
-- **Version Control**: Git
-- **Testing**: Flutter Test Framework
-- **Code Quality**: Flutter Lints 5.0.0
-- **Analysis**: Flutter Analyze
-
-### Planned Backend Integration
-- **API**: RESTful services
-- **Database**: SQL Server
-- **Authentication**: JWT tokens
-- **File Storage**: Cloud storage for images
-- **Real-time**: WebSocket connections
+- **UI**: Material Design 3
+- **State Management**: Riverpod
+- **Backend**: Supabase (PostgreSQL)
+- **Local Storage**: Shared Preferences
+- **Authentication**: Supabase Auth + Local Biometrics
+- **Notifications**: Flutter Local Notifications
 
 ## 📋 Current Status
 
-This project is currently in the **active development phase** with a solid foundation and core features implemented:
+The application is in **production-ready state** with:
+- ✅ Complete UI implementation for all major screens
+- ✅ Full navigation flow between screens
+- ✅ Backend integration with Supabase
+- ✅ State management with Riverpod
+- ✅ Authentication with biometric support
+- ✅ Quiz taking functionality with timer
+- ✅ Results tracking and analytics
+- ✅ Profile management
+- ✅ Notification system
+- ✅ Teacher/Admin features
 
-✅ **Core Infrastructure**: Complete app architecture with role-based navigation
-✅ **Authentication System**: Multi-role login with persistent sessions
-✅ **User Interfaces**: Separate interfaces for Students, Teachers, and Admins
-✅ **Quiz System**: Full quiz taking functionality with timer and progress tracking
-✅ **Course Management**: Course browsing and management for all user types
-✅ **Results & Analytics**: Quiz results display and performance tracking
-✅ **Profile Management**: User profile viewing and editing capabilities
-✅ **State Management**: Comprehensive Riverpod implementation
-✅ **Mock Data**: Complete sample data for all features
-✅ **Theme System**: Dark/light mode support with Material Design 3
+## 🔐 Security Features
 
-🚧 **In Progress**:
-- Backend API integration
-- Enhanced quiz question types
-- Real-time notifications
-- Data export capabilities
-- Advanced analytics features
+- Biometric authentication (fingerprint/face recognition)
+- Auto-lock on app background
+- Session management
+- Secure quiz taking (no exit without submit)
+- Authentication required for quiz start
 
 ## 🤝 Contributing
 
@@ -334,4 +226,4 @@ For support and questions, please contact the development team or create an issu
 
 ---
 
-**Note**: This application currently uses mock data for demonstration purposes. All screens and functionality are implemented for UI/UX testing and will be connected to a backend service in future iterations.
+**Note**: This application uses Supabase as the backend service. Ensure you have proper database setup and credentials configured before running the application.
