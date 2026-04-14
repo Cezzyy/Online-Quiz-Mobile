@@ -140,12 +140,15 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> with WidgetsBindingOb
         break;
       case AppLifecycleState.resumed:
         debugPrint('App resumed, _isAppInBackground: $_isAppInBackground');
-        if (_isAppInBackground) {
+        if (_isAppInBackground && !localAuthState.isLocked) {
           _isAppInBackground = false;
           debugPrint('Locking app on resume');
           ref.read(localAuthProvider.notifier).lockApp();
           // Reset user profile to loading state
           ref.read(userProfileProvider.notifier).resetToLoading();
+        } else if (_isAppInBackground && localAuthState.isLocked) {
+          debugPrint('App already locked, skipping duplicate lock');
+          _isAppInBackground = false;
         }
         break;
       default:
@@ -167,6 +170,12 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> with WidgetsBindingOb
         authState.role != null) {
       if (localAuthState.isLocked) {
         return const BiometricLockScreen();
+      }
+
+      // Reset background flag when app is unlocked
+      if (_isAppInBackground) {
+        debugPrint('App unlocked, resetting background flag');
+        _isAppInBackground = false;
       }
 
       if (!_hasCompletedInitialAuth) {
