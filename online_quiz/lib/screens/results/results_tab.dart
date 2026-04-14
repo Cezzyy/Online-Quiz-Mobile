@@ -555,6 +555,9 @@ class _ResultsTabState extends ConsumerState<ResultsTab> {
   }
 
   Future<List<QuizResultWithDetails>> _getAllQuizResults() async {
+    // Check if widget is still mounted before using ref
+    if (!mounted) return [];
+    
     final quizNotifier = ref.read(quizProvider.notifier);
     final authState = ref.read(authProvider);
     
@@ -562,6 +565,9 @@ class _ResultsTabState extends ConsumerState<ResultsTab> {
     
     try {
       final resultsData = await quizNotifier.getAllQuizResults(authState.user!.userId);
+      
+      // Check again after async operation
+      if (!mounted) return [];
       
       final results = <QuizResultWithDetails>[];
       
