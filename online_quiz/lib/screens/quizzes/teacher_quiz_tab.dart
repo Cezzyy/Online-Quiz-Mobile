@@ -10,6 +10,7 @@ import '../../providers/quiz_provider.dart';
 import '../../providers/local_auth_provider.dart';
 import '../../widgets/quizzes_skeleton_loader.dart';
 import 'create_quiz_screen.dart';
+import 'teacher_quiz_view_screen.dart';
 
 class TeacherQuizTab extends ConsumerStatefulWidget {
   const TeacherQuizTab({super.key});
@@ -997,7 +998,23 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
-        onTap: quiz.isPublished ? null : () => _continueDraft(quiz),
+        onTap: () {
+          if (quiz.isPublished) {
+            // Navigate to view screen for published quizzes
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => TeacherQuizViewScreen(
+                  quiz: quiz,
+                  course: selectedCourse!,
+                ),
+              ),
+            );
+          } else {
+            // Continue editing draft
+            _continueDraft(quiz);
+          }
+        },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(12),
