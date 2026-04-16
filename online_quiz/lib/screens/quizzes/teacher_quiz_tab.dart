@@ -104,9 +104,11 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
       return;
     }
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => _CreateQuizDialog(
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _CreateQuizBottomSheet(
         course: selectedCourse!,
         onQuizCreated: () {
           setState(() {
@@ -1273,131 +1275,216 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
   }
 }
 
-class _CreateQuizDialog extends ConsumerStatefulWidget {
+class _CreateQuizBottomSheet extends ConsumerStatefulWidget {
   final Course course;
   final VoidCallback onQuizCreated;
 
-  const _CreateQuizDialog({required this.course, required this.onQuizCreated});
+  const _CreateQuizBottomSheet({required this.course, required this.onQuizCreated});
 
   @override
-  ConsumerState<_CreateQuizDialog> createState() => _CreateQuizDialogState();
+  ConsumerState<_CreateQuizBottomSheet> createState() => _CreateQuizBottomSheetState();
 }
 
-class _CreateQuizDialogState extends ConsumerState<_CreateQuizDialog> {
+class _CreateQuizBottomSheetState extends ConsumerState<_CreateQuizBottomSheet> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   int? _selectedTimeLimit;
-  DateTime? _dueDate;
+  late DateTime _dueDate;
 
   final List<Map<String, dynamic>> _timeLimitOptions = [
-    {'label': '30 min', 'value': 30},
+    {'label': '30 minutes', 'value': 30},
     {'label': '1 hour', 'value': 60},
-    {'label': '1.5 hours', 'value': 90},
+    {'label': '90 minutes', 'value': 90},
     {'label': '2 hours', 'value': 120},
     {'label': '3 hours', 'value': 180},
   ];
 
   @override
+  void initState() {
+    super.initState();
+    // Prefill due date with 7 days from today
+    _dueDate = DateTime.now().add(const Duration(days: 7));
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Create New Quiz'),
-      content: SizedBox(
-        width: 400,
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Quiz Title',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a quiz title';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<int>(
-                initialValue: _selectedTimeLimit,
-                decoration: const InputDecoration(
-                  labelText: 'Time Limit',
-                  border: OutlineInputBorder(),
-                ),
-                items: _timeLimitOptions.map((option) {
-                  return DropdownMenuItem<int>(
-                    value: option['value'],
-                    child: Text(option['label']),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedTimeLimit = value;
-                  });
-                },
-                validator: (value) {
-                  if (value == null) {
-                    return 'Please select a time limit';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              InkWell(
-                onTap: () async {
-                  final date = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime.now().add(const Duration(days: 7)),
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 365)),
-                  );
-                  if (date != null) {
-                    setState(() {
-                      _dueDate = date;
-                    });
-                  }
-                },
-                child: InputDecorator(
-                  decoration: InputDecoration(
-                    labelText: 'Due Date',
-                    border: const OutlineInputBorder(),
-                    suffixIcon: const Icon(Icons.calendar_today),
-                    errorText: _dueDate == null
-                        ? 'Please select a due date'
-                        : null,
-                  ),
-                  child: Text(
-                    _dueDate != null
-                        ? '${_dueDate!.day}/${_dueDate!.month}/${_dueDate!.year}'
-                        : 'Select due date',
-                  ),
-                ),
-              ),
-            ],
-          ),
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: isDark 
+                    ? Colors.white.withValues(alpha: 0.3)
+                    : Colors.black.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.add_circle,
+                    color: AppTheme.primaryColor,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Create New Quiz',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Form
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextFormField(
+                      controller: _titleController,
+                      decoration: InputDecoration(
+                        labelText: 'Quiz Title',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        prefixIcon: const Icon(Icons.title),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter a quiz title';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<int>(
+                      initialValue: _selectedTimeLimit,
+                      decoration: InputDecoration(
+                        labelText: 'Time Limit',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        prefixIcon: const Icon(Icons.timer),
+                      ),
+                      items: _timeLimitOptions.map((option) {
+                        return DropdownMenuItem<int>(
+                          value: option['value'],
+                          child: Text(option['label']),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedTimeLimit = value;
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null) {
+                          return 'Please select a time limit';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    InkWell(
+                      onTap: () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate: _dueDate,
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                        );
+                        if (date != null) {
+                          setState(() {
+                            _dueDate = date;
+                          });
+                        }
+                      },
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: 'Due Date',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          prefixIcon: const Icon(Icons.calendar_today),
+                        ),
+                        child: Text(
+                          DateFormat('MMMM d, yyyy').format(_dueDate),
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text('Cancel'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _createQuiz,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text('Create'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
-        ElevatedButton(onPressed: _createQuiz, child: const Text('Create')),
-      ],
+      ),
     );
   }
 
   Future<void> _createQuiz() async {
-    // Check if all required fields are filled
-    if (_dueDate == null) {
-      setState(() {}); // Trigger rebuild to show error
-      return;
-    }
-
     if (_formKey.currentState!.validate()) {
       // Create the quiz using provider
       final createdQuiz = await ref
@@ -1425,7 +1512,7 @@ class _CreateQuizDialogState extends ConsumerState<_CreateQuizDialog> {
         return;
       }
 
-      // Close the dialog and navigate
+      // Close the bottom sheet and navigate
       Navigator.pop(context);
 
       // Navigate to the quiz creation screen with the created quiz
@@ -1472,9 +1559,9 @@ class _EditQuizDialogState extends ConsumerState<_EditQuizDialog> {
   late bool _isPublished;
 
   final List<Map<String, dynamic>> _timeLimitOptions = [
-    {'label': '30 min', 'value': 30},
+    {'label': '30 minutes', 'value': 30},
     {'label': '1 hour', 'value': 60},
-    {'label': '1.5 hours', 'value': 90},
+    {'label': '90 minutes', 'value': 90},
     {'label': '2 hours', 'value': 120},
     {'label': '3 hours', 'value': 180},
   ];
