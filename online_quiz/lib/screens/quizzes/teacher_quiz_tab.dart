@@ -298,6 +298,11 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
                         
                         // Quiz List
                         _buildQuizList(context),
+                      ] else ...[
+                        const SizedBox(height: 16),
+                        
+                        // Empty state when no course selected
+                        _buildNoCourseSelectedState(),
                       ],
                     ],
                     const SizedBox(height: 40),
@@ -488,6 +493,47 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
                 backgroundColor: AppTheme.primaryColor,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoCourseSelectedState() {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.touch_app,
+                size: 64,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Select a Course',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Tap the course selector above to choose\na course and view its quizzes.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ],
