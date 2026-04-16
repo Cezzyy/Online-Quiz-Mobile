@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../models/quiz.dart';
 import '../../models/course.dart';
 import '../../models/question.dart';
 import '../../providers/quiz_provider.dart';
+import '../../utils/app_theme.dart';
 import '../../widgets/empty_state_widget.dart';
 
 class CreateQuizScreen extends ConsumerStatefulWidget {
@@ -29,9 +31,9 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
   final List<QuestionData> _questions = [];
 
   final List<Map<String, dynamic>> _timeLimitOptions = [
-    {'label': '30 min', 'value': 30},
+    {'label': '30 minutes', 'value': 30},
     {'label': '1 hour', 'value': 60},
-    {'label': '1.5 hours', 'value': 90},
+    {'label': '90 minutes', 'value': 90},
     {'label': '2 hours', 'value': 120},
     {'label': '3 hours', 'value': 180},
   ];
@@ -85,22 +87,35 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: AppTheme.primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
-          TextButton(
+          TextButton.icon(
             onPressed: _saveAsDraft,
-            child: const Text(
+            icon: const Icon(Icons.save, size: 18, color: Colors.white),
+            label: const Text(
               'Draft',
-              style: TextStyle(fontSize: 14),
+              style: TextStyle(fontSize: 14, color: Colors.white),
             ),
           ),
           const SizedBox(width: 4),
-          ElevatedButton(
+          ElevatedButton.icon(
             onPressed: _publishQuiz,
-            child: const Text(
+            icon: const Icon(Icons.publish, size: 18),
+            label: const Text(
               'Publish',
               style: TextStyle(fontSize: 14),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: AppTheme.primaryColor,
+              elevation: 0,
             ),
           ),
           const SizedBox(width: 12),
@@ -112,16 +127,35 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
           children: [
             // Quiz Details Section
             Container(
-              padding: const EdgeInsets.all(20),
-              color: Theme.of(context).colorScheme.surface,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: 0.05),
+                border: Border(
+                  bottom: BorderSide(
+                    color: isDark 
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : Colors.black.withValues(alpha: 0.1),
+                  ),
+                ),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Quiz Details',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        color: AppTheme.primaryColor,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Quiz Details',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   _buildQuizDetailsForm(),
@@ -132,23 +166,45 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
             // Questions Section
             Expanded(
               child: Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Questions (${_questions.length})',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.quiz,
+                              color: AppTheme.primaryColor,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Questions (${_questions.length})',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                         ElevatedButton.icon(
                           onPressed: _addQuestion,
-                          icon: const Icon(Icons.add),
-                          label: const Text('Add Question'),
+                          icon: const Icon(Icons.add, size: 18),
+                          label: const Text('Add'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
                         ),
                       ],
                     ),
@@ -163,6 +219,10 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
                                 onPressed: _addQuestion,
                                 icon: const Icon(Icons.add),
                                 label: const Text('Add First Question'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryColor,
+                                  foregroundColor: Colors.white,
+                                ),
                               ),
                             )
                           : ListView.builder(
@@ -185,11 +245,65 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
   Widget _buildQuizDetailsForm() {
     return Column(
       children: [
+        // Course Code Display
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppTheme.primaryColor.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.school,
+                  color: AppTheme.primaryColor,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Course',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.primaryColor.withValues(alpha: 0.7),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${widget.course.code} - ${widget.course.name}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.primaryColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
         TextFormField(
           controller: _titleController,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Quiz Title',
-            border: OutlineInputBorder(),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            prefixIcon: const Icon(Icons.title),
           ),
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
@@ -198,15 +312,18 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
             return null;
           },
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         Row(
           children: [
             Expanded(
               child: DropdownButtonFormField<int>(
-                initialValue: _selectedTimeLimit,
-                decoration: const InputDecoration(
+                value: _selectedTimeLimit,
+                decoration: InputDecoration(
                   labelText: 'Time Limit',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  prefixIcon: const Icon(Icons.timer),
                 ),
                 items: _timeLimitOptions.map((option) {
                   return DropdownMenuItem<int>(
@@ -227,7 +344,7 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
                 },
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
               child: InkWell(
                 onTap: () async {
@@ -246,14 +363,19 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
                 child: InputDecorator(
                   decoration: InputDecoration(
                     labelText: 'Due Date',
-                    border: const OutlineInputBorder(),
-                    suffixIcon: const Icon(Icons.calendar_today),
-                    errorText: _dueDate == null ? 'Please select a due date' : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    prefixIcon: const Icon(Icons.calendar_today),
                   ),
                   child: Text(
                     _dueDate != null
-                        ? '${_dueDate!.day}/${_dueDate!.month}/${_dueDate!.year}'
-                        : 'Select due date',
+                        ? DateFormat('MMM d, yyyy').format(_dueDate!)
+                        : 'Select date',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: _dueDate != null ? null : Colors.grey,
+                    ),
                   ),
                 ),
               ),
@@ -266,9 +388,15 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
 
   Widget _buildQuestionCard(int index) {
     final question = _questions[index];
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      elevation: isDark ? 2 : 1,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -277,114 +405,154 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     'Q${index + 1}',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
+                    style: const TextStyle(
+                      color: AppTheme.primaryColor,
                       fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                      fontSize: 13,
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: _getQuestionTypeColor(question.type).withValues(alpha: 0.1),
+                    color: _getQuestionTypeColor(question.type).withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     question.type.value,
                     style: TextStyle(
                       color: _getQuestionTypeColor(question.type),
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                       fontSize: 12,
                     ),
                   ),
                 ),
                 const Spacer(),
-                Text(
-                  '${question.points} pts',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                    fontWeight: FontWeight.w500,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${question.points.toInt()} pts',
+                    style: const TextStyle(
+                      color: Colors.orange,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                PopupMenuButton(
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit),
-                          SizedBox(width: 8),
-                          Text('Edit'),
-                        ],
-                      ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: PopupMenuButton(
+                    icon: Icon(
+                      Icons.more_vert,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete, color: Colors.red),
-                          SizedBox(width: 8),
-                          Text('Delete', style: TextStyle(color: Colors.red)),
-                        ],
-                      ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  ],
-                  onSelected: (value) {
-                    if (value == 'edit') {
-                      _editQuestion(index);
-                    } else if (value == 'delete') {
-                      _deleteQuestion(index);
-                    }
-                  },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit, size: 18),
+                            SizedBox(width: 12),
+                            Text('Edit'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, color: Colors.red, size: 18),
+                            SizedBox(width: 12),
+                            Text('Delete', style: TextStyle(color: Colors.red)),
+                          ],
+                        ),
+                      ),
+                    ],
+                    onSelected: (value) {
+                      if (value == 'edit') {
+                        _editQuestion(index);
+                      } else if (value == 'delete') {
+                        _deleteQuestion(index);
+                      }
+                    },
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Text(
               question.body,
               style: const TextStyle(
-                fontSize: 16,
+                fontSize: 15,
                 fontWeight: FontWeight.w500,
+                height: 1.4,
               ),
             ),
             if (question.choices.isNotEmpty) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               ...question.choices.asMap().entries.map((entry) {
                 final choiceIndex = entry.key;
                 final choice = entry.value;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: choice.isCorrect 
+                        ? Colors.green.withValues(alpha: 0.08)
+                        : theme.colorScheme.surface,
+                    border: Border.all(
+                      color: choice.isCorrect 
+                          ? Colors.green.withValues(alpha: 0.3)
+                          : theme.colorScheme.outline.withValues(alpha: 0.2),
+                      width: 1.5,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   child: Row(
                     children: [
                       Container(
-                        width: 24,
-                        height: 24,
+                        width: 28,
+                        height: 28,
                         decoration: BoxDecoration(
                           color: choice.isCorrect 
-                              ? Colors.green.withValues(alpha: 0.1)
-                              : Colors.grey.withValues(alpha: 0.1),
+                              ? Colors.green.withValues(alpha: 0.15)
+                              : theme.colorScheme.surface,
                           border: Border.all(
-                            color: choice.isCorrect ? Colors.green : Colors.grey,
+                            color: choice.isCorrect 
+                                ? Colors.green 
+                                : theme.colorScheme.outline.withValues(alpha: 0.4),
+                            width: 2,
                           ),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(14),
                         ),
                         child: Center(
                           child: Text(
                             String.fromCharCode(65 + choiceIndex), // A, B, C, D
                             style: TextStyle(
-                              color: choice.isCorrect ? Colors.green : Colors.grey,
+                              color: choice.isCorrect 
+                                  ? Colors.green 
+                                  : theme.colorScheme.onSurface.withValues(alpha: 0.7),
                               fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                              fontSize: 13,
                             ),
                           ),
                         ),
@@ -395,17 +563,85 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
                           choice.text,
                           style: TextStyle(
                             color: choice.isCorrect 
-                                ? Colors.green 
-                                : Theme.of(context).colorScheme.onSurface,
+                                ? Colors.green.shade800
+                                : theme.colorScheme.onSurface,
+                            fontSize: 14,
+                            fontWeight: choice.isCorrect ? FontWeight.w500 : FontWeight.normal,
                           ),
                         ),
                       ),
                       if (choice.isCorrect)
-                        const Icon(Icons.check_circle, color: Colors.green, size: 16),
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 14,
+                          ),
+                        ),
                     ],
                   ),
                 );
               }),
+            ],
+            if (question.correctAnswer != null) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.08),
+                  border: Border.all(
+                    color: Colors.green.withValues(alpha: 0.3),
+                    width: 1.5,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.check_circle,
+                        color: Colors.green,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Correct Answer:',
+                            style: TextStyle(
+                              color: Colors.green.shade700,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            question.correctAnswer!,
+                            style: TextStyle(
+                              color: Colors.green.shade800,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ],
         ),
