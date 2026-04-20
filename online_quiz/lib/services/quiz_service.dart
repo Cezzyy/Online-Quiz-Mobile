@@ -37,17 +37,24 @@ class QuizService {
   // Get all quizzes available to a student (from enrolled courses)
   Future<List<Quiz>> getAvailableQuizzes(int userId) async {
     try {
+      debugPrint('getAvailableQuizzes: Fetching quizzes for userId: $userId');
+      
       // First, get all courses the user is enrolled in
       final enrollments = await _supabase
           .from('Enrollment')
           .select('CourseId')
           .eq('UserId', userId);
 
+      debugPrint('getAvailableQuizzes: Found ${enrollments.length} enrollments');
+      
       final courseIds = enrollments.map((e) => e['CourseId'] as int).toList();
 
       if (courseIds.isEmpty) {
+        debugPrint('getAvailableQuizzes: No enrollments found for user');
         return [];
       }
+
+      debugPrint('getAvailableQuizzes: Enrolled in courses: $courseIds');
 
       // Get all published quizzes from enrolled courses
       final response = await _supabase
@@ -57,6 +64,8 @@ class QuizService {
           .eq('Is_Published', true)
           .order('Due_At', ascending: true);
 
+      debugPrint('getAvailableQuizzes: Found ${response.length} published quizzes');
+
       final List<Quiz> quizzes = [];
       for (final quizData in response) {
         quizzes.add(Quiz.fromJson(quizData));
@@ -64,8 +73,10 @@ class QuizService {
 
       return quizzes;
     } on PostgrestException catch (e) {
+      debugPrint('getAvailableQuizzes: PostgrestException - ${e.message}');
       throw Exception('Failed to fetch available quizzes: ${e.message}');
     } catch (e) {
+      debugPrint('getAvailableQuizzes: Exception - $e');
       throw Exception('Failed to fetch available quizzes: $e');
     }
   }

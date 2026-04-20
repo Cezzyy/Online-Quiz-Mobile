@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/quiz.dart';
 import '../models/question.dart';
@@ -123,11 +124,15 @@ class QuizNotifier extends StateNotifier<QuizState> {
     state = state.copyWith(isLoading: true, clearError: true);
     
     try {
+      debugPrint('QuizProvider: Initializing quizzes for userId: $userId');
+      
       // Load all quizzes from enrolled courses
       final allQuizzes = await _quizService.getAvailableQuizzes(userId);
+      debugPrint('QuizProvider: Loaded ${allQuizzes.length} quizzes');
       
       // Load user attempts
       final userAttempts = await _quizService.getUserAttempts(userId);
+      debugPrint('QuizProvider: Loaded ${userAttempts.length} attempts');
       
       // Calculate completion status and scores for each quiz
       final Map<int, bool> completionStatus = {};
