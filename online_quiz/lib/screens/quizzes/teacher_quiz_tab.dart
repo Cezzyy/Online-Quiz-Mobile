@@ -589,17 +589,49 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
                           ),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: Text(
-                              selectedCourse?.code ?? 'Select Course',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: selectedCourse != null ? FontWeight.w600 : FontWeight.normal,
-                                color: selectedCourse != null 
-                                    ? (isDark ? Colors.white : Colors.black87)
-                                    : theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            child: selectedCourse != null && selectedCourse!.section != null && selectedCourse!.section!.isNotEmpty
+                                ? Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          selectedCourse!.code,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: isDark ? Colors.white : Colors.black87,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          selectedCourse!.section!,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppTheme.primaryColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : Text(
+                                    selectedCourse?.code ?? 'Select Course',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: selectedCourse != null ? FontWeight.w600 : FontWeight.normal,
+                                      color: selectedCourse != null 
+                                          ? (isDark ? Colors.white : Colors.black87)
+                                          : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                           ),
                           Icon(
                             Icons.arrow_drop_down,
@@ -819,15 +851,37 @@ class _TeacherQuizTabState extends ConsumerState<TeacherQuizTab> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  course.code,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: isSelected 
-                                        ? AppTheme.primaryColor
-                                        : (isDark ? Colors.white : Colors.black87),
-                                  ),
+                                Row(
+                                  children: [
+                                    Text(
+                                      course.code,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: isSelected 
+                                            ? AppTheme.primaryColor
+                                            : (isDark ? Colors.white : Colors.black87),
+                                      ),
+                                    ),
+                                    if (course.section != null && course.section!.isNotEmpty) ...[
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.getCourseColor(course.code).withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          course.section!,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppTheme.getCourseColor(course.code),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
