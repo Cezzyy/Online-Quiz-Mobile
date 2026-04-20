@@ -317,7 +317,7 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
           children: [
             Expanded(
               child: DropdownButtonFormField<int>(
-                value: _selectedTimeLimit,
+                initialValue: _selectedTimeLimit,
                 decoration: InputDecoration(
                   labelText: 'Time Limit',
                   border: OutlineInputBorder(
