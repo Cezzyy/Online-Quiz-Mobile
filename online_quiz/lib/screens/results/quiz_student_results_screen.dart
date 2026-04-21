@@ -40,7 +40,6 @@ class _QuizStudentResultsScreenState extends ConsumerState<QuizStudentResultsScr
   String? _selectedSection;
   List<String> _sections = [];
   String _viewMode = 'all'; // 'all' or 'scores_only'
-  bool _isTableView = false;
   bool _isLoading = true;
   List<Map<String, dynamic>> _enrolledStudents = [];
   List<Map<String, dynamic>> _quizAttempts = [];
@@ -296,48 +295,6 @@ class _QuizStudentResultsScreenState extends ConsumerState<QuizStudentResultsScr
     }
   }
 
-  Widget _buildTableView(List<StudentQuizResult> results) {
-    final scoresOnly = results.where((r) => r.attempt != null).toList();
-    
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Card(
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-             headingRowColor: WidgetStateProperty.all(
-               Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-             ),
-             columns: const [
-               DataColumn(label: Text('Name', style: TextStyle(fontWeight: FontWeight.bold))),
-               DataColumn(label: Text('Section', style: TextStyle(fontWeight: FontWeight.bold))),
-               DataColumn(label: Text('Score', style: TextStyle(fontWeight: FontWeight.bold))),
-             ],
-            rows: scoresOnly.map((result) {
-               return DataRow(
-                 cells: [
-                   DataCell(
-                     Text(
-                       result.user.fullName,
-                       overflow: TextOverflow.ellipsis,
-                     ),
-                   ),
-                   DataCell(Text(result.student.section ?? 'N/A')),
-                   DataCell(
-                     Text(
-                       result.attempt!.score.toStringAsFixed(1),
-                       style: const TextStyle(fontWeight: FontWeight.bold),
-                     ),
-                   ),
-                 ],
-               );
-            }).toList(),
-          ),
-        ),
-      ),
-    );
-  }
-
   double _calculateTotalPoints() {
     return _totalPoints;
   }
@@ -393,23 +350,21 @@ class _QuizStudentResultsScreenState extends ConsumerState<QuizStudentResultsScr
                     // Results List
                     results.isEmpty
                         ? _buildEmptyState(context)
-                        : _viewMode == 'scores_only' && _isTableView
-                            ? _buildTableView(results)
-                            : Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Student Results',
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  ...results.asMap().entries.map((entry) {
-                                    return _buildStudentResultCard(entry.value, entry.key + 1, isDark);
-                                  }),
-                                ],
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Student Results',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
+                              const SizedBox(height: 12),
+                              ...results.asMap().entries.map((entry) {
+                                return _buildStudentResultCard(entry.value, entry.key + 1, isDark);
+                              }),
+                            ],
+                          ),
                     const SizedBox(height: 40),
                   ],
                 ),
@@ -1177,7 +1132,7 @@ class _QuizStudentResultsScreenState extends ConsumerState<QuizStudentResultsScr
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: _viewMode == 'scores_only' ? _exportToExcel : null,
+                    onPressed: _exportToExcel,
                     icon: const Icon(Icons.file_download, size: 18),
                     label: const Text('Export Excel'),
                     style: ElevatedButton.styleFrom(
@@ -1187,24 +1142,6 @@ class _QuizStudentResultsScreenState extends ConsumerState<QuizStudentResultsScr
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                IconButton(
-                  onPressed: _viewMode == 'scores_only' ? () {
-                    setState(() {
-                      _isTableView = !_isTableView;
-                    });
-                  } : null,
-                  icon: Icon(_isTableView ? Icons.view_list : Icons.table_chart),
-                  tooltip: _isTableView ? 'List View' : 'Table View',
-                  style: IconButton.styleFrom(
-                    backgroundColor: isDark 
-                        ? Colors.white.withValues(alpha: 0.05)
-                        : Colors.black.withValues(alpha: 0.05),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),
