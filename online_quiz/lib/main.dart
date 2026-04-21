@@ -36,20 +36,21 @@ void main() async {
   // Load environment variables from .env file
   await dotenv.load(fileName: ".env");
 
-  await Supabase.initialize(
-    url: SupabaseConfig.supabaseUrl,
-    anonKey: SupabaseConfig.supabaseAnonKey,
-  );
+  await Future.wait([
+    Supabase.initialize(
+      url: SupabaseConfig.supabaseUrl,
+      anonKey: SupabaseConfig.supabaseAnonKey,
+    ),
+    LocalNotificationService().initialize(),
+    Future(() {
+      AppTheme.initialize();
+      AppTheme.precomputeThemes();
+    }),
+  ]);
 
-  // Initialize Local Notification Service
-  await LocalNotificationService().initialize();
-
-  // Start deadline reminder service for quiz notifications
-  DeadlineReminderService().startPeriodicChecks();
-
-  // Initialize and precompute themes at app startup for instant switching
-  AppTheme.initialize();
-  AppTheme.precomputeThemes();
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    DeadlineReminderService().startPeriodicChecks();
+  });
 
   runApp(const ProviderScope(child: ACLCQuizApp()));
 }

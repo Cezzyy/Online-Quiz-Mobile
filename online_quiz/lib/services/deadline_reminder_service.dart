@@ -34,8 +34,13 @@ class DeadlineReminderService {
       debugPrint('Starting deadline reminder service');
     }
 
-    // Run initial check immediately
-    _checkDeadlines();
+    // Defer initial check to avoid blocking app startup
+    // Run after a short delay to let the app fully initialize
+    Future.delayed(const Duration(seconds: 5), () {
+      if (_isRunning) {
+        _checkDeadlines();
+      }
+    });
 
     // Set up periodic checks every hour
     _reminderTimer = Timer.periodic(
@@ -77,11 +82,11 @@ class DeadlineReminderService {
       final prefs = await SharedPreferences.getInstance();
       final now = DateTime.now();
 
-      // Check for 24-hour reminders
-      await _check24HourReminders(prefs, now);
-
-      // Check for 1-hour reminders
-      await _check1HourReminders(prefs, now);
+      // Run both reminder checks in parallel since they're independent
+      await Future.wait([
+        _check24HourReminders(prefs, now),
+        _check1HourReminders(prefs, now),
+      ]);
 
       if (kDebugMode) {
         debugPrint('Deadline check completed successfully');

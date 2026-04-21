@@ -76,12 +76,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
           isInitialized: true,
         );
 
-        // Subscribe to notifications
+        // Subscribe to notifications asynchronously without blocking
+        // This runs in the background and doesn't block the UI
         final user = session['user'] as User?;
         if (user != null) {
-          await _realtimeNotificationService.subscribeToNotifications(
+          _realtimeNotificationService.subscribeToNotifications(
             user.userId,
-          );
+          ).catchError((error) {
+            // Log error but don't block initialization
+            if (mounted) {
+              print('Failed to subscribe to notifications: $error');
+            }
+          });
         }
       } else {
         // No existing session - show splash screen for minimum time
@@ -118,12 +124,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
         clearError: true,
       );
 
-      // Subscribe to realtime notifications
+      // Run notification subscription and permission request in parallel
+      // These are independent operations and can run concurrently
       final user = result['user'] as User;
-      await _realtimeNotificationService.subscribeToNotifications(user.userId);
-
-      // Request notification permission on first login
-      await LocalNotificationService().requestPermission();
+      await Future.wait([
+        _realtimeNotificationService.subscribeToNotifications(user.userId),
+        LocalNotificationService().requestPermission(),
+      ]);
 
       return true;
     } catch (e) {
