@@ -342,7 +342,7 @@ class _QuizStudentDetailScreenState extends ConsumerState<QuizStudentDetailScree
                 _buildScoreStat(
                   context,
                   'Score',
-                  hasPending ? 'Pending' : '${widget.attempt.score.toStringAsFixed(1)}',
+                  hasPending ? 'Pending' : widget.attempt.score.toStringAsFixed(1),
                   hasPending ? 'Awaiting grading' : 'out of ${_totalPoints.toStringAsFixed(1)}',
                   scoreColor,
                   isDark,
