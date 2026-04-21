@@ -608,61 +608,6 @@ class _CreateQuizScreenState extends ConsumerState<CreateQuizScreen> {
                 );
               }),
             ],
-            if (question.correctAnswer != null) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.08),
-                  border: Border.all(
-                    color: Colors.green.withValues(alpha: 0.3),
-                    width: 1.5,
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.check_circle,
-                        color: Colors.green,
-                        size: 18,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Correct Answer:',
-                            style: TextStyle(
-                              color: Colors.green.shade700,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            question.correctAnswer!,
-                            style: TextStyle(
-                              color: Colors.green.shade800,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ],
         ),
       ),
@@ -1112,29 +1057,35 @@ class _QuestionBottomSheetState extends State<_QuestionBottomSheet> {
                       ),
                       if (_selectedType == QuestionType.text) ...[
                         const SizedBox(height: 16),
-                        const Text(
-                          'Correct Answer',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: _correctAnswerController,
-                          decoration: InputDecoration(
-                            labelText: 'Expected Answer',
-                            hintText: 'Enter the correct answer for validation',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.blue.withValues(alpha: 0.3),
                             ),
-                            helperText: 'Student answers will be compared to this (case-insensitive)',
-                            prefixIcon: const Icon(Icons.check_circle_outline),
                           ),
-                          maxLines: 3,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Please enter the correct answer';
-                            }
-                            return null;
-                          },
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                color: Colors.blue,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Text questions require manual grading by the teacher after submission.',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.blue.shade700,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                       if (_selectedType != QuestionType.text) ...[
@@ -1405,9 +1356,7 @@ class _QuestionBottomSheetState extends State<_QuestionBottomSheet> {
           isCorrect: controller.isCorrect,
         );
       }).toList(),
-      correctAnswer: _selectedType == QuestionType.text 
-          ? _correctAnswerController.text.trim() 
-          : null,
+      correctAnswer: null, // Text questions are manually graded, no correct answer needed
     );
 
     widget.onSave(questionData);

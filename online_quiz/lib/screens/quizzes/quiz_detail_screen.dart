@@ -4,6 +4,7 @@ import '../../models/quiz.dart';
 import '../../models/course.dart';
 import '../../models/attempt.dart';
 import '../../models/user.dart';
+import '../../models/question.dart';
 import '../../utils/app_theme.dart';
 import '../../providers/quiz_provider.dart';
 import '../../providers/course_provider.dart';
@@ -85,10 +86,23 @@ class _QuizDetailScreenState extends ConsumerState<QuizDetailScreen> {
   }
 
   Widget _buildQuizHeader(BuildContext context, bool isCompleted, bool isOverdue, int daysUntilDue) {
+    final quizState = ref.watch(quizProvider);
+    final attempt = quizState.quizAttempts[widget.quiz.quizId];
+    
+    // Check if there are pending grading questions
+    bool hasPendingGrading = false;
+    if (isCompleted && attempt != null) {
+      final attemptAnswers = quizState.attemptAnswers[attempt.attemptId] ?? [];
+      hasPendingGrading = attemptAnswers.any((a) => a.needsGrading);
+    }
+    
     Color statusColor;
     IconData statusIcon;
     
-    if (isCompleted) {
+    if (hasPendingGrading) {
+      statusColor = Colors.orange;
+      statusIcon = Icons.pending;
+    } else if (isCompleted) {
       statusColor = Colors.green;
       statusIcon = Icons.check_circle;
     } else if (isOverdue) {
@@ -200,11 +214,21 @@ class _QuizDetailScreenState extends ConsumerState<QuizDetailScreen> {
     final isCompleted = attempt != null;
     final isOverdue = !isCompleted && widget.quiz.isOverdue;
     
+    // Check if there are pending grading questions
+    bool hasPendingGrading = false;
+    if (isCompleted) {
+      final attemptAnswers = quizState.attemptAnswers[attempt.attemptId] ?? [];
+      hasPendingGrading = attemptAnswers.any((a) => a.needsGrading);
+    }
+    
     // Determine status display
     String statusValue;
     Color statusColor;
     
-    if (isCompleted) {
+    if (hasPendingGrading) {
+      statusValue = 'Pending';
+      statusColor = Colors.orange;
+    } else if (isCompleted) {
       statusValue = 'Completed';
       statusColor = Colors.green;
     } else if (isOverdue) {
@@ -279,9 +303,28 @@ class _QuizDetailScreenState extends ConsumerState<QuizDetailScreen> {
     final totalPoints = questions.fold<int>(0, (sum, q) => sum + q.points.toInt());
     final percentage = totalPoints > 0 ? (attempt.score / totalPoints) * 100 : 0.0;
     
+    // Check if there are pending grading questions
+    final attemptAnswers = quizState.attemptAnswers[attempt.attemptId] ?? [];
+    bool hasPendingGrading = false;
+    for (final question in questions) {
+      if (question.type == QuestionType.text) {
+        final questionAnswers = attemptAnswers.where(
+          (answer) => answer.questionId == question.questionId,
+        ).toList();
+        if (questionAnswers.isNotEmpty && questionAnswers.first.isCorrect == null) {
+          hasPendingGrading = true;
+          break;
+        }
+      }
+    }
+    
     Color scoreColor;
     String performanceLabel;
-    if (percentage >= 90) {
+    
+    if (hasPendingGrading) {
+      scoreColor = Colors.orange;
+      performanceLabel = 'Pending';
+    } else if (percentage >= 90) {
       scoreColor = Colors.green;
       performanceLabel = 'Excellent';
     } else if (percentage >= 75) {
@@ -303,15 +346,20 @@ class _QuizDetailScreenState extends ConsumerState<QuizDetailScreen> {
         _buildInfoRow(
           context,
           'Score',
-          '${attempt.score.toInt()}/${totalPoints.toInt()} Points',
+          hasPendingGrading 
+              ? 'Pending' 
+              : '${attempt.score.toInt()}/${totalPoints.toInt()} Points',
+          valueColor: hasPendingGrading ? Colors.orange : null,
         ),
-        _buildDivider(context),
-        _buildInfoRow(
-          context,
-          'Percentage',
-          '${percentage.toStringAsFixed(1)}%',
-          valueColor: scoreColor,
-        ),
+        if (!hasPendingGrading) ...[
+          _buildDivider(context),
+          _buildInfoRow(
+            context,
+            'Percentage',
+            '${percentage.toStringAsFixed(1)}%',
+            valueColor: scoreColor,
+          ),
+        ],
         _buildDivider(context),
         _buildInfoRow(
           context,

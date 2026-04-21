@@ -50,11 +50,29 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
     final totalPoints = questions.fold<double>(0.0, (sum, q) => sum + q.points);
     final percentage = totalPoints > 0 ? (widget.attempt.score / totalPoints) * 100 : 0.0;
     
+    // Check if there are pending grading questions
+    final attemptAnswers = quizState.attemptAnswers[widget.attempt.attemptId] ?? [];
+    bool hasPendingGrading = false;
+    for (final question in questions) {
+      final questionAnswers = attemptAnswers.where(
+        (answer) => answer.questionId == question.questionId,
+      ).toList();
+      if (_isQuestionPending(question, questionAnswers)) {
+        hasPendingGrading = true;
+        break;
+      }
+    }
+    
     Color scoreColor;
     String gradeText;
     IconData gradeIcon;
     
-    if (percentage >= 90) {
+    if (hasPendingGrading) {
+      // If there are pending questions, show pending status
+      scoreColor = Colors.orange;
+      gradeText = 'Pending Grading';
+      gradeIcon = Icons.pending_actions;
+    } else if (percentage >= 90) {
       scoreColor = Colors.green;
       gradeText = 'Excellent';
       gradeIcon = Icons.emoji_events;
@@ -79,7 +97,7 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
               padding: EdgeInsets.zero,
               child: Column(
                 children: [
-                  _buildResultHeader(context, scoreColor, gradeText, gradeIcon, percentage),
+                  _buildResultHeader(context, scoreColor, gradeText, gradeIcon, percentage, hasPendingGrading),
                   const SizedBox(height: 24),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -102,7 +120,7 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
     );
   }
 
-  Widget _buildResultHeader(BuildContext context, Color scoreColor, String gradeText, IconData gradeIcon, double percentage) {
+  Widget _buildResultHeader(BuildContext context, Color scoreColor, String gradeText, IconData gradeIcon, double percentage, bool hasPendingGrading) {
     return Stack(
       clipBehavior: Clip.none,
       alignment: Alignment.center,
@@ -171,24 +189,47 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
                 size: 64,
               ),
               const SizedBox(height: 16),
-              Text(
-                '${percentage.round()}%',
-                style: const TextStyle(
-                  fontSize: 56,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  height: 1,
+              if (hasPendingGrading) ...[
+                // Show "Pending Grading" text only
+                const Text(
+                  'Pending Grading',
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    height: 1,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                gradeText,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                const SizedBox(height: 12),
+                Text(
+                  'Your teacher will review your answers',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-              ),
+              ] else ...[
+                Text(
+                  '${percentage.round()}%',
+                  style: const TextStyle(
+                    fontSize: 56,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  gradeText,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -214,7 +255,8 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
 
   Widget _buildScoreStats(BuildContext context, WidgetRef ref, int totalQuestions) {
     final correctAnswers = _getCorrectAnswersCount(ref);
-    final incorrectAnswers = totalQuestions - correctAnswers;
+    final pendingGrading = _getPendingGradingCount(ref);
+    final incorrectAnswers = totalQuestions - correctAnswers - pendingGrading;
     final timeSpent = _getTimeSpentMinutes();
     final totalPoints = _getTotalPoints();
     
@@ -243,6 +285,15 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
           '$correctAnswers/$totalQuestions',
           valueColor: Colors.green,
         ),
+        if (pendingGrading > 0) ...[
+          _buildDivider(context),
+          _buildInfoRow(
+            context,
+            'Pending Grading',
+            '$pendingGrading/$totalQuestions',
+            valueColor: Colors.orange,
+          ),
+        ],
         _buildDivider(context),
         _buildInfoRow(
           context,
@@ -306,13 +357,14 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
             (answer) => answer.questionId == question.questionId,
           ).toList();
           
-          // Determine if the question is correct overall
+          // Determine if the question is correct or pending
           bool isQuestionCorrect = _isQuestionCorrect(ref, question, questionAnswers);
+          bool isPending = _isQuestionPending(question, questionAnswers);
           
           return Column(
             children: [
               if (index > 0) _buildDivider(context),
-              _buildAnswerItem(context, ref, question, questionAnswers, index, isQuestionCorrect),
+              _buildAnswerItem(context, ref, question, questionAnswers, index, isQuestionCorrect, isPending),
             ],
           );
         }),
@@ -327,7 +379,23 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
     List<AttemptAnswer> answers,
     int index,
     bool isCorrect,
+    bool isPending,
   ) {
+    // Determine icon and color based on status
+    IconData statusIcon;
+    Color statusColor;
+    
+    if (isPending) {
+      statusIcon = Icons.pending;
+      statusColor = Colors.orange;
+    } else if (isCorrect) {
+      statusIcon = Icons.check;
+      statusColor = Colors.green;
+    } else {
+      statusIcon = Icons.close;
+      statusColor = Colors.red;
+    }
+    
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Column(
@@ -338,14 +406,12 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: isCorrect 
-                      ? Colors.green.withValues(alpha: 0.1)
-                      : Colors.red.withValues(alpha: 0.1),
+                  color: statusColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
-                  isCorrect ? Icons.check : Icons.close,
-                  color: isCorrect ? Colors.green : Colors.red,
+                  statusIcon,
+                  color: statusColor,
                   size: 16,
                 ),
               ),
@@ -400,12 +466,44 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: isCorrect ? Colors.green : Colors.red,
+                    color: statusColor,
                   ),
                 ),
               ),
             ],
           ),
+          if (isPending) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.orange.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.schedule,
+                    size: 14,
+                    color: Colors.orange,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Pending teacher grading',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.orange.shade700,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -488,6 +586,16 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
   bool _isQuestionCorrect(WidgetRef ref, Question question, List<AttemptAnswer> questionAnswers) {
     if (questionAnswers.isEmpty) return false;
     
+    // For text questions, check if they're pending grading
+    if (question.type == QuestionType.text) {
+      final answer = questionAnswers.first;
+      // If isCorrect is null, it's pending grading - return false (not counted as correct)
+      if (answer.isCorrect == null) {
+        return false;
+      }
+      return answer.isCorrect == true;
+    }
+    
     final quizState = ref.watch(quizProvider);
     
     if (question.type == QuestionType.multiple) {
@@ -501,6 +609,18 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
     } else {
       return questionAnswers.any((answer) => answer.isCorrect == true);
     }
+  }
+
+  bool _isQuestionPending(Question question, List<AttemptAnswer> questionAnswers) {
+    if (questionAnswers.isEmpty) return false;
+    
+    // Only text questions can be pending
+    if (question.type == QuestionType.text) {
+      final answer = questionAnswers.first;
+      return answer.isCorrect == null;
+    }
+    
+    return false;
   }
 
   int _getCorrectAnswersCount(WidgetRef ref) {
@@ -521,6 +641,28 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
     }
     
     return correctQuestionsCount;
+  }
+
+  int _getPendingGradingCount(WidgetRef ref) {
+    final quizState = ref.watch(quizProvider);
+    final questions = quizState.selectedQuizQuestions;
+    final attemptAnswers = quizState.attemptAnswers[widget.attempt.attemptId] ?? [];
+    
+    int pendingCount = 0;
+    
+    for (final question in questions) {
+      if (question.type == QuestionType.text) {
+        final questionAnswers = attemptAnswers.where(
+          (answer) => answer.questionId == question.questionId,
+        ).toList();
+        
+        if (questionAnswers.isNotEmpty && questionAnswers.first.isCorrect == null) {
+          pendingCount++;
+        }
+      }
+    }
+    
+    return pendingCount;
   }
 
   double _getTotalPoints() {

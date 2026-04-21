@@ -299,11 +299,18 @@ class _QuizTabState extends ConsumerState<QuizTab> {
     final isOverdue = !isCompleted && quiz.isOverdue;
     final daysUntilDue = quiz.daysUntilDue;
     
+    // Check if attempt has pending grading
+    final hasPendingGrading = isCompleted && quizState.attemptAnswers[completedAttempt.attemptId]?.any((a) => a.needsGrading) == true;
+    
     Color statusColor;
     String statusText;
     IconData statusIcon;
     
-    if (isCompleted) {
+    if (hasPendingGrading) {
+      statusColor = Colors.orange;
+      statusText = 'Pending';
+      statusIcon = Icons.pending;
+    } else if (isCompleted) {
       statusColor = Colors.green;
       statusText = 'Completed';
       statusIcon = Icons.check_circle;
@@ -431,14 +438,23 @@ class _QuizTabState extends ConsumerState<QuizTab> {
                 _buildInfoRow(
                   context,
                   'Score',
-                  Text(
-                    '${completedAttempt.score.toInt()} points (${quizState.quizScores[quiz.quizId]?.round() ?? 0}%)',
-                    textAlign: TextAlign.end,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.green,
-                    ),
-                  ),
+                  hasPendingGrading
+                      ? Text(
+                          'Pending',
+                          textAlign: TextAlign.end,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.orange,
+                          ),
+                        )
+                      : Text(
+                          '${completedAttempt.score.toInt()} points (${quizState.quizScores[quiz.quizId]?.round() ?? 0}%)',
+                          textAlign: TextAlign.end,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green,
+                          ),
+                        ),
                 ),
               ],
             ],

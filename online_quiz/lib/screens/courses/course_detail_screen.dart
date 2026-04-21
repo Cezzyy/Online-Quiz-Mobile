@@ -281,11 +281,18 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
     final isCompleted = completedAttempt != null && completedAttempt.submittedAt != null;
     final isOverdue = !isCompleted && quiz.isOverdue;
     
+    // Check if attempt has pending grading
+    final hasPendingGrading = isCompleted && quizState.attemptAnswers[completedAttempt.attemptId]?.any((a) => a.needsGrading) == true;
+    
     Color statusColor;
     String statusText;
     IconData statusIcon;
     
-    if (isCompleted) {
+    if (hasPendingGrading) {
+      statusColor = Colors.orange;
+      statusText = 'Pending';
+      statusIcon = Icons.pending;
+    } else if (isCompleted) {
       statusColor = Colors.green;
       statusText = 'Completed';
       statusIcon = Icons.check_circle;

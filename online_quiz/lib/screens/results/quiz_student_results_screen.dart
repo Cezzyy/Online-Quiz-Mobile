@@ -18,6 +18,7 @@ import '../../services/analytics_service.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/stat_card.dart';
+import 'manual_grading_screen.dart';
 
 class QuizStudentResultsScreen extends ConsumerStatefulWidget {
   final Quiz quiz;
@@ -648,34 +649,87 @@ class _QuizStudentResultsScreenState extends ConsumerState<QuizStudentResultsScr
             ],
           ],
         ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: scoreColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                hasAttempt ? '${percentage.toStringAsFixed(1)}%' : statusText,
-                style: TextStyle(
-                  color: scoreColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: scoreColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    hasAttempt ? '${percentage.toStringAsFixed(1)}%' : statusText,
+                    style: TextStyle(
+                      color: scoreColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
                 ),
-              ),
+                if (hasAttempt) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    statusText,
+                    style: TextStyle(
+                      color: scoreColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ],
             ),
             if (hasAttempt) ...[
-              const SizedBox(height: 4),
-              Text(
-                statusText,
-                style: TextStyle(
-                  color: scoreColor,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                ),
+              const SizedBox(width: 8),
+              // Check if needs grading
+              FutureBuilder<List<AttemptAnswer>>(
+                future: _quizService.getAttemptAnswers(result.attempt!.attemptId),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) return const SizedBox.shrink();
+                  
+                  final needsGrading = snapshot.data!.any((a) => a.needsGrading);
+                  
+                  if (needsGrading) {
+                    return IconButton(
+                      icon: const Icon(Icons.rate_review, size: 20),
+                      color: Colors.orange,
+                      tooltip: 'Grade Text Answers',
+                      onPressed: () async {
+                        final graded = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ManualGradingScreen(
+                              quiz: widget.quiz,
+                              attempt: result.attempt!,
+                              userData: {
+                                'user': {
+                                  'FullName': result.user.fullName,
+                                  'Email': result.user.email,
+                                },
+                                'student': {
+                                  'StudentId': result.student.studentId,
+                                  'Section': result.student.section,
+                                },
+                              },
+                            ),
+                          ),
+                        );
+                        
+                        if (graded == true && mounted) {
+                          // Reload data after grading
+                          _loadData();
+                        }
+                      },
+                    );
+                  }
+                  
+                  return const SizedBox.shrink();
+                },
               ),
             ],
           ],
@@ -1177,6 +1231,74 @@ class _QuizStudentDetailScreenState extends ConsumerState<QuizStudentDetailScree
               style: const TextStyle(fontSize: 14),
             ),
           ),
+          // Show grading status
+          if (answer.needsGrading) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.pending, size: 16, color: Colors.orange),
+                  SizedBox(width: 8),
+                  Text(
+                    'Pending manual grading',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.orange,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else if (answer.isGraded) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.check_circle, size: 16, color: Colors.green),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Graded: ${answer.pointsAwarded?.toStringAsFixed(1)} / ${question.points.toStringAsFixed(1)} pts',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.green,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (answer.feedback != null && answer.feedback!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Teacher Feedback:',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      answer.feedback!,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ],
       );
     }

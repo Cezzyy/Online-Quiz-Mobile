@@ -341,24 +341,17 @@ class QuizService {
 
             case QuestionType.text:
               final textAnswer = userAnswer as String;
-              // Validate text answer against correct answer (case-insensitive, trimmed)
-              if (question.correctAnswer != null && question.correctAnswer!.trim().isNotEmpty) {
-                isCorrect = textAnswer.trim().toLowerCase() == question.correctAnswer!.trim().toLowerCase();
-              } else {
-                // Fallback: if no correct answer is set, mark as correct if not empty
-                isCorrect = textAnswer.trim().isNotEmpty;
-              }
+              // For text questions, do NOT auto-check - leave for manual grading
+              // isCorrect will be null until teacher grades it
               
-              if (isCorrect) {
-                questionScore = question.points;
-              }
-
               attemptAnswersToInsert.add({
                 'AttemptId': attemptId,
                 'QuestionId': question.questionId,
                 'ChoiceId': null,
                 'Free_Text': textAnswer,
-                'Is_Correct': isCorrect,
+                'Is_Correct': null, // Changed from auto-checking to null for manual grading
+                'Points_Awarded': null,
+                'Feedback': null,
               });
               break;
           }
@@ -370,6 +363,8 @@ class QuizService {
             'ChoiceId': null,
             'Free_Text': null,
             'Is_Correct': false,
+            'Points_Awarded': null,
+            'Feedback': null,
           });
         }
 
@@ -671,6 +666,127 @@ class QuizService {
     } catch (e) {
       debugPrint('getAllQuizResults: Exception - $e');
       throw Exception('Failed to fetch quiz results: $e');
+    }
+  }
+
+  // Grade a text answer manually
+  Future<void> gradeTextAnswer({
+    required int attemptAnswerId,
+    required double pointsAwarded,
+    String? feedback,
+  }) async {
+    try {
+      final isCorrect = pointsAwarded > 0;
+      
+      await _supabase
+          .from('AttemptAnswer')
+          .update({
+            'Is_Correct': isCorrect,
+            'Points_Awarded': pointsAwarded,
+            'Feedback': feedback,
+          })
+          .eq('AttemptAnswerId', attemptAnswerId);
+      
+      // Recalculate attempt score
+      final answerResponse = await _supabase
+          .from('AttemptAnswer')
+          .select('AttemptId')
+          .eq('AttemptAnswerId', attemptAnswerId)
+          .single();
+      
+      final attemptId = answerResponse['AttemptId'] as int;
+      await _recalculateAttemptScore(attemptId);
+    } on PostgrestException catch (e) {
+      throw Exception('Failed to grade answer: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to grade answer: $e');
+    }
+  }
+
+  // Recalculate attempt score after grading
+  Future<void> _recalculateAttemptScore(int attemptId) async {
+    try {
+      // Get all answers for this attempt
+      final answers = await getAttemptAnswers(attemptId);
+      
+      // Calculate total score
+      double totalScore = 0.0;
+      for (final answer in answers) {
+        if (answer.pointsAwarded != null) {
+          // Use manually awarded points for text answers
+          totalScore += answer.pointsAwarded!;
+        } else if (answer.isCorrect == true) {
+          // For auto-graded questions, get the question points
+          final questionResponse = await _supabase
+              .from('Question')
+              .select('Points')
+              .eq('QuestionId', answer.questionId)
+              .single();
+          
+          totalScore += (questionResponse['Points'] as num).toDouble();
+        }
+      }
+      
+      // Update attempt score
+      await _supabase
+          .from('Attempt')
+          .update({'Score': totalScore})
+          .eq('AttemptId', attemptId);
+    } catch (e) {
+      debugPrint('Failed to recalculate attempt score: $e');
+      rethrow;
+    }
+  }
+
+  // Get attempts that need grading for a quiz
+  Future<List<Map<String, dynamic>>> getAttemptsNeedingGrading(int quizId) async {
+    try {
+      // Get all submitted attempts for this quiz
+      final attemptsResponse = await _supabase
+          .from('Attempt')
+          .select('''
+            *,
+            User:UserId (
+              UserId,
+              FullName,
+              Email
+            ),
+            Student:UserId (
+              UserId,
+              StudentId,
+              Section
+            )
+          ''')
+          .eq('QuizId', quizId)
+          .not('SubmittedAt', 'is', null)
+          .order('SubmittedAt', ascending: false);
+
+      final List<Map<String, dynamic>> attemptsNeedingGrading = [];
+
+      for (final attemptData in attemptsResponse) {
+        final attempt = Attempt.fromJson(attemptData);
+        
+        // Get answers for this attempt
+        final answers = await getAttemptAnswers(attempt.attemptId);
+        
+        // Check if any text answers need grading
+        final needsGrading = answers.any((a) => a.needsGrading);
+        
+        if (needsGrading) {
+          attemptsNeedingGrading.add({
+            'attempt': attempt,
+            'user': attemptData['User'],
+            'student': attemptData['Student'],
+            'answers': answers,
+          });
+        }
+      }
+
+      return attemptsNeedingGrading;
+    } on PostgrestException catch (e) {
+      throw Exception('Failed to fetch attempts needing grading: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to fetch attempts needing grading: $e');
     }
   }
 }
