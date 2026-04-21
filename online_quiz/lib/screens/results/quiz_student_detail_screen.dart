@@ -37,15 +37,21 @@ class _QuizStudentDetailScreenState extends ConsumerState<QuizStudentDetailScree
   bool _isLoading = true;
   List<Map<String, dynamic>> _questionResults = [];
   double _totalPoints = 0.0;
+  late Attempt _currentAttempt;
 
   @override
   void initState() {
     super.initState();
+    _currentAttempt = widget.attempt;
     _loadQuestionResults();
   }
 
   Future<void> _loadQuestionResults() async {
     try {
+      // Reload the attempt to get updated score
+      final attemptDetails = await _quizService.getAttemptDetails(widget.attempt.attemptId);
+      final updatedAttempt = attemptDetails['attempt'] as Attempt;
+      
       // Load quiz questions
       final questions = await _quizService.getQuizQuestions(widget.quiz.quizId);
       _totalPoints = questions.fold(0.0, (sum, q) => sum + q.points);
@@ -111,6 +117,7 @@ class _QuizStudentDetailScreenState extends ConsumerState<QuizStudentDetailScree
 
       if (mounted) {
         setState(() {
+          _currentAttempt = updatedAttempt;
           _questionResults = results;
           _isLoading = false;
         });
@@ -137,7 +144,7 @@ class _QuizStudentDetailScreenState extends ConsumerState<QuizStudentDetailScree
     
     // Check if there are any pending questions
     final hasPendingQuestions = _questionResults.any((r) => r['isPending'] == true);
-    final percentage = _totalPoints > 0 ? (widget.attempt.score / _totalPoints) * 100 : 0.0;
+    final percentage = _totalPoints > 0 ? (_currentAttempt.score / _totalPoints) * 100 : 0.0;
     
     Color scoreColor;
     if (hasPendingQuestions) {
@@ -342,7 +349,7 @@ class _QuizStudentDetailScreenState extends ConsumerState<QuizStudentDetailScree
                 _buildScoreStat(
                   context,
                   'Score',
-                  hasPending ? 'Pending' : widget.attempt.score.toStringAsFixed(1),
+                  hasPending ? 'Pending' : _currentAttempt.score.toStringAsFixed(1),
                   hasPending ? 'Awaiting grading' : 'out of ${_totalPoints.toStringAsFixed(1)}',
                   scoreColor,
                   isDark,
@@ -438,8 +445,8 @@ class _QuizStudentDetailScreenState extends ConsumerState<QuizStudentDetailScree
   void _showInfoBottomSheet(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final submittedAt = widget.attempt.submittedAt;
-    final timeSpent = widget.attempt.timeSpentSeconds;
+    final submittedAt = _currentAttempt.submittedAt;
+    final timeSpent = _currentAttempt.timeSpentSeconds;
     
     showModalBottomSheet(
       context: context,
@@ -1034,7 +1041,7 @@ class _QuizStudentDetailScreenState extends ConsumerState<QuizStudentDetailScree
                 MaterialPageRoute(
                   builder: (context) => ManualGradingScreen(
                     quiz: widget.quiz,
-                    attempt: widget.attempt,
+                    attempt: _currentAttempt,
                     userData: {
                       'user': {
                         'FullName': widget.user.fullName,
@@ -1050,8 +1057,13 @@ class _QuizStudentDetailScreenState extends ConsumerState<QuizStudentDetailScree
               );
               
               if (graded == true && mounted) {
+                // Show loading indicator
+                setState(() {
+                  _isLoading = true;
+                });
+                
                 // Reload the question results to reflect the grading
-                _loadQuestionResults();
+                await _loadQuestionResults();
               }
             },
             icon: const Icon(Icons.rate_review, size: 20),
