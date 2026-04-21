@@ -14,7 +14,6 @@ import '../../providers/course_provider.dart';
 import '../../services/quiz_service.dart';
 import '../../services/analytics_service.dart';
 import '../../utils/app_theme.dart';
-import 'manual_grading_screen.dart';
 import 'quiz_student_detail_screen.dart';
 
 class QuizStudentResultsScreen extends ConsumerStatefulWidget {
@@ -1488,50 +1487,13 @@ class _QuizStudentResultsScreenState extends ConsumerState<QuizStudentResultsScr
                     ),
                   ),
                   
-                  // Grading Button or Arrow
+                  // Arrow
                   const SizedBox(width: 8),
-                  if (needsGrading)
-                    IconButton(
-                      icon: const Icon(Icons.rate_review, size: 18),
-                      color: Colors.orange,
-                      tooltip: 'Grade Text Answers',
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(
-                        minWidth: 32,
-                        minHeight: 32,
-                      ),
-                      onPressed: () async {
-                        final graded = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ManualGradingScreen(
-                              quiz: widget.quiz,
-                              attempt: result.attempt!,
-                              userData: {
-                                'user': {
-                                  'FullName': result.user.fullName,
-                                  'Email': result.user.email,
-                                },
-                                'student': {
-                                  'StudentId': result.student.studentId,
-                                  'Section': result.student.section,
-                                },
-                              },
-                            ),
-                          ),
-                        );
-                        
-                        if (graded == true && mounted) {
-                          _loadData();
-                        }
-                      },
-                    )
-                  else
-                    Icon(
-                      Icons.arrow_forward_ios,
-                      size: 16,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                    ),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                  ),
                 ],
               ),
             ),
