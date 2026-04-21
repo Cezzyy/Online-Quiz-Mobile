@@ -10,6 +10,7 @@ import '../../models/student.dart';
 import '../../models/user.dart';
 import '../../services/quiz_service.dart';
 import '../../utils/app_theme.dart';
+import 'manual_grading_screen.dart';
 // Detailed student result screen
 class QuizStudentDetailScreen extends ConsumerStatefulWidget {
   final Quiz quiz;
@@ -192,6 +193,7 @@ class _QuizStudentDetailScreenState extends ConsumerState<QuizStudentDetailScree
                 ),
               ),
             ),
+      bottomNavigationBar: hasPendingQuestions ? _buildBottomBar(context, isDark) : null,
     );
   }
 
@@ -999,5 +1001,73 @@ class _QuizStudentDetailScreenState extends ConsumerState<QuizStudentDetailScree
     } else {
       return '${secs}s';
     }
+  }
+
+  Widget _buildBottomBar(BuildContext context, bool isDark) {
+    final theme = Theme.of(context);
+    
+    return Container(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 12,
+        bottom: MediaQuery.of(context).padding.bottom + 12,
+      ),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () async {
+              final graded = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ManualGradingScreen(
+                    quiz: widget.quiz,
+                    attempt: widget.attempt,
+                    userData: {
+                      'user': {
+                        'FullName': widget.user.fullName,
+                        'Email': widget.user.email,
+                      },
+                      'student': {
+                        'StudentId': widget.student.studentId,
+                        'Section': widget.student.section,
+                      },
+                    },
+                  ),
+                ),
+              );
+              
+              if (graded == true && mounted) {
+                // Reload the question results to reflect the grading
+                _loadQuestionResults();
+              }
+            },
+            icon: const Icon(Icons.rate_review, size: 20),
+            label: const Text('Check Quiz for Manual Scoring'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 0,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

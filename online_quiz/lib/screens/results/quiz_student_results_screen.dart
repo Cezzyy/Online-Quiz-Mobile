@@ -1200,52 +1200,15 @@ class _QuizStudentResultsScreenState extends ConsumerState<QuizStudentResultsScr
   Widget _buildStudentResultCard(StudentQuizResult result, int rank, bool isDark) {
     final theme = Theme.of(context);
     final hasAttempt = result.attempt != null;
-    final percentage = hasAttempt ? result.getPercentage() : 0.0;
-    
-    Color scoreColor;
-    IconData statusIcon;
-    
-    if (!hasAttempt) {
-      scoreColor = Colors.grey;
-      statusIcon = Icons.pending_outlined;
-    } else if (percentage >= 90) {
-      scoreColor = Colors.green;
-      statusIcon = Icons.trending_up;
-    } else if (percentage >= 75) {
-      scoreColor = Colors.blue;
-      statusIcon = Icons.trending_flat;
-    } else if (percentage >= 60) {
-      scoreColor = Colors.orange;
-      statusIcon = Icons.trending_flat;
-    } else {
-      scoreColor = Colors.red;
-      statusIcon = Icons.trending_down;
-    }
 
-    return Card(
-      elevation: 1,
-      shadowColor: Colors.black.withValues(alpha: 0.05),
-      color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      margin: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        onTap: hasAttempt
-            ? () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => QuizStudentDetailScreen(
-                      quiz: widget.quiz,
-                      course: widget.course,
-                      student: result.student,
-                      user: result.user,
-                      attempt: result.attempt!,
-                    ),
-                  ),
-                );
-              }
-            : null,
-        borderRadius: BorderRadius.circular(12),
+    if (!hasAttempt) {
+      // No attempt - show N/A
+      return Card(
+        elevation: 1,
+        shadowColor: Colors.black.withValues(alpha: 0.05),
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.only(bottom: 8),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
@@ -1254,20 +1217,14 @@ class _QuizStudentResultsScreenState extends ConsumerState<QuizStudentResultsScr
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: scoreColor.withValues(alpha: 0.1),
+                  color: Colors.grey.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: hasAttempt
-                    ? Icon(
-                        statusIcon,
-                        color: scoreColor,
-                        size: 20,
-                      )
-                    : Icon(
-                        statusIcon,
-                        color: scoreColor,
-                        size: 20,
-                      ),
+                child: Icon(
+                  Icons.pending_outlined,
+                  color: Colors.grey,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               
@@ -1318,26 +1275,6 @@ class _QuizStudentResultsScreenState extends ConsumerState<QuizStudentResultsScr
                             ),
                           ),
                         ],
-                        if (hasAttempt) ...[
-                          Text(
-                            ' • ',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDark 
-                                  ? Colors.white.withValues(alpha: 0.5)
-                                  : Colors.black.withValues(alpha: 0.5),
-                            ),
-                          ),
-                          Text(
-                            '${result.attempt!.score.toStringAsFixed(1)}/${result.getTotalPoints().toStringAsFixed(1)} pts',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDark 
-                                  ? Colors.white.withValues(alpha: 0.5)
-                                  : Colors.black.withValues(alpha: 0.5),
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ],
@@ -1348,92 +1285,259 @@ class _QuizStudentResultsScreenState extends ConsumerState<QuizStudentResultsScr
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: scoreColor.withValues(alpha: 0.1),
+                  color: Colors.grey.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  hasAttempt ? '${percentage.toStringAsFixed(0)}%' : 'N/A',
+                  'N/A',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: scoreColor,
+                    color: Colors.grey,
                   ),
                 ),
               ),
               
-              // Grading Button or Arrow
-              if (hasAttempt) ...[
-                const SizedBox(width: 8),
-                FutureBuilder<List<AttemptAnswer>>(
-                  future: _quizService.getAttemptAnswers(result.attempt!.attemptId),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) {
-                      return Icon(
-                        Icons.arrow_forward_ios,
-                        size: 16,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                      );
-                    }
-                    
-                    final needsGrading = snapshot.data!.any((a) => a.needsGrading);
-                    
-                    if (needsGrading) {
-                      return IconButton(
-                        icon: const Icon(Icons.rate_review, size: 18),
-                        color: Colors.orange,
-                        tooltip: 'Grade Text Answers',
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(
-                          minWidth: 32,
-                          minHeight: 32,
-                        ),
-                        onPressed: () async {
-                          final graded = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ManualGradingScreen(
-                                quiz: widget.quiz,
-                                attempt: result.attempt!,
-                                userData: {
-                                  'user': {
-                                    'FullName': result.user.fullName,
-                                    'Email': result.user.email,
-                                  },
-                                  'student': {
-                                    'StudentId': result.student.studentId,
-                                    'Section': result.student.section,
-                                  },
-                                },
-                              ),
-                            ),
-                          );
-                          
-                          if (graded == true && mounted) {
-                            _loadData();
-                          }
-                        },
-                      );
-                    }
-                    
-                    return Icon(
-                      Icons.arrow_forward_ios,
-                      size: 16,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                    );
-                  },
-                ),
-              ] else ...[
-                const SizedBox(width: 8),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
-                ),
-              ],
+              const SizedBox(width: 8),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+              ),
             ],
           ),
         ),
-      ),
+      );
+    }
+
+    // Has attempt - use FutureBuilder to check for pending questions
+    return FutureBuilder<List<AttemptAnswer>>(
+      future: _quizService.getAttemptAnswers(result.attempt!.attemptId),
+      builder: (context, snapshot) {
+        final percentage = result.getPercentage();
+        bool needsGrading = false;
+        
+        if (snapshot.hasData) {
+          needsGrading = snapshot.data!.any((a) => a.needsGrading);
+        }
+        
+        // Determine status based on pending grading or score
+        Color scoreColor;
+        IconData statusIcon;
+        String statusBadge;
+        
+        if (needsGrading) {
+          // Has pending questions - show orange pending status
+          scoreColor = Colors.orange;
+          statusIcon = Icons.pending;
+          statusBadge = 'Pending';
+        } else if (percentage >= 90) {
+          scoreColor = Colors.green;
+          statusIcon = Icons.trending_up;
+          statusBadge = '${percentage.toStringAsFixed(0)}%';
+        } else if (percentage >= 75) {
+          scoreColor = Colors.blue;
+          statusIcon = Icons.trending_flat;
+          statusBadge = '${percentage.toStringAsFixed(0)}%';
+        } else if (percentage >= 60) {
+          scoreColor = Colors.orange;
+          statusIcon = Icons.trending_flat;
+          statusBadge = '${percentage.toStringAsFixed(0)}%';
+        } else {
+          scoreColor = Colors.red;
+          statusIcon = Icons.trending_down;
+          statusBadge = '${percentage.toStringAsFixed(0)}%';
+        }
+
+        return Card(
+          elevation: 1,
+          shadowColor: Colors.black.withValues(alpha: 0.05),
+          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.only(bottom: 8),
+          child: InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => QuizStudentDetailScreen(
+                    quiz: widget.quiz,
+                    course: widget.course,
+                    student: result.student,
+                    user: result.user,
+                    attempt: result.attempt!,
+                  ),
+                ),
+              );
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  // Status Icon
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: scoreColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      statusIcon,
+                      color: scoreColor,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  
+                  // Student Info
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          result.user.fullName,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                result.student.studentId,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark 
+                                      ? Colors.white.withValues(alpha: 0.5)
+                                      : Colors.black.withValues(alpha: 0.5),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (result.student.section != null && result.student.section!.isNotEmpty) ...[
+                              Text(
+                                ' • ',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark 
+                                      ? Colors.white.withValues(alpha: 0.5)
+                                      : Colors.black.withValues(alpha: 0.5),
+                                ),
+                              ),
+                              Flexible(
+                                child: Text(
+                                  result.student.section!,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark 
+                                        ? Colors.white.withValues(alpha: 0.5)
+                                        : Colors.black.withValues(alpha: 0.5),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                            Text(
+                              ' • ',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark 
+                                    ? Colors.white.withValues(alpha: 0.5)
+                                    : Colors.black.withValues(alpha: 0.5),
+                              ),
+                            ),
+                            Flexible(
+                              child: Text(
+                                '${result.attempt!.score.toStringAsFixed(1)}/${result.getTotalPoints().toStringAsFixed(1)} pts',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark 
+                                      ? Colors.white.withValues(alpha: 0.5)
+                                      : Colors.black.withValues(alpha: 0.5),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Score Badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: scoreColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      statusBadge,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: scoreColor,
+                      ),
+                    ),
+                  ),
+                  
+                  // Grading Button or Arrow
+                  const SizedBox(width: 8),
+                  if (needsGrading)
+                    IconButton(
+                      icon: const Icon(Icons.rate_review, size: 18),
+                      color: Colors.orange,
+                      tooltip: 'Grade Text Answers',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 32,
+                        minHeight: 32,
+                      ),
+                      onPressed: () async {
+                        final graded = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ManualGradingScreen(
+                              quiz: widget.quiz,
+                              attempt: result.attempt!,
+                              userData: {
+                                'user': {
+                                  'FullName': result.user.fullName,
+                                  'Email': result.user.email,
+                                },
+                                'student': {
+                                  'StudentId': result.student.studentId,
+                                  'Section': result.student.section,
+                                },
+                              },
+                            ),
+                          ),
+                        );
+                        
+                        if (graded == true && mounted) {
+                          _loadData();
+                        }
+                      },
+                    )
+                  else
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
