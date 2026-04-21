@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
@@ -85,7 +86,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           ).catchError((error) {
             // Log error but don't block initialization
             if (mounted) {
-              print('Failed to subscribe to notifications: $error');
+              debugPrint('Failed to subscribe to notifications: $error');
             }
           });
         }
