@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/attempt.dart';
 import '../../models/attempt_answer.dart';
@@ -30,6 +31,7 @@ class _ManualGradingScreenState extends ConsumerState<ManualGradingScreen> {
   List<Map<String, dynamic>> _textQuestions = [];
   final Map<int, TextEditingController> _pointsControllers = {};
   final Map<int, TextEditingController> _feedbackControllers = {};
+  final Map<int, String?> _pointsErrors = {};
 
   @override
   void initState() {
@@ -85,6 +87,12 @@ class _ManualGradingScreenState extends ConsumerState<ManualGradingScreen> {
           _feedbackControllers[answer.attemptAnswerId] = TextEditingController(
             text: answer.feedback ?? '',
           );
+          _pointsErrors[answer.attemptAnswerId] = null;
+          
+          // Add listener for real-time validation
+          _pointsControllers[answer.attemptAnswerId]!.addListener(() {
+            _validatePoints(answer.attemptAnswerId, question.points);
+          });
         }
       }
 
@@ -109,7 +117,79 @@ class _ManualGradingScreenState extends ConsumerState<ManualGradingScreen> {
     }
   }
 
+  void _validatePoints(int attemptAnswerId, double maxPoints) {
+    final controller = _pointsControllers[attemptAnswerId];
+    if (controller == null) return;
+    
+    final text = controller.text;
+    
+    if (text.isEmpty) {
+      setState(() {
+        _pointsErrors[attemptAnswerId] = null;
+      });
+      return;
+    }
+
+    final value = double.tryParse(text);
+    
+    if (value == null) {
+      setState(() {
+        _pointsErrors[attemptAnswerId] = 'Please enter a valid number';
+      });
+      return;
+    }
+
+    if (value < 0) {
+      // Auto-correct to 0
+      controller.value = TextEditingValue(
+        text: '0',
+        selection: TextSelection.collapsed(offset: 1),
+      );
+      setState(() {
+        _pointsErrors[attemptAnswerId] = null;
+      });
+      return;
+    }
+
+    if (value > maxPoints) {
+      // Auto-correct to max points
+      final maxText = maxPoints.toStringAsFixed(1);
+      controller.value = TextEditingValue(
+        text: maxText,
+        selection: TextSelection.collapsed(offset: maxText.length),
+      );
+      setState(() {
+        _pointsErrors[attemptAnswerId] = null;
+      });
+      return;
+    }
+
+    setState(() {
+      _pointsErrors[attemptAnswerId] = null;
+    });
+  }
+
   Future<void> _saveGrades() async {
+    // Check for validation errors first
+    bool hasErrors = false;
+    for (final questionData in _textQuestions) {
+      final answer = questionData['answer'] as AttemptAnswer;
+      if (_pointsErrors[answer.attemptAnswerId] != null) {
+        hasErrors = true;
+        break;
+      }
+    }
+
+    if (hasErrors) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter valid points for all questions'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isSaving = true;
     });
@@ -130,7 +210,7 @@ class _ManualGradingScreenState extends ConsumerState<ManualGradingScreen> {
 
         final pointsAwarded = double.tryParse(pointsText);
         if (pointsAwarded == null) {
-          throw Exception('Invalid points value');
+          throw Exception('Please enter valid points for all questions');
         }
 
         if (pointsAwarded < 0 || pointsAwarded > question.points) {
@@ -147,7 +227,7 @@ class _ManualGradingScreenState extends ConsumerState<ManualGradingScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Grades saved successfully!'),
+            content: Text('✓ Grades saved successfully!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -157,7 +237,7 @@ class _ManualGradingScreenState extends ConsumerState<ManualGradingScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error saving grades: $e'),
+            content: Text('Failed to save grades: ${e.toString().replaceAll('Exception: ', '')}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -178,14 +258,14 @@ class _ManualGradingScreenState extends ConsumerState<ManualGradingScreen> {
     final user = widget.userData['user'] as Map<String, dynamic>;
     final student = widget.userData['student'] as Map<String, dynamic>;
     final screenHeight = MediaQuery.of(context).size.height;
-    final headerHeight = screenHeight < 700 ? 200.0 : 220.0;
+    final headerHeight = screenHeight < 700 ? 260.0 : 300.0;
 
     return Scaffold(
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                // Gradient Header with Student Info
+                // Gradient Header
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
@@ -244,14 +324,14 @@ class _ManualGradingScreenState extends ConsumerState<ManualGradingScreen> {
                     ),
                     // Content
                     Positioned(
-                      top: MediaQuery.of(context).padding.top + 60,
+                      top: MediaQuery.of(context).padding.top + 70,
                       left: 24,
                       right: 24,
                       child: Column(
                         children: [
                           // Icon
                           Container(
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.2),
                               shape: BoxShape.circle,
@@ -259,55 +339,17 @@ class _ManualGradingScreenState extends ConsumerState<ManualGradingScreen> {
                             child: const Icon(
                               Icons.rate_review,
                               color: Colors.white,
-                              size: 32,
+                              size: 40,
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 16),
                           // Title
                           Text(
                             'Manual Grading',
                             style: TextStyle(
-                              fontSize: screenHeight < 700 ? 22 : 24,
+                              fontSize: screenHeight < 700 ? 26 : 28,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          // Student Info Badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                CircleAvatar(
-                                  radius: 14,
-                                  backgroundColor: Colors.white,
-                                  child: Text(
-                                    user['FullName'].toString()[0].toUpperCase(),
-                                    style: const TextStyle(
-                                      color: AppTheme.primaryColor,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Flexible(
-                                  child: Text(
-                                    user['FullName'] as String,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
                             ),
                           ),
                         ],
@@ -318,51 +360,22 @@ class _ManualGradingScreenState extends ConsumerState<ManualGradingScreen> {
 
                 const SizedBox(height: 16),
 
-                // Quiz Info Card
+                // View Information Button
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Card(
-                    elevation: 2,
-                    shadowColor: Colors.black.withValues(alpha: 0.1),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          _buildInfoRow(
-                            context,
-                            Icons.quiz,
-                            'Quiz',
-                            widget.quiz.title,
-                            isDark,
-                          ),
-                          const Divider(height: 24),
-                          _buildInfoRow(
-                            context,
-                            Icons.badge,
-                            'Student ID',
-                            student['StudentId'] as String,
-                            isDark,
-                          ),
-                          const Divider(height: 24),
-                          _buildInfoRow(
-                            context,
-                            Icons.class_,
-                            'Section',
-                            student['Section'] ?? 'N/A',
-                            isDark,
-                          ),
-                          const Divider(height: 24),
-                          _buildInfoRow(
-                            context,
-                            Icons.calendar_today,
-                            'Submitted',
-                            _formatDate(widget.attempt.submittedAt!),
-                            isDark,
-                          ),
-                        ],
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showInfoBottomSheet(context, user, student, isDark),
+                      icon: const Icon(Icons.info_outline, size: 20),
+                      label: const Text('View Information'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.primaryColor,
+                        side: BorderSide(color: AppTheme.primaryColor, width: 1.5),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
@@ -452,6 +465,159 @@ class _ManualGradingScreenState extends ConsumerState<ManualGradingScreen> {
                   ),
               ],
             ),
+    );
+  }
+
+  void _showInfoBottomSheet(BuildContext context, Map<String, dynamic> user, Map<String, dynamic> student, bool isDark) {
+    final theme = Theme.of(context);
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: isDark 
+                    ? Colors.white.withValues(alpha: 0.3)
+                    : Colors.black.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 16, 16),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppTheme.primaryColor.withValues(alpha: 0.2),
+                          AppTheme.secondaryColor.withValues(alpha: 0.2),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.info,
+                      color: AppTheme.primaryColor,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Grading Details',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'Quiz and student information',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                    style: IconButton.styleFrom(
+                      backgroundColor: isDark 
+                          ? Colors.white.withValues(alpha: 0.1)
+                          : Colors.black.withValues(alpha: 0.05),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Content
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark 
+                      ? Colors.white.withValues(alpha: 0.05)
+                      : Colors.black.withValues(alpha: 0.03),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDark 
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : Colors.black.withValues(alpha: 0.1),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    _buildInfoRow(
+                      context,
+                      Icons.quiz,
+                      'Quiz',
+                      widget.quiz.title,
+                      isDark,
+                    ),
+                    const Divider(height: 24),
+                    _buildInfoRow(
+                      context,
+                      Icons.person,
+                      'Student Name',
+                      user['FullName'] as String,
+                      isDark,
+                    ),
+                    const Divider(height: 24),
+                    _buildInfoRow(
+                      context,
+                      Icons.badge,
+                      'Student ID',
+                      student['StudentId'] as String,
+                      isDark,
+                    ),
+                    const Divider(height: 24),
+                    _buildInfoRow(
+                      context,
+                      Icons.class_,
+                      'Section',
+                      student['Section'] ?? 'N/A',
+                      isDark,
+                    ),
+                    const Divider(height: 24),
+                    _buildInfoRow(
+                      context,
+                      Icons.calendar_today,
+                      'Submitted',
+                      _formatDate(widget.attempt.submittedAt!),
+                      isDark,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -725,17 +891,37 @@ class _ManualGradingScreenState extends ConsumerState<ManualGradingScreen> {
                         child: TextField(
                           controller: _pointsControllers[answer.attemptAnswerId],
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                          ],
                           decoration: InputDecoration(
                             labelText: 'Points',
                             hintText: '0 - ${question.points}',
                             prefixIcon: const Icon(Icons.star_border, size: 20),
+                            errorText: _pointsErrors[answer.attemptAnswerId],
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(
+                                color: _pointsErrors[answer.attemptAnswerId] != null 
+                                    ? Colors.red 
+                                    : AppTheme.primaryColor,
+                                width: 2,
+                              ),
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
                               borderSide: const BorderSide(
-                                color: AppTheme.primaryColor,
+                                color: Colors.red,
+                                width: 1,
+                              ),
+                            ),
+                            focusedErrorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(
+                                color: Colors.red,
                                 width: 2,
                               ),
                             ),
