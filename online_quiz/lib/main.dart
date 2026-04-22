@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/onboarding/splash_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/biometric_lock_screen.dart';
+import 'screens/common/offline_screen.dart';
 import 'screens/home/main_screen.dart';
 import 'screens/home/teacher_main_screen.dart';
 import 'screens/home/admin_main_screen.dart';
@@ -11,6 +12,7 @@ import 'utils/app_routes.dart';
 import 'utils/app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/local_auth_provider.dart';
+import 'providers/connectivity_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/user_profile_provider.dart';
 import 'services/local_notification_service.dart';
@@ -161,14 +163,23 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> with WidgetsBindingOb
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final localAuthState = ref.watch(localAuthProvider);
+    final connectivityState = ref.watch(connectivityProvider);
 
     if (!authState.isInitialized && !_hasShownSplash) {
       _hasShownSplash = true;
       return const SplashScreen();
     }
+    
     if (authState.isAuthenticated &&
         authState.user != null &&
         authState.role != null) {
+      
+      // Check connectivity first - if offline, show offline screen
+      if (!connectivityState.isConnected) {
+        return const OfflineScreen();
+      }
+      
+      // Then check if app is locked
       if (localAuthState.isLocked) {
         return const BiometricLockScreen();
       }
@@ -183,6 +194,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> with WidgetsBindingOb
         debugPrint('Initial authentication completed');
         _hasCompletedInitialAuth = true;
       }
+      
       switch (authState.role?.toLowerCase()) {
         case 'teacher':
           return const TeacherMainScreen();
