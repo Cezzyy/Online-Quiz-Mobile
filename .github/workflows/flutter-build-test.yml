@@ -1,0 +1,94 @@
+name: "Flutter Build Test"
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - "online_quiz/lib/**"
+      - "online_quiz/android/**"
+      - "online_quiz/pubspec.yaml"
+      - "online_quiz/pubspec.lock"
+      - ".github/workflows/**"
+  push:
+    branches: [ main, develop ]
+    paths:
+      - "online_quiz/lib/**"
+      - "online_quiz/android/**"
+      - "online_quiz/pubspec.yaml"
+      - "online_quiz/pubspec.lock"
+      - ".github/workflows/**"
+  workflow_dispatch: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Run all shell steps inside the Flutter project
+defaults:
+  run:
+    working-directory: online_quiz
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter (stable)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Show tool versions
+        run: |
+          flutter --version
+          dart --version
+          java -version
+
+      - name: Cache pub packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('online_quiz/pubspec.lock') }}
+          restore-keys: ${{ runner.os }}-pub-
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('online_quiz/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      - name: Create dummy .env file
+        run: |
+          cat > .env << EOF
+          SUPABASE_URL=https://dummy-url.supabase.co
+          SUPABASE_ANON_KEY=dummy-anon-key
+          SUPABASE_SERVICE_ROLE_KEY=dummy-service-role-key
+          DATABASE_URL=dummy-database-url
+          DIRECT_URL=dummy-direct-url
+          JWT_SECRET=dummy-jwt-secret
+          EOF
+
+      - name: Build Android APK (debug)
+        run: flutter build apk --debug --no-shrink
+
+      - name: Build Android App Bundle (release)
+        run: flutter build appbundle --release --no-shrink
