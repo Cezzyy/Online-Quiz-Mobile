@@ -14,6 +14,7 @@ import '../../providers/course_provider.dart';
 import '../../services/quiz_service.dart';
 import '../../services/analytics_service.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/error_messages.dart';
 import 'quiz_student_detail_screen.dart';
 
 class QuizStudentResultsScreen extends ConsumerStatefulWidget {
@@ -100,7 +101,7 @@ class _QuizStudentResultsScreenState extends ConsumerState<QuizStudentResultsScr
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error loading data: $e'),
+            content: Text(ErrorMessages.getUserFriendlyMessage(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -269,7 +270,7 @@ class _QuizStudentResultsScreenState extends ConsumerState<QuizStudentResultsScr
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(exportState.errorMessage ?? 'Failed to export Excel file'),
+              content: Text(ErrorMessages.getUserFriendlyMessage(exportState.errorMessage ?? 'Failed to export Excel file')),
               backgroundColor: Colors.red,
               duration: const Duration(seconds: 4),
             ),
@@ -284,7 +285,7 @@ class _QuizStudentResultsScreenState extends ConsumerState<QuizStudentResultsScr
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error exporting Excel file: ${e.toString()}'),
+            content: Text(ErrorMessages.getUserFriendlyMessage(e.toString())),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 4),
           ),

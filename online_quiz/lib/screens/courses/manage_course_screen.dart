@@ -6,6 +6,7 @@ import '../../models/student.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/error_messages.dart';
 import '../../providers/course_provider.dart';
 import '../../providers/auth_provider.dart';
 
@@ -111,7 +112,7 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error loading data: $e'),
+            content: Text(ErrorMessages.getUserFriendlyMessage(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -287,7 +288,7 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
                   final error = ref.read(courseProvider).error;
                   scaffoldMessenger.showSnackBar(
                     SnackBar(
-                      content: Text(error ?? 'Failed to remove student'),
+                      content: Text(ErrorMessages.getUserFriendlyMessage(error ?? 'Failed to remove student')),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -313,7 +314,7 @@ class _ManageCourseScreenState extends ConsumerState<ManageCourseScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(courseState.error!),
+            content: Text(ErrorMessages.getUserFriendlyMessage(courseState.error!)),
             backgroundColor: Colors.red,
             action: SnackBarAction(
               label: 'Retry',

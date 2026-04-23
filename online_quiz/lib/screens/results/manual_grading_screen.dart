@@ -7,6 +7,7 @@ import '../../models/question.dart';
 import '../../models/quiz.dart';
 import '../../services/quiz_service.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/error_messages.dart';
 
 class ManualGradingScreen extends ConsumerStatefulWidget {
   final Quiz quiz;
@@ -109,7 +110,7 @@ class _ManualGradingScreenState extends ConsumerState<ManualGradingScreen> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error loading questions: $e'),
+            content: Text(ErrorMessages.getUserFriendlyMessage(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -237,7 +238,7 @@ class _ManualGradingScreenState extends ConsumerState<ManualGradingScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to save grades: ${e.toString().replaceAll('Exception: ', '')}'),
+            content: Text(ErrorMessages.getUserFriendlyMessage(e.toString())),
             backgroundColor: Colors.red,
           ),
         );

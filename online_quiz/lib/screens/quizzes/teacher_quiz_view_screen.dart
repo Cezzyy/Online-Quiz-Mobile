@@ -7,6 +7,7 @@ import '../../models/question.dart';
 import '../../models/choice.dart';
 import '../../services/quiz_service.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/error_messages.dart';
 
 class TeacherQuizViewScreen extends ConsumerStatefulWidget {
   final Quiz quiz;
@@ -61,7 +62,7 @@ class _TeacherQuizViewScreenState extends ConsumerState<TeacherQuizViewScreen> {
       });
     } catch (e) {
       setState(() {
-        _error = e.toString();
+        _error = ErrorMessages.getUserFriendlyMessage(e.toString());
         _isLoading = false;
       });
     }
@@ -507,7 +508,7 @@ class _TeacherQuizViewScreenState extends ConsumerState<TeacherQuizViewScreen> {
     final theme = Theme.of(context);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32.0),
+        padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 32.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -518,7 +519,7 @@ class _TeacherQuizViewScreenState extends ConsumerState<TeacherQuizViewScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              'Error Loading Quiz',
+              'Unable to Load Quiz',
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
