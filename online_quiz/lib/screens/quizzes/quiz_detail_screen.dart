@@ -6,6 +6,7 @@ import '../../models/attempt.dart';
 import '../../models/user.dart';
 import '../../models/question.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/error_messages.dart';
 import '../../providers/quiz_provider.dart';
 import '../../providers/course_provider.dart';
 import '../../providers/local_auth_provider.dart';
@@ -56,6 +57,52 @@ class _QuizDetailScreenState extends ConsumerState<QuizDetailScreen> {
     final isCompleted = attempt != null;
     final isOverdue = !isCompleted && widget.quiz.isOverdue;
     final daysUntilDue = widget.quiz.daysUntilDue;
+    
+    // Show loading state
+    if (quizState.isLoadingQuizDetails) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    
+    // Show error state
+    if (quizState.error != null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Unable to Load Quiz',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  ErrorMessages.getUserFriendlyMessage(quizState.error),
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  ref.read(quizProvider.notifier).loadQuizDetails(widget.quiz.quizId);
+                },
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     
     return Scaffold(
       body: SingleChildScrollView(

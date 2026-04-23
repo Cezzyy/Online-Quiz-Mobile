@@ -5,6 +5,7 @@ import '../../models/quiz.dart';
 import '../../models/user.dart';
 import '../quizzes/quiz_detail_screen.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/error_messages.dart';
 import '../../providers/course_provider.dart';
 import '../../providers/quiz_provider.dart';
 import '../../providers/auth_provider.dart';
@@ -63,14 +64,17 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Error loading course details',
+                        'Unable to Load Course',
                         style: Theme.of(context).textTheme.headlineSmall,
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        courseState.error!,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                        textAlign: TextAlign.center,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        child: Text(
+                          ErrorMessages.getUserFriendlyMessage(courseState.error),
+                          style: Theme.of(context).textTheme.bodyMedium,
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(

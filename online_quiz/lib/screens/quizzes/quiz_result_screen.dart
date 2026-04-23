@@ -6,6 +6,7 @@ import '../../models/attempt.dart';
 import '../../models/question.dart';
 import '../../models/attempt_answer.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/error_messages.dart';
 import '../../providers/quiz_provider.dart';
 
 class QuizResultScreen extends ConsumerStatefulWidget {
@@ -26,24 +27,101 @@ class QuizResultScreen extends ConsumerStatefulWidget {
 
 class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
   bool _isLoading = true;
+  String? _errorMessage;
   
   @override
   void initState() {
     super.initState();
     // Load quiz details and attempt details when screen opens
     Future.microtask(() async {
-      await ref.read(quizProvider.notifier).loadQuizDetails(widget.quiz.quizId);
-      await ref.read(quizProvider.notifier).getAttemptDetails(widget.attempt.attemptId);
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+      try {
+        await ref.read(quizProvider.notifier).loadQuizDetails(widget.quiz.quizId);
+        await ref.read(quizProvider.notifier).getAttemptDetails(widget.attempt.attemptId);
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = e.toString();
+          });
+        }
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    // Show loading state
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    
+    // Show error state
+    if (_errorMessage != null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Unable to Load Results',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  ErrorMessages.getUserFriendlyMessage(_errorMessage),
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _isLoading = true;
+                    _errorMessage = null;
+                  });
+                  Future.microtask(() async {
+                    try {
+                      await ref.read(quizProvider.notifier).loadQuizDetails(widget.quiz.quizId);
+                      await ref.read(quizProvider.notifier).getAttemptDetails(widget.attempt.attemptId);
+                      if (mounted) {
+                        setState(() {
+                          _isLoading = false;
+                        });
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        setState(() {
+                          _isLoading = false;
+                          _errorMessage = e.toString();
+                        });
+                      }
+                    }
+                  });
+                },
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    
     final quizState = ref.watch(quizProvider);
     final questions = quizState.selectedQuizQuestions;
     final totalQuestions = questions.length;
@@ -91,15 +169,13 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
     }
 
     return Scaffold(
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  _buildResultHeader(context, scoreColor, gradeText, gradeIcon, percentage, hasPendingGrading),
-                  const SizedBox(height: 24),
-                  Padding(
+      body: SingleChildScrollView(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              _buildResultHeader(context, scoreColor, gradeText, gradeIcon, percentage, hasPendingGrading),
+              const SizedBox(height: 24),
+              Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Column(
                       children: [
@@ -116,7 +192,7 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
                   ),
                 ],
               ),
-            ),
+        ),
     );
   }
 
