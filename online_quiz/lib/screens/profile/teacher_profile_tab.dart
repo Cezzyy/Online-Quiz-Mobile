@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/teacher_profile_provider.dart';
 import '../../providers/local_auth_provider.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/error_messages.dart';
 import '../../widgets/profile_skeleton_loader.dart';
 import 'edit_profile_screen.dart';
 import '../settings/settings_screen.dart';
@@ -64,20 +65,23 @@ class _TeacherProfileTabState extends ConsumerState<TeacherProfileTab> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
               const SizedBox(height: 16),
               Text(
-                'Error loading profile',
+                'Unable to Load Profile',
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                teacherState.error!,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  ErrorMessages.getUserFriendlyMessage(teacherState.error),
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),

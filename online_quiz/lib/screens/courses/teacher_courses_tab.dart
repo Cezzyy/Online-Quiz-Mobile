@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/course.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/error_messages.dart';
 import '../../widgets/courses_skeleton_loader.dart';
 import '../../providers/course_provider.dart';
 import '../../providers/auth_provider.dart';
@@ -70,17 +71,20 @@ class _TeacherCoursesTabState extends ConsumerState<TeacherCoursesTab> {
               Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
               const SizedBox(height: 16),
               Text(
-                'Error loading courses',
+                'Unable to Load Courses',
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                courseState.error!,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  ErrorMessages.getUserFriendlyMessage(courseState.error),
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
