@@ -6,6 +6,7 @@ import 'course_detail_screen.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/courses_skeleton_loader.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/error_messages.dart';
 import '../../providers/course_provider.dart';
 import '../../providers/auth_provider.dart';
 
@@ -54,14 +55,17 @@ class _CoursesTabState extends ConsumerState<CoursesTab> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Error loading courses',
+                'Unable to Load Courses',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 8),
-              Text(
-                courseState.error!,
-                style: Theme.of(context).textTheme.bodyMedium,
-                textAlign: TextAlign.center,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  ErrorMessages.getUserFriendlyMessage(courseState.error),
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
               ),
               const SizedBox(height: 16),
               ElevatedButton(

@@ -6,6 +6,7 @@ import '../../widgets/empty_state_widget.dart';
 import '../../widgets/filter_tab_widget.dart';
 import '../../widgets/quiz_skeleton_loader.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/error_messages.dart';
 import '../../providers/quiz_provider.dart';
 import '../../providers/auth_provider.dart';
 import 'quiz_detail_screen.dart';
@@ -60,7 +61,7 @@ class _QuizTabState extends ConsumerState<QuizTab> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Error loading quizzes',
+                'Unable to Load Quizzes',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -68,13 +69,16 @@ class _QuizTabState extends ConsumerState<QuizTab> {
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                error,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  ErrorMessages.getUserFriendlyMessage(error),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
               ElevatedButton(
