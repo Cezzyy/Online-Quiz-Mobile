@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/notification.dart' as model;
 import '../models/user.dart';
@@ -8,77 +9,110 @@ class NotificationState {
   final List<model.Notification> allNotifications;
   final List<model.Notification> unreadNotifications;
   final List<model.Notification> readNotifications;
-  final List<model.Notification> filteredNotifications;
+  final List<model.Notification> displayedNotifications;
   final List<Map<String, dynamic>> groupedNotifications; // For admin view
   final bool isLoading;
+  final bool isLoadingMore;
   final String? error;
   final String selectedFilter; // 'All', 'Unread', 'Read', 'Quiz', 'Course', 'System', 'Reminder'
-  final int currentPage;
-  final int itemsPerPage;
+  final int displayedCount;
+  final int batchSize;
   final int unreadCount;
   final Map<int, bool> notificationReadStatus; // notificationId -> isRead
   final int? currentUserId; // Track the current user ID
+  final bool hasMoreToLoad;
 
   const NotificationState({
     this.allNotifications = const [],
     this.unreadNotifications = const [],
     this.readNotifications = const [],
-    this.filteredNotifications = const [],
+    this.displayedNotifications = const [],
     this.groupedNotifications = const [],
     this.isLoading = false,
+    this.isLoadingMore = false,
     this.error,
     this.selectedFilter = 'All',
-    this.currentPage = 0,
-    this.itemsPerPage = 10,
+    this.displayedCount = 0,
+    this.batchSize = 20,
     this.unreadCount = 0,
     this.notificationReadStatus = const {},
     this.currentUserId,
+    this.hasMoreToLoad = false,
   });
 
   NotificationState copyWith({
     List<model.Notification>? allNotifications,
     List<model.Notification>? unreadNotifications,
     List<model.Notification>? readNotifications,
-    List<model.Notification>? filteredNotifications,
+    List<model.Notification>? displayedNotifications,
     List<Map<String, dynamic>>? groupedNotifications,
     bool? isLoading,
+    bool? isLoadingMore,
     String? error,
     String? selectedFilter,
-    int? currentPage,
-    int? itemsPerPage,
+    int? displayedCount,
+    int? batchSize,
     int? unreadCount,
     Map<int, bool>? notificationReadStatus,
     int? currentUserId,
+    bool? hasMoreToLoad,
     bool clearError = false,
   }) {
     return NotificationState(
       allNotifications: allNotifications ?? this.allNotifications,
       unreadNotifications: unreadNotifications ?? this.unreadNotifications,
       readNotifications: readNotifications ?? this.readNotifications,
-      filteredNotifications: filteredNotifications ?? this.filteredNotifications,
+      displayedNotifications: displayedNotifications ?? this.displayedNotifications,
       groupedNotifications: groupedNotifications ?? this.groupedNotifications,
       isLoading: isLoading ?? this.isLoading,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       error: clearError ? null : (error ?? this.error),
       selectedFilter: selectedFilter ?? this.selectedFilter,
-      currentPage: currentPage ?? this.currentPage,
-      itemsPerPage: itemsPerPage ?? this.itemsPerPage,
+      displayedCount: displayedCount ?? this.displayedCount,
+      batchSize: batchSize ?? this.batchSize,
       unreadCount: unreadCount ?? this.unreadCount,
       notificationReadStatus: notificationReadStatus ?? this.notificationReadStatus,
       currentUserId: currentUserId ?? this.currentUserId,
+      hasMoreToLoad: hasMoreToLoad ?? this.hasMoreToLoad,
     );
   }
 
   // Helper getters
   bool get hasUnreadNotifications => unreadCount > 0;
   bool get hasNotifications => allNotifications.isNotEmpty;
-  List<model.Notification> get paginatedNotifications {
-    final startIndex = currentPage * itemsPerPage;
-    final endIndex = (startIndex + itemsPerPage).clamp(0, filteredNotifications.length);
-    return filteredNotifications.sublist(startIndex, endIndex);
+  
+  // Legacy getters for backward compatibility
+  List<model.Notification> get paginatedNotifications => displayedNotifications;
+  List<model.Notification> get filteredNotifications {
+    return _applyFilterToList(allNotifications, selectedFilter);
   }
-  int get totalPages => (filteredNotifications.length / itemsPerPage).ceil();
-  bool get hasNextPage => currentPage < totalPages - 1;
-  bool get hasPreviousPage => currentPage > 0;
+  int get totalPages => 1; // Not used in infinite scroll
+  bool get hasNextPage => hasMoreToLoad;
+  bool get hasPreviousPage => false; // Not used in infinite scroll
+  
+  // Apply filter helper
+  static List<model.Notification> _applyFilterToList(List<model.Notification> notifications, String filter) {
+    switch (filter) {
+      case 'Unread':
+        return notifications.where((n) => !n.isRead).toList();
+      case 'Read':
+        return notifications.where((n) => n.isRead).toList();
+      case 'Quiz':
+      case 'Quiz Submissions':
+        return notifications.where((n) => n.type == model.NotificationType.quiz).toList();
+      case 'Course':
+      case 'Course Updates':
+        return notifications.where((n) => n.type == model.NotificationType.course).toList();
+      case 'System':
+        return notifications.where((n) => n.type == model.NotificationType.system).toList();
+      case 'Reminder':
+      case 'Reminders':
+        return notifications.where((n) => n.type == model.NotificationType.reminder).toList();
+      case 'All':
+      default:
+        return notifications;
+    }
+  }
 }
 
 // Provider for notification service
@@ -97,6 +131,7 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
 
   // Load notifications for the current user
   Future<void> loadNotifications({int? userId}) async {
+    debugPrint('[Notifications] loadNotifications() started for userId: $userId');
     state = state.copyWith(isLoading: true, clearError: true);
     
     try {
@@ -108,6 +143,7 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
       
       // Get all notifications for the user from Supabase
       final allNotifications = await _notificationService.getNotificationsByUser(currentUserId);
+      debugPrint('[Notifications] Fetched ${allNotifications.length} total notifications from API');
       
       // Sort notifications by creation date (newest first)
       allNotifications.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -115,6 +151,7 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
       // Separate read and unread notifications
       final unreadNotifications = allNotifications.where((n) => !n.isRead).toList();
       final readNotifications = allNotifications.where((n) => n.isRead).toList();
+      debugPrint('[Notifications] Unread: ${unreadNotifications.length}, Read: ${readNotifications.length}');
       
       // Create read status map
       final readStatusMap = <int, bool>{};
@@ -122,21 +159,30 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
         readStatusMap[notification.notificationId] = notification.isRead;
       }
       
-      // Apply current filter
+      // Apply current filter and get initial batch
       final filteredNotifications = _applyFilter(allNotifications, state.selectedFilter);
+      final initialBatch = filteredNotifications.take(state.batchSize).toList();
+      final hasMore = filteredNotifications.length > state.batchSize;
+      
+      debugPrint('[Notifications] Initial batch: ${initialBatch.length}/${filteredNotifications.length} (filter: ${state.selectedFilter})');
+      debugPrint('[Notifications] hasMoreToLoad: $hasMore');
       
       state = state.copyWith(
         allNotifications: allNotifications,
         unreadNotifications: unreadNotifications,
         readNotifications: readNotifications,
-        filteredNotifications: filteredNotifications,
+        displayedNotifications: initialBatch,
         unreadCount: unreadNotifications.length,
         notificationReadStatus: readStatusMap,
         isLoading: false,
-        currentPage: 0, // Reset to first page when loading
+        displayedCount: initialBatch.length,
+        hasMoreToLoad: hasMore,
         currentUserId: currentUserId, // Track the current user ID
       );
+      
+      debugPrint('[Notifications] loadNotifications() completed successfully');
     } catch (e) {
+      debugPrint('[Notifications] ERROR loadNotifications(): ${e.toString()}');
       state = state.copyWith(
         isLoading: false,
         error: 'Failed to load notifications: ${e.toString()}',
@@ -168,19 +214,22 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
         readStatusMap[notification.notificationId] = notification.isRead;
       }
       
-      // Apply current filter
+      // Apply current filter and get initial batch
       final filteredNotifications = _applyFilter(allNotifications, state.selectedFilter);
+      final initialBatch = filteredNotifications.take(state.batchSize).toList();
+      final hasMore = filteredNotifications.length > state.batchSize;
       
       state = state.copyWith(
         allNotifications: allNotifications,
         unreadNotifications: unreadNotifications,
         readNotifications: readNotifications,
-        filteredNotifications: filteredNotifications,
+        displayedNotifications: initialBatch,
         groupedNotifications: groupedNotifications,
         unreadCount: unreadNotifications.length,
         notificationReadStatus: readStatusMap,
         isLoading: false,
-        currentPage: 0, // Reset to first page when loading
+        displayedCount: initialBatch.length,
+        hasMoreToLoad: hasMore,
         currentUserId: null, // Clear current user ID for admin view
       );
     } catch (e) {
@@ -215,15 +264,17 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
       final updatedReadStatusMap = Map<int, bool>.from(state.notificationReadStatus);
       updatedReadStatusMap[notification.notificationId] = true;
       
-      // Apply current filter to updated notifications
-      final filteredNotifications = _applyFilter(updatedAllNotifications, state.selectedFilter);
+      // Update displayed notifications to reflect the change
+      final updatedDisplayed = state.displayedNotifications.map((n) => 
+        n.notificationId == notification.notificationId ? updatedNotification : n
+      ).toList();
       
-      // Update state with preserved filter and pagination
+      // Update state with preserved filter and displayed notifications
       state = state.copyWith(
         allNotifications: updatedAllNotifications,
         unreadNotifications: unreadNotifications,
         readNotifications: readNotifications,
-        filteredNotifications: filteredNotifications,
+        displayedNotifications: updatedDisplayed,
         unreadCount: unreadNotifications.length,
         notificationReadStatus: updatedReadStatusMap,
       );
@@ -244,15 +295,37 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
       // Mark all as read in Supabase
       await _notificationService.bulkMarkAsRead(unreadIds);
       
-      // Reload notifications to reflect changes
-      if (state.currentUserId == null) {
-        // Admin view - reload all notifications
-        state = state.copyWith(selectedFilter: 'All');
-        await loadAllNotifications();
-      } else {
-        // User view - reload user-specific notifications
-        await loadNotifications(userId: state.currentUserId);
+      // Update all notifications to mark as read
+      final updatedAllNotifications = state.allNotifications.map((n) {
+        if (unreadIds.contains(n.notificationId)) {
+          return n.markAsRead();
+        }
+        return n;
+      }).toList();
+      
+      // Update displayed notifications
+      final updatedDisplayed = state.displayedNotifications.map((n) {
+        if (unreadIds.contains(n.notificationId)) {
+          return n.markAsRead();
+        }
+        return n;
+      }).toList();
+      
+      // Update read status map
+      final updatedReadStatusMap = Map<int, bool>.from(state.notificationReadStatus);
+      for (final id in unreadIds) {
+        updatedReadStatusMap[id] = true;
       }
+      
+      // Update state
+      state = state.copyWith(
+        allNotifications: updatedAllNotifications,
+        unreadNotifications: [],
+        readNotifications: updatedAllNotifications,
+        displayedNotifications: updatedDisplayed,
+        unreadCount: 0,
+        notificationReadStatus: updatedReadStatusMap,
+      );
     } catch (e) {
       state = state.copyWith(error: 'Failed to mark all notifications as read: ${e.toString()}');
     }
@@ -409,13 +482,68 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
     }
   }
 
+  // Load more notifications (for infinite scroll)
+  Future<void> loadMore() async {
+    if (state.isLoadingMore || !state.hasMoreToLoad) {
+      debugPrint('[Notifications] loadMore() blocked - isLoadingMore: ${state.isLoadingMore}, hasMoreToLoad: ${state.hasMoreToLoad}');
+      return;
+    }
+    
+    debugPrint('[Notifications] loadMore() started - Current displayed: ${state.displayedCount}');
+    state = state.copyWith(isLoadingMore: true);
+    
+    try {
+      // Simulate a small delay for smooth UX
+      await Future.delayed(const Duration(milliseconds: 300));
+      
+      // Get filtered notifications
+      final filteredNotifications = _applyFilter(state.allNotifications, state.selectedFilter);
+      debugPrint('[Notifications] Total filtered notifications: ${filteredNotifications.length}');
+      
+      // Calculate next batch
+      final currentCount = state.displayedCount;
+      final nextBatch = filteredNotifications
+          .skip(currentCount)
+          .take(state.batchSize)
+          .toList();
+      
+      debugPrint('[Notifications] Loading batch: ${nextBatch.length} items (from index $currentCount)');
+      
+      // Combine with existing displayed notifications
+      final updatedDisplayed = [...state.displayedNotifications, ...nextBatch];
+      final hasMore = updatedDisplayed.length < filteredNotifications.length;
+      
+      debugPrint('[Notifications] loadMore() completed - Now displaying: ${updatedDisplayed.length}/${filteredNotifications.length}, hasMore: $hasMore');
+      
+      state = state.copyWith(
+        displayedNotifications: updatedDisplayed,
+        displayedCount: updatedDisplayed.length,
+        hasMoreToLoad: hasMore,
+        isLoadingMore: false,
+      );
+    } catch (e) {
+      debugPrint('[Notifications] ERROR loadMore(): ${e.toString()}');
+      state = state.copyWith(
+        isLoadingMore: false,
+        error: 'Failed to load more notifications: ${e.toString()}',
+      );
+    }
+  }
+
   // Set filter for notifications
   void setFilter(String filter) {
+    debugPrint('[Notifications] setFilter() called - New filter: $filter');
     final filteredNotifications = _applyFilter(state.allNotifications, filter);
+    final initialBatch = filteredNotifications.take(state.batchSize).toList();
+    final hasMore = filteredNotifications.length > state.batchSize;
+    
+    debugPrint('[Notifications] Filter applied - Showing ${initialBatch.length}/${filteredNotifications.length}, hasMore: $hasMore');
+    
     state = state.copyWith(
       selectedFilter: filter,
-      filteredNotifications: filteredNotifications,
-      currentPage: 0, // Reset to first page when filtering
+      displayedNotifications: initialBatch,
+      displayedCount: initialBatch.length,
+      hasMoreToLoad: hasMore,
     );
   }
 
@@ -443,38 +571,13 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
     }
   }
 
-  // Set current page for pagination
-  void setPage(int page) {
-    if (page >= 0 && page < state.totalPages) {
-      state = state.copyWith(currentPage: page);
-    }
-  }
-
-  // Go to next page
-  void nextPage() {
-    if (state.hasNextPage) {
-      setPage(state.currentPage + 1);
-    }
-  }
-
-  // Go to previous page
-  void previousPage() {
-    if (state.hasPreviousPage) {
-      setPage(state.currentPage - 1);
-    }
-  }
-
-  // Set items per page
-  void setItemsPerPage(int itemsPerPage) {
-    state = state.copyWith(
-      itemsPerPage: itemsPerPage,
-      currentPage: 0, // Reset to first page
-    );
-  }
-
   // Refresh notifications
   Future<void> refresh() async {
-    await loadNotifications();
+    if (state.currentUserId != null) {
+      await loadNotifications(userId: state.currentUserId);
+    } else {
+      await loadAllNotifications();
+    }
   }
 
   // Clear error

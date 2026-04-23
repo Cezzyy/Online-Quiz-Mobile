@@ -14,18 +14,50 @@ class TeacherNotificationScreen extends ConsumerStatefulWidget {
 }
 
 class _TeacherNotificationScreenState extends ConsumerState<TeacherNotificationScreen> {
-  final int itemsPerPage = 10;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    debugPrint('[TeacherNotificationScreen] Initialized');
+    
     // Load notifications when screen initializes
     Future.microtask(() {
       final currentUser = ref.read(currentUserProvider);
       if (currentUser != null) {
+        debugPrint('[TeacherNotificationScreen] Loading notifications for user: ${currentUser.userId}');
         ref.read(notificationNotifierProvider.notifier).loadNotifications(userId: currentUser.userId);
+      } else {
+        debugPrint('[TeacherNotificationScreen] WARNING: No current user found');
       }
     });
+    
+    // Add scroll listener for infinite scroll
+    _scrollController.addListener(_onScroll);
+    debugPrint('[TeacherNotificationScreen] Scroll listener attached');
+  }
+
+  @override
+  void dispose() {
+    debugPrint('[TeacherNotificationScreen] Disposing');
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    final position = _scrollController.position;
+    final distanceFromBottom = position.maxScrollExtent - position.pixels;
+    
+    // Only log when getting close to bottom
+    if (distanceFromBottom < 500) {
+      debugPrint('[TeacherNotificationScreen] Scroll position: ${position.pixels.toStringAsFixed(0)}/${position.maxScrollExtent.toStringAsFixed(0)} (${distanceFromBottom.toStringAsFixed(0)}px from bottom)');
+    }
+    
+    if (distanceFromBottom <= 200) {
+      debugPrint('[TeacherNotificationScreen] Trigger threshold reached - Calling loadMore()');
+      ref.read(notificationNotifierProvider.notifier).loadMore();
+    }
   }
 
   @override
@@ -65,10 +97,6 @@ class _TeacherNotificationScreenState extends ConsumerState<TeacherNotificationS
           Expanded(
             child: _buildNotificationsList(notificationState),
           ),
-          
-          // Pagination
-          if (notificationState.totalPages > 1)
-            _buildPagination(notificationState),
         ],
       ),
     );
@@ -78,8 +106,17 @@ class _TeacherNotificationScreenState extends ConsumerState<TeacherNotificationS
     final filters = ['All', 'Unread', 'Quiz Submissions', 'Course Updates', 'System', 'Reminders'];
     
     return Container(
-      height: 50,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppTheme.getSurfaceColor(context),
+        border: Border(
+          bottom: BorderSide(
+            color: AppTheme.getDividerColor(context),
+            width: 1,
+          ),
+        ),
+      ),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: filters.length,
@@ -88,7 +125,7 @@ class _TeacherNotificationScreenState extends ConsumerState<TeacherNotificationS
           final isSelected = state.selectedFilter == filter;
           
           return Padding(
-            padding: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.only(right: 6),
             child: FilterChip(
               label: Text(filter),
               selected: isSelected,
@@ -97,11 +134,23 @@ class _TeacherNotificationScreenState extends ConsumerState<TeacherNotificationS
                   ref.read(notificationNotifierProvider.notifier).setFilter(filter);
                 }
               },
-              selectedColor: AppTheme.primaryColor.withValues(alpha: 0.2),
-              checkmarkColor: AppTheme.primaryColor,
-              labelStyle: TextStyle(
-                color: isSelected ? AppTheme.primaryColor : Theme.of(context).colorScheme.onSurface,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+              labelPadding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+              selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+              checkmarkColor: Theme.of(context).colorScheme.primary,
+              side: BorderSide(
+                color: isSelected 
+                    ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)
+                    : AppTheme.getDividerColor(context),
+                width: 1,
+              ),
+              labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: isSelected 
+                    ? Theme.of(context).colorScheme.primary 
+                    : AppTheme.getTextColor(context),
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                fontSize: 12,
               ),
             ),
           );
@@ -128,23 +177,43 @@ class _TeacherNotificationScreenState extends ConsumerState<TeacherNotificationS
       );
     }
 
-    if (state.filteredNotifications.isEmpty) {
+    if (state.displayedNotifications.isEmpty) {
       return _buildEmptyState(state.selectedFilter);
     }
 
-      return RefreshIndicator(
-        onRefresh: () async {
-          final currentUser = ref.read(currentUserProvider);
-          if (currentUser != null) {
-            await ref.read(notificationNotifierProvider.notifier).loadNotifications(userId: currentUser.userId);
-          }
-        },
-        child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: state.paginatedNotifications.length,
+    return RefreshIndicator(
+      onRefresh: () async {
+        final currentUser = ref.read(currentUserProvider);
+        if (currentUser != null) {
+          await ref.read(notificationNotifierProvider.notifier).loadNotifications(userId: currentUser.userId);
+        }
+      },
+      child: ListView.builder(
+        controller: _scrollController,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        itemCount: state.displayedNotifications.length + (state.isLoadingMore ? 1 : 0),
         itemBuilder: (context, index) {
-          final notification = state.paginatedNotifications[index];
-          return _buildNotificationCard(notification);
+          if (index < state.displayedNotifications.length) {
+            final notification = state.displayedNotifications[index];
+            return _buildNotificationCard(notification);
+          } else {
+            // Loading indicator at the bottom
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }
         },
       ),
     );
@@ -190,168 +259,130 @@ class _TeacherNotificationScreenState extends ConsumerState<TeacherNotificationS
   Widget _buildNotificationCard(model.Notification notification) {
     final isRead = notification.isRead;
     
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: isRead ? 2 : 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: isRead 
-          ? BorderSide.none 
-          : BorderSide(color: AppTheme.primaryColor.withValues(alpha: 0.3), width: 1),
-      ),
-      child: InkWell(
-        onTap: () => _handleNotificationTap(notification),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Notification icon
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: _getNotificationColor(notification.type).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  _getNotificationIcon(notification.type),
-                  color: _getNotificationColor(notification.type),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              
-              // Notification content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Title and read status
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            notification.title,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: isRead ? FontWeight.w500 : FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                        ),
-                        if (!isRead)
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryColor,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    
-                    // Message
-                    Text(
-                      notification.message,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                        height: 1.4,
-                      ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                    
-                    // Timestamp and type
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.access_time,
-                          size: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          _formatTimestamp(notification.createdAt),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: _getNotificationColor(notification.type).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            _getNotificationTypeLabel(notification.type),
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: _getNotificationColor(notification.type),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
+    return InkWell(
+      onTap: () => _handleNotificationTap(notification),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isRead 
+              ? AppTheme.getCardColor(context)
+              : Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isRead 
+                ? AppTheme.getDividerColor(context)
+                : Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+            width: 1,
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildPagination(NotificationState state) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Previous page button
-          ElevatedButton.icon(
-            onPressed: state.hasPreviousPage 
-              ? () => ref.read(notificationNotifierProvider.notifier).previousPage()
-              : null,
-            icon: const Icon(Icons.chevron_left),
-            label: const Text('Previous'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
-              foregroundColor: Colors.white,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Notification icon
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: _getNotificationColor(notification.type).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Icon(
+                _getNotificationIcon(notification.type),
+                color: _getNotificationColor(notification.type),
+                size: 16,
+              ),
             ),
-          ),
-          
-          // Page indicator
-          Text(
-            'Page ${state.currentPage + 1} of ${state.totalPages}',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-              fontWeight: FontWeight.w500,
+            const SizedBox(width: 10),
+            
+            // Notification content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title and read status
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          notification.title,
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            fontWeight: isRead ? FontWeight.w500 : FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (!isRead) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  
+                  // Message
+                  Text(
+                    notification.message,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.getSecondaryTextColor(context),
+                      fontSize: 13,
+                      height: 1.3,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  
+                  // Timestamp and type
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time,
+                        size: 11,
+                        color: AppTheme.getSecondaryTextColor(context),
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        _formatTimestamp(notification.createdAt),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.getSecondaryTextColor(context),
+                          fontSize: 11,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: _getNotificationColor(notification.type).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          _getNotificationTypeLabel(notification.type),
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: _getNotificationColor(notification.type),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 9,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          
-          // Next page button
-          ElevatedButton.icon(
-            onPressed: state.hasNextPage 
-              ? () => ref.read(notificationNotifierProvider.notifier).nextPage()
-              : null,
-            icon: const Icon(Icons.chevron_right),
-            label: const Text('Next'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
