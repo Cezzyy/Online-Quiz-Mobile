@@ -281,13 +281,8 @@ class _QuizTabState extends ConsumerState<QuizTab> {
           itemCount: quizzes.length,
           itemBuilder: (context, index) {
             final quiz = quizzes[index];
-            return FutureBuilder<Course?>(
-              future: ref.read(quizProvider.notifier).getCourseForQuiz(quiz.quizId),
-              builder: (context, snapshot) {
-                final course = snapshot.data;
-                return _buildQuizCard(quiz, course);
-              },
-            );
+            final course = ref.read(quizProvider.notifier).getCourseForQuizSync(quiz.quizId);
+            return _buildQuizCard(quiz, course);
           },
         ),
         if (filteredQuizzes.length > paginationInfo['itemsPerPage']!) 

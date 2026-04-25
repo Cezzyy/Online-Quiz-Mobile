@@ -1,4 +1,3 @@
-import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/quiz.dart';
 import '../models/question.dart';
@@ -30,6 +29,7 @@ class QuizState {
   final Map<int, Attempt?> quizAttempts; // quizId -> latest attempt
   final Map<int, double> quizScores; // quizId -> score percentage
   final Map<int, List<AttemptAnswer>> attemptAnswers; // attemptId -> answers
+  final Map<int, Course> courseCache; // courseId -> course (for performance)
 
   const QuizState({
     this.allQuizzes = const [],
@@ -49,6 +49,7 @@ class QuizState {
     this.quizAttempts = const {},
     this.quizScores = const {},
     this.attemptAnswers = const {},
+    this.courseCache = const {},
   });
 
   QuizState copyWith({
@@ -69,6 +70,7 @@ class QuizState {
     Map<int, Attempt?>? quizAttempts,
     Map<int, double>? quizScores,
     Map<int, List<AttemptAnswer>>? attemptAnswers,
+    Map<int, Course>? courseCache,
     bool clearError = false,
     bool clearSelectedQuiz = false,
   }) {
@@ -90,6 +92,7 @@ class QuizState {
       quizAttempts: quizAttempts ?? this.quizAttempts,
       quizScores: quizScores ?? this.quizScores,
       attemptAnswers: attemptAnswers ?? this.attemptAnswers,
+      courseCache: courseCache ?? this.courseCache,
     );
   }
 
@@ -109,6 +112,7 @@ class QuizState {
   bool isQuizCompleted(int quizId) => quizCompletionStatus[quizId] ?? false;
   Attempt? getQuizAttempt(int quizId) => quizAttempts[quizId];
   double getQuizScore(int quizId) => quizScores[quizId] ?? 0.0;
+  Course? getCachedCourse(int courseId) => courseCache[courseId];
 }
 
 // Quiz notifier class to manage quiz state
@@ -124,15 +128,42 @@ class QuizNotifier extends StateNotifier<QuizState> {
     state = state.copyWith(isLoading: true, clearError: true);
     
     try {
-      debugPrint('QuizProvider: Initializing quizzes for userId: $userId');
+      // Load all data in parallel for better performance
+      final results = await Future.wait([
+        _quizService.getAvailableQuizzes(userId),
+        _quizService.getUserAttempts(userId),
+      ]);
       
-      // Load all quizzes from enrolled courses
-      final allQuizzes = await _quizService.getAvailableQuizzes(userId);
-      debugPrint('QuizProvider: Loaded ${allQuizzes.length} quizzes');
+      final allQuizzes = results[0] as List<Quiz>;
+      final userAttempts = results[1] as List<Attempt>;
       
-      // Load user attempts
-      final userAttempts = await _quizService.getUserAttempts(userId);
-      debugPrint('QuizProvider: Loaded ${userAttempts.length} attempts');
+      // Get all unique quiz IDs and course IDs
+      final quizIds = allQuizzes.map((q) => q.quizId).toList();
+      final courseIds = allQuizzes.map((q) => q.courseId).toSet().toList();
+      final attemptIds = userAttempts.map((a) => a.attemptId).toList();
+      
+      // Batch fetch questions, answers, and courses in parallel
+      final batchResults = await Future.wait([
+        if (quizIds.isNotEmpty) _quizService.getQuestionsForQuizzes(quizIds),
+        if (attemptIds.isNotEmpty) _quizService.getAnswersForAttempts(attemptIds),
+        if (courseIds.isNotEmpty) ref.read(courseProvider.notifier).getCoursesByIds(courseIds),
+      ]);
+      
+      final questionsByQuiz = quizIds.isNotEmpty 
+          ? batchResults[0] as Map<int, List<dynamic>>
+          : <int, List<dynamic>>{};
+      final answersByAttempt = attemptIds.isNotEmpty 
+          ? batchResults[quizIds.isNotEmpty ? 1 : 0] as Map<int, List<AttemptAnswer>>
+          : <int, List<AttemptAnswer>>{};
+      final courses = courseIds.isNotEmpty
+          ? batchResults[quizIds.isNotEmpty && attemptIds.isNotEmpty ? 2 : (quizIds.isNotEmpty || attemptIds.isNotEmpty ? 1 : 0)] as List<Course>
+          : <Course>[];
+      
+      // Build course cache
+      final Map<int, Course> courseCache = {};
+      for (final course in courses) {
+        courseCache[course.courseId] = course;
+      }
       
       // Calculate completion status and scores for each quiz
       final Map<int, bool> completionStatus = {};
@@ -150,19 +181,9 @@ class QuizNotifier extends StateNotifier<QuizState> {
         attempts[quiz.quizId] = latestAttempt;
         
         if (latestAttempt != null) {
-          // Calculate percentage score
-          final questions = await _quizService.getQuizQuestions(quiz.quizId);
-          final totalPoints = questions.fold<double>(0, (sum, q) => sum + q.points);
+          final questions = questionsByQuiz[quiz.quizId] ?? [];
+          final totalPoints = questions.fold<double>(0, (sum, q) => sum + (q['Points'] as num).toDouble());
           scores[quiz.quizId] = totalPoints > 0 ? (latestAttempt.score / totalPoints) * 100 : 0.0;
-        }
-      }
-      
-      // Load attempt answers grouped by attempt ID
-      final Map<int, List<AttemptAnswer>> attemptAnswersMap = {};
-      for (final attempt in userAttempts) {
-        final answers = await _quizService.getAttemptAnswers(attempt.attemptId);
-        if (answers.isNotEmpty) {
-          attemptAnswersMap[attempt.attemptId] = answers;
         }
       }
 
@@ -181,7 +202,8 @@ class QuizNotifier extends StateNotifier<QuizState> {
         quizCompletionStatus: completionStatus,
         quizAttempts: attempts,
         quizScores: scores,
-        attemptAnswers: attemptAnswersMap,
+        attemptAnswers: answersByAttempt,
+        courseCache: courseCache,
         isLoading: false,
       );
       
@@ -339,11 +361,22 @@ class QuizNotifier extends StateNotifier<QuizState> {
   }
 
   // Get course for quiz
+  Course? getCourseForQuizSync(int quizId) {
+    final quiz = state.allQuizzes.where((q) => q.quizId == quizId).firstOrNull;
+    if (quiz == null) return null;
+    
+    return state.getCachedCourse(quiz.courseId);
+  }
+
   Future<Course?> getCourseForQuiz(int quizId) async {
     final quiz = state.allQuizzes.where((q) => q.quizId == quizId).firstOrNull;
     if (quiz == null) return null;
     
-    // Get course without modifying state
+    // Try cache first
+    final cachedCourse = state.getCachedCourse(quiz.courseId);
+    if (cachedCourse != null) return cachedCourse;
+    
+    // Fallback to fetching from course provider
     return await ref.read(courseProvider.notifier).getCourseById(quiz.courseId);
   }
 

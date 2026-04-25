@@ -248,6 +248,38 @@ class CourseNotifier extends StateNotifier<CourseState> {
     }
   }
 
+  // Get multiple courses by IDs (batch operation)
+  Future<List<Course>> getCoursesByIds(List<int> courseIds) async {
+    try {
+      if (courseIds.isEmpty) return [];
+      
+      // Check which courses are already in state
+      final existingCourses = <Course>[];
+      final missingIds = <int>[];
+      
+      for (final id in courseIds) {
+        final existing = state.allCourses.where((c) => c.courseId == id).firstOrNull
+          ?? state.userCourses.where((c) => c.courseId == id).firstOrNull;
+        
+        if (existing != null) {
+          existingCourses.add(existing);
+        } else {
+          missingIds.add(id);
+        }
+      }
+      
+      // Fetch missing courses in batch
+      if (missingIds.isNotEmpty) {
+        final fetchedCourses = await _courseService.getCoursesByIds(missingIds);
+        return [...existingCourses, ...fetchedCourses];
+      }
+      
+      return existingCourses;
+    } catch (e) {
+      return [];
+    }
+  }
+
   // Admin methods
   Future<void> initializeAdminCourses() async {
     state = state.copyWith(isLoading: true, clearError: true);

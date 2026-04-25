@@ -85,6 +85,40 @@ class CourseService {
     }
   }
 
+  // Get multiple courses by IDs (batch operation)
+  Future<List<Course>> getCoursesByIds(List<int> courseIds) async {
+    try {
+      if (courseIds.isEmpty) return [];
+      
+      final response = await _supabase
+          .from('Course')
+          .select('*')
+          .inFilter('CourseId', courseIds);
+
+      final List<Course> courses = [];
+      for (final courseData in response) {
+        courses.add(Course(
+          courseId: courseData['CourseId'],
+          code: courseData['Code'],
+          name: courseData['Name'],
+          instructorUserId: courseData['Instructor_UserId'],
+          status: courseData['Status'] ?? 'Active',
+          category: courseData['Category'],
+          section: courseData['Section'],
+          createdAt: DateTime.parse(courseData['CreatedAt']),
+          updatedAt: DateTime.parse(courseData['UpdatedAt']),
+          createdBy: courseData['CreatedBy'],
+        ));
+      }
+
+      return courses;
+    } on PostgrestException catch (e) {
+      throw Exception('Failed to fetch courses: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to fetch courses: $e');
+    }
+  }
+
   // Get instructor details for a course
   Future<app_user.User?> getCourseInstructor(int instructorUserId) async {
     try {

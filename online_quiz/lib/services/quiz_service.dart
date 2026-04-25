@@ -435,6 +435,54 @@ class QuizService {
     }
   }
 
+  // Batch get questions for multiple quizzes
+  Future<Map<int, List<dynamic>>> getQuestionsForQuizzes(List<int> quizIds) async {
+    try {
+      if (quizIds.isEmpty) return {};
+      
+      final response = await _supabase
+          .from('Question')
+          .select('QuizId, QuestionId, Points')
+          .inFilter('QuizId', quizIds);
+
+      final Map<int, List<dynamic>> questionsByQuiz = {};
+      for (final q in response) {
+        final quizId = q['QuizId'] as int;
+        questionsByQuiz.putIfAbsent(quizId, () => []).add(q);
+      }
+
+      return questionsByQuiz;
+    } on PostgrestException catch (e) {
+      throw Exception('Failed to fetch questions: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to fetch questions: $e');
+    }
+  }
+
+  // Batch get answers for multiple attempts
+  Future<Map<int, List<AttemptAnswer>>> getAnswersForAttempts(List<int> attemptIds) async {
+    try {
+      if (attemptIds.isEmpty) return {};
+      
+      final response = await _supabase
+          .from('AttemptAnswer')
+          .select('*')
+          .inFilter('AttemptId', attemptIds);
+
+      final Map<int, List<AttemptAnswer>> answersByAttempt = {};
+      for (final answerData in response) {
+        final answer = AttemptAnswer.fromJson(answerData);
+        answersByAttempt.putIfAbsent(answer.attemptId, () => []).add(answer);
+      }
+
+      return answersByAttempt;
+    } on PostgrestException catch (e) {
+      throw Exception('Failed to fetch attempt answers: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to fetch attempt answers: $e');
+    }
+  }
+
   // Get quiz statistics for a user
   Future<Map<String, dynamic>> getQuizStatistics(int userId) async {
     try {
