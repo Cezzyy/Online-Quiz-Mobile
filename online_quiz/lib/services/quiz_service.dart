@@ -638,7 +638,17 @@ class QuizService {
             (sum, q) => sum + (q['Points'] as num).toDouble(),
           );
           final correctAnswers = answers.where((a) => a['Is_Correct'] == true).length;
-          final percentage = totalPoints > 0 ? (attempt.score / totalPoints) * 100 : 0.0;
+          
+          double percentage;
+          if (totalPoints == 0) {
+            percentage = 0.0;
+          } else if (attempt.score > totalPoints) {
+            percentage = attempt.score.clamp(0.0, 100.0);
+          } else {
+            percentage = (attempt.score / totalPoints) * 100;
+          }
+          
+          percentage = percentage.clamp(0.0, 100.0);
 
           results.add({
             'attempt': attempt,
