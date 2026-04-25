@@ -72,19 +72,21 @@ class UserProfileNotifier extends StateNotifier<UserProfileState> {
     state = state.copyWith(isLoading: true, error: null);
     
     try {
-      // Fetch user profile from Supabase
-      final profileData = await _userProfileService.getUserProfile(userId);
+      // Fetch all data in parallel for better performance
+      final results = await Future.wait([
+        _userProfileService.getUserProfile(userId),
+        _userProfileService.getEnrolledCourses(userId),
+        _userProfileService.getQuizStatistics(userId),
+        _userProfileService.getCourseProgress(userId),
+      ]);
+
+      final profileData = results[0] as Map<String, dynamic>;
+      final courses = results[1] as List<Course>;
+      final stats = results[2] as Map<String, dynamic>;
+      final progress = results[3] as Map<int, double>;
+
       final user = profileData['user'] as User;
       final student = profileData['student'] as Student?;
-
-      // Fetch enrolled courses
-      final courses = await _userProfileService.getEnrolledCourses(userId);
-
-      // Fetch statistics
-      final stats = await _userProfileService.getQuizStatistics(userId);
-
-      // Fetch course progress
-      final progress = await _userProfileService.getCourseProgress(userId);
       
       state = state.copyWith(
         user: user,
