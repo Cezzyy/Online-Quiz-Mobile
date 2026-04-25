@@ -199,17 +199,27 @@ class UserProfileService {
             .eq('CourseId', course.courseId)
             .eq('Is_Published', true);
 
+        if (totalQuizzes.isEmpty) {
+          courseProgress[course.courseId] = 0.0;
+          continue;
+        }
+
         // Get completed attempts for quizzes in this course
+        final quizIds = totalQuizzes.map((q) => q['QuizId']).toList();
         final completedAttempts = await _supabase
             .from('Attempt')
             .select('QuizId')
             .eq('UserId', userId)
             .not('SubmittedAt', 'is', null)
-            .inFilter('QuizId', totalQuizzes.map((q) => q['QuizId']).toList());
+            .inFilter('QuizId', quizIds);
 
-        final progress = totalQuizzes.isNotEmpty 
-            ? completedAttempts.length / totalQuizzes.length 
-            : 0.0;
+        // Get unique quiz IDs from completed attempts
+        final uniqueCompletedQuizIds = <int>{};
+        for (var attempt in completedAttempts) {
+          uniqueCompletedQuizIds.add(attempt['QuizId'] as int);
+        }
+
+        final progress = uniqueCompletedQuizIds.length / totalQuizzes.length;
 
         courseProgress[course.courseId] = progress;
       }
