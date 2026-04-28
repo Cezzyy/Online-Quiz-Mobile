@@ -8,7 +8,6 @@ import 'screens/auth/biometric_lock_screen.dart';
 import 'screens/common/offline_screen.dart';
 import 'screens/home/main_screen.dart';
 import 'screens/home/teacher_main_screen.dart';
-import 'screens/home/admin_main_screen.dart';
 import 'utils/app_routes.dart';
 import 'utils/app_theme.dart';
 import 'providers/auth_provider.dart';
@@ -85,7 +84,6 @@ class ACLCQuizApp extends ConsumerWidget {
         AppRoutes.login: (context) => const LoginScreen(),
         AppRoutes.main: (context) => const MainScreen(),
         AppRoutes.teacherHome: (context) => const TeacherMainScreen(),
-        AppRoutes.adminMain: (context) => const AdminMainScreen(),
       },
     );
   }
@@ -205,8 +203,6 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> with WidgetsBindingOb
       switch (authState.role?.toLowerCase()) {
         case 'teacher':
           return const TeacherMainScreen();
-        case 'admin':
-          return const AdminMainScreen();
         case 'student':
         default:
           return const MainScreen();

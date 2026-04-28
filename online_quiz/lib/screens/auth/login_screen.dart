@@ -318,7 +318,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             ),
             const SizedBox(height: 4),
             Text(
-              'All accounts are managed by the school administration.\nPlease contact your admin for login credentials.',
+              'All accounts are managed by the school.\nPlease contact your teacher or school staff for login credentials.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
