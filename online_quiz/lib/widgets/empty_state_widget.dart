@@ -150,9 +150,9 @@ class EmptyStatePresets {
       icon: Icons.school_outlined,
       title: 'No Enrolled Courses',
       message: 'You have no enrolled courses online.',
-      subtitle: 'If you have issues, please contact the school admin.',
+      subtitle: 'If you have issues, please contact your teacher or school staff.',
       showInfoCard: true,
-      infoCardText: 'Contact your administrator to get enrolled in courses.',
+      infoCardText: 'Contact your teacher or school staff to get enrolled in courses.',
       infoCardColor: Colors.blue,
     );
   }

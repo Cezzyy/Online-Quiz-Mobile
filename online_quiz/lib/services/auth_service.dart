@@ -48,6 +48,11 @@ class AuthService {
 
       final roleName = roleResponse['Role']['Name'] as String;
 
+      // Block admin access to mobile app
+      if (roleName.toLowerCase() == 'admin') {
+        throw Exception('This account type is not supported on mobile devices.');
+      }
+
       // Get additional profile data based on role
       Map<String, dynamic>? profileData;
       if (roleName == 'Student') {
